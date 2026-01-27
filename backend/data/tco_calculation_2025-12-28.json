@@ -1,0 +1,532 @@
+{
+  "company_name": "SARL ALLO MAISON",
+  "project_name": "ALLO MAISON – Complexe Industriel Polymère & Matériaux Avancés",
+  "calculation_date": "2025-12-28",
+  "total_tco": 14006740000.0,
+  "average_annual_tco": 2801348000.0,
+  "tco_per_unit_revenue": 28.0135,
+  "machine_tco": [
+    {
+      "machine_id": "M-01",
+      "machine_name": "Machine d'injection plastique",
+      "category": "Presse à injection",
+      "manufacturer": "KraussMaffei",
+      "initial_cost": 105000000.0,
+      "operations_cost": 85200000.0,
+      "maintenance_cost": 55200000.0,
+      "downtime_cost": 14400000.0,
+      "resale_value": 16200000.0,
+      "total_tco": 243600000.0,
+      "annual_tco": 20300000.0,
+      "lifetime_years": 12,
+      "cost_breakdown": {
+        "initial_pct": 40.42,
+        "operations_pct": 32.79,
+        "maintenance_pct": 21.25,
+        "downtime_pct": 5.54,
+        "resale_offset_pct": 6.24
+      },
+      "estimated_purchase_price": 81000000.0,
+      "estimation_confidence": "medium"
+    }
+  ],
+  "total_machines_tco": 243600000.0,
+  "product_tco": [
+    {
+      "nom_produit": "Panneaux polymères et composites",
+      "categorie": "semi-finished",
+      "landing_cost": 8120000.0,
+      "holding_cost": 1015000.0,
+      "quality_cost": 609000.0,
+      "administrative_cost": 1624000.0,
+      "total_tco": 11368000.0
+    },
+    {
+      "nom_produit": "Revêtements de sol SPC à système clic étanche",
+      "categorie": "finished",
+      "landing_cost": 8120000.0,
+      "holding_cost": 1015000.0,
+      "quality_cost": 609000.0,
+      "administrative_cost": 1624000.0,
+      "total_tco": 11368000.0
+    },
+    {
+      "nom_produit": "Portes intérieures, extérieures, techniques et grand format",
+      "categorie": "finished",
+      "landing_cost": 8120000.0,
+      "holding_cost": 1015000.0,
+      "quality_cost": 609000.0,
+      "administrative_cost": 1624000.0,
+      "total_tco": 11368000.0
+    },
+    {
+      "nom_produit": "Panneaux muraux décoratifs et techniques",
+      "categorie": "finished",
+      "landing_cost": 8120000.0,
+      "holding_cost": 1015000.0,
+      "quality_cost": 609000.0,
+      "administrative_cost": 1624000.0,
+      "total_tco": 11368000.0
+    },
+    {
+      "nom_produit": "Pièces thermoformées",
+      "categorie": "semi-finished",
+      "landing_cost": 8120000.0,
+      "holding_cost": 1015000.0,
+      "quality_cost": 609000.0,
+      "administrative_cost": 1624000.0,
+      "total_tco": 11368000.0
+    }
+  ],
+  "total_products_tco": 56840000.0,
+  "raw_materials_tco": [
+    {
+      "nom_materiau": "Polyuréthane (PU)",
+      "type_materiau": "Résine polymère",
+      "categorie": "Primaire",
+      "quantite_annuelle": 1000.0,
+      "unite": "tonnes",
+      "unit_price": 405000.0,
+      "annual_cost": 405000000.0,
+      "transport_cost": 101250000.0,
+      "storage_cost": 12150000.0,
+      "wastage_cost": 8100000.0,
+      "total_tco": 526500000.0,
+      "estimation_confidence": "medium"
+    },
+    {
+      "nom_materiau": "Polyurée (2K)",
+      "type_materiau": "Résine polymère",
+      "categorie": "Primaire",
+      "quantite_annuelle": 500.0,
+      "unite": "tonnes",
+      "unit_price": 607500.0,
+      "annual_cost": 303750000.0,
+      "transport_cost": 75937500.0,
+      "storage_cost": 9112500.0,
+      "wastage_cost": 6075000.0,
+      "total_tco": 394875000.0,
+      "estimation_confidence": "medium"
+    },
+    {
+      "nom_materiau": "Résines époxy",
+      "type_materiau": "Résine polymère",
+      "categorie": "Primaire",
+      "quantite_annuelle": 200.0,
+      "unite": "tonnes",
+      "unit_price": 405000.0,
+      "annual_cost": 81000000.0,
+      "transport_cost": 17820000.0,
+      "storage_cost": 1620000.0,
+      "wastage_cost": 1620000.0,
+      "total_tco": 102060000.0,
+      "estimation_confidence": "medium"
+    },
+    {
+      "nom_materiau": "Isocyanates",
+      "type_materiau": "Produit chimique",
+      "categorie": "Primaire",
+      "quantite_annuelle": 100.0,
+      "unite": "tonnes",
+      "unit_price": 405000.0,
+      "annual_cost": 40500000.0,
+      "transport_cost": 11340000.0,
+      "storage_cost": 1620000.0,
+      "wastage_cost": 1215000.0,
+      "total_tco": 54675000.0,
+      "estimation_confidence": "medium"
+    },
+    {
+      "nom_materiau": "Polyols",
+      "type_materiau": "Produit chimique",
+      "categorie": "Primaire",
+      "quantite_annuelle": 150.0,
+      "unite": "tonnes",
+      "unit_price": 297000.0,
+      "annual_cost": 44550000.0,
+      "transport_cost": 9801000.0,
+      "storage_cost": 891000.0,
+      "wastage_cost": 891000.0,
+      "total_tco": 56133000.0,
+      "estimation_confidence": "medium"
+    },
+    {
+      "nom_materiau": "Solvants industriels",
+      "type_materiau": "Produit chimique",
+      "categorie": "Primaire",
+      "quantite_annuelle": 50.0,
+      "unite": "tonnes",
+      "unit_price": 270000.0,
+      "annual_cost": 13500000.0,
+      "transport_cost": 3375000.0,
+      "storage_cost": 405000.0,
+      "wastage_cost": 270000.0,
+      "total_tco": 17550000.0,
+      "estimation_confidence": "low"
+    },
+    {
+      "nom_materiau": "Additifs chimiques",
+      "type_materiau": "Produit chimique",
+      "categorie": "Primaire",
+      "quantite_annuelle": 20.0,
+      "unite": "tonnes",
+      "unit_price": 1350000.0,
+      "annual_cost": 27000000.0,
+      "transport_cost": 5400000.0,
+      "storage_cost": 540000.0,
+      "wastage_cost": 270000.0,
+      "total_tco": 33210000.0,
+      "estimation_confidence": "low"
+    },
+    {
+      "nom_materiau": "Verre de sécurité laminé",
+      "type_materiau": "Matériau de construction",
+      "categorie": "Primaire",
+      "quantite_annuelle": 500.0,
+      "unite": "tonnes",
+      "unit_price": 270000.0,
+      "annual_cost": 135000000.0,
+      "transport_cost": 40500000.0,
+      "storage_cost": 6750000.0,
+      "wastage_cost": 6750000.0,
+      "total_tco": 189000000.0,
+      "estimation_confidence": "medium"
+    },
+    {
+      "nom_materiau": "UTG (verre ultra-mince flexible)",
+      "type_materiau": "Matériau de construction",
+      "categorie": "Primaire",
+      "quantite_annuelle": 100.0,
+      "unite": "tonnes",
+      "unit_price": 4050000.0,
+      "annual_cost": 405000000.0,
+      "transport_cost": 101250000.0,
+      "storage_cost": 12150000.0,
+      "wastage_cost": 12150000.0,
+      "total_tco": 530550000.0,
+      "estimation_confidence": "low"
+    },
+    {
+      "nom_materiau": "PVC",
+      "type_materiau": "Matériau polymère",
+      "categorie": "Primaire",
+      "quantite_annuelle": 1000.0,
+      "unite": "tonnes",
+      "unit_price": 175500.0,
+      "annual_cost": 175500000.0,
+      "transport_cost": 35100000.0,
+      "storage_cost": 3510000.0,
+      "wastage_cost": 1755000.0,
+      "total_tco": 215865000.0,
+      "estimation_confidence": "high"
+    },
+    {
+      "nom_materiau": "SPC",
+      "type_materiau": "Matériau polymère",
+      "categorie": "Primaire",
+      "quantite_annuelle": 500.0,
+      "unite": "tonnes",
+      "unit_price": 270000.0,
+      "annual_cost": 135000000.0,
+      "transport_cost": 29700000.0,
+      "storage_cost": 2700000.0,
+      "wastage_cost": 1350000.0,
+      "total_tco": 168750000.0,
+      "estimation_confidence": "medium"
+    },
+    {
+      "nom_materiau": "EPS",
+      "type_materiau": "Matériau polymère",
+      "categorie": "Primaire",
+      "quantite_annuelle": 200.0,
+      "unite": "tonnes",
+      "unit_price": 202500.0,
+      "annual_cost": 40500000.0,
+      "transport_cost": 10125000.0,
+      "storage_cost": 1215000.0,
+      "wastage_cost": 405000.0,
+      "total_tco": 52245000.0,
+      "estimation_confidence": "high"
+    },
+    {
+      "nom_materiau": "ASA",
+      "type_materiau": "Matériau polymère",
+      "categorie": "Primaire",
+      "quantite_annuelle": 100.0,
+      "unite": "tonnes",
+      "unit_price": 405000.0,
+      "annual_cost": 40500000.0,
+      "transport_cost": 8910000.0,
+      "storage_cost": 810000.0,
+      "wastage_cost": 405000.0,
+      "total_tco": 50625000.0,
+      "estimation_confidence": "medium"
+    },
+    {
+      "nom_materiau": "ABS",
+      "type_materiau": "Matériau polymère",
+      "categorie": "Primaire",
+      "quantite_annuelle": 500.0,
+      "unite": "tonnes",
+      "unit_price": 297000.0,
+      "annual_cost": 148500000.0,
+      "transport_cost": 32670000.0,
+      "storage_cost": 2970000.0,
+      "wastage_cost": 1485000.0,
+      "total_tco": 185625000.0,
+      "estimation_confidence": "high"
+    },
+    {
+      "nom_materiau": "PC",
+      "type_materiau": "Matériau polymère",
+      "categorie": "Primaire",
+      "quantite_annuelle": 200.0,
+      "unite": "tonnes",
+      "unit_price": 472500.0,
+      "annual_cost": 94500000.0,
+      "transport_cost": 20790000.0,
+      "storage_cost": 1890000.0,
+      "wastage_cost": 945000.0,
+      "total_tco": 118125000.0,
+      "estimation_confidence": "medium"
+    }
+  ],
+  "total_raw_materials_tco": 2695788000.0,
+  "annual_tco": [
+    {
+      "year": 1,
+      "machines_tco": 20300000.0,
+      "products_tco": 56840000.0,
+      "raw_materials_tco": 2695788000.0,
+      "total_tco": 2772928000.0,
+      "cumulative_tco": 2772928000.0
+    },
+    {
+      "year": 2,
+      "machines_tco": 21721000.0,
+      "products_tco": 60818800.0,
+      "raw_materials_tco": 2884493160.0,
+      "total_tco": 2967032960.0,
+      "cumulative_tco": 5739960960.0
+    },
+    {
+      "year": 3,
+      "machines_tco": 23241470.0,
+      "products_tco": 65076116.0,
+      "raw_materials_tco": 3086407681.2,
+      "total_tco": 3174725267.2,
+      "cumulative_tco": 8914686227.2
+    },
+    {
+      "year": 4,
+      "machines_tco": 24868372.9,
+      "products_tco": 69631444.12,
+      "raw_materials_tco": 3302456218.88,
+      "total_tco": 3396956035.9,
+      "cumulative_tco": 12311642263.1
+    },
+    {
+      "year": 5,
+      "machines_tco": 26609159.0,
+      "products_tco": 74505645.21,
+      "raw_materials_tco": 3533628154.21,
+      "total_tco": 3634742958.42,
+      "cumulative_tco": 15946385221.52
+    }
+  ],
+  "stage_1_informations_generales": {
+    "informations_generales": {
+      "nom_projet": "ALLO MAISON – Complexe Industriel Polymère & Matériaux Avancés",
+      "nom_entreprise": "SARL ALLO MAISON",
+      "secteur_activite": "industrie des matériaux polymères et composites",
+      "description_projet": "Le projet ALLO MAISON vise à créer un complexe industriel pour la production de matériaux polymères et composites, notamment des panneaux polymères, des revêtements de sol, des portes intérieures et extérieures, des panneaux muraux décoratifs, des pièces thermoformées et des articles moulés par injection et extrusion plastique.",
+      "objectifs_strategiques": [
+        "substitution aux importations",
+        "création de valeur locale",
+        "export potentiel",
+        "transfert technologique"
+      ]
+    }
+  },
+  "stage_2_matieres_premieres": {
+    "matieres_premieres": [
+      {
+        "nom_materiau": "Polyuréthane (PU)",
+        "type": "Résine polymère",
+        "quantite_estimee": {
+          "valeur": 1000,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      },
+      {
+        "nom_materiau": "Polyurée (2K)",
+        "type": "Résine polymère",
+        "quantite_estimee": {
+          "valeur": 500,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      },
+      {
+        "nom_materiau": "Résines époxy",
+        "type": "Résine polymère",
+        "quantite_estimee": {
+          "valeur": 200,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      },
+      {
+        "nom_materiau": "Isocyanates",
+        "type": "Produit chimique",
+        "quantite_estimee": {
+          "valeur": 100,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      },
+      {
+        "nom_materiau": "Polyols",
+        "type": "Produit chimique",
+        "quantite_estimee": {
+          "valeur": 150,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      },
+      {
+        "nom_materiau": "Solvants industriels",
+        "type": "Produit chimique",
+        "quantite_estimee": {
+          "valeur": 50,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      },
+      {
+        "nom_materiau": "Additifs chimiques",
+        "type": "Produit chimique",
+        "quantite_estimee": {
+          "valeur": 20,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      },
+      {
+        "nom_materiau": "Verre de sécurité laminé",
+        "type": "Matériau de construction",
+        "quantite_estimee": {
+          "valeur": 500,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      },
+      {
+        "nom_materiau": "UTG (verre ultra-mince flexible)",
+        "type": "Matériau de construction",
+        "quantite_estimee": {
+          "valeur": 100,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      },
+      {
+        "nom_materiau": "PVC",
+        "type": "Matériau polymère",
+        "quantite_estimee": {
+          "valeur": 1000,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      },
+      {
+        "nom_materiau": "SPC",
+        "type": "Matériau polymère",
+        "quantite_estimee": {
+          "valeur": 500,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      },
+      {
+        "nom_materiau": "EPS",
+        "type": "Matériau polymère",
+        "quantite_estimee": {
+          "valeur": 200,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      },
+      {
+        "nom_materiau": "ASA",
+        "type": "Matériau polymère",
+        "quantite_estimee": {
+          "valeur": 100,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      },
+      {
+        "nom_materiau": "ABS",
+        "type": "Matériau polymère",
+        "quantite_estimee": {
+          "valeur": 500,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      },
+      {
+        "nom_materiau": "PC",
+        "type": "Matériau polymère",
+        "quantite_estimee": {
+          "valeur": 200,
+          "unite": "tonnes",
+          "periode": "par an"
+        }
+      }
+    ]
+  },
+  "stage_3_produits_fabriques": {
+    "produits_fabriques": [
+      {
+        "nom_produit": "Panneaux polymères et composites"
+      },
+      {
+        "nom_produit": "Revêtements de sol SPC à système clic étanche"
+      },
+      {
+        "nom_produit": "Portes intérieures, extérieures, techniques et grand format"
+      },
+      {
+        "nom_produit": "Panneaux muraux décoratifs et techniques"
+      },
+      {
+        "nom_produit": "Pièces thermoformées"
+      },
+      {
+        "nom_produit": "Articles moulés par injection et extrusion plastique"
+      },
+      {
+        "nom_produit": "Verre de sécurité laminé/trempé et verre ultra-mince flexible"
+      },
+      {
+        "nom_produit": "Produits à base de résines polymères"
+      },
+      {
+        "nom_produit": "Films décoratifs, techniques, LED et chauffants intégrés"
+      },
+      {
+        "nom_produit": "Systèmes constructifs modulaires et accessoires techniques"
+      }
+    ]
+  },
+  "stage_6_informations_complementaires": {
+    "aspects_reglementaires": {
+      "certifications": [
+        "Certification ISO 9001",
+        "Certification ISO 14001"
+      ]
+    }
+  }
+}

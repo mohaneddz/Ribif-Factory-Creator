@@ -1,0 +1,14 @@
+flask
+flask-cors
+python-dotenv
+openai
+google-generativeai
+pymupdf
+pydantic
+numpy
+numpy-financial
+requests
+xlsxwriter
+beautifulsoup4
+trafilatura
+google-cloud-documentai

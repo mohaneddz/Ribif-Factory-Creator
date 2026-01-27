@@ -1,0 +1,138 @@
+{
+  "groups": [
+    {
+      "name": "Bottle Forming",
+      "machines": [
+        "BM-12000-2C"
+      ],
+      "purpose": "Manufacture PET bottles from preforms."
+    },
+    {
+      "name": "Filling & Capping",
+      "machines": [
+        "AC-040",
+        "RFC-12000",
+        "CES-200"
+      ],
+      "purpose": "Convey, rinse, fill, and cap bottles, with cap supply."
+    },
+    {
+      "name": "Finishing & Inspection",
+      "machines": [
+        "IJC-300",
+        "LAB-12K-OPP",
+        "VISC-2D-12000"
+      ],
+      "purpose": "Apply date codes, labels, and perform quality checks."
+    },
+    {
+      "name": "End-of-Line Packaging",
+      "machines": [
+        "PC-600",
+        "SW-6PK-30_1",
+        "SW-6PK-30_2",
+        "SW-6PK-30_3",
+        "CP-12K_1",
+        "CP-12K_2"
+      ],
+      "purpose": "Convey, bundle into multi-packs, and load into cases."
+    }
+  ],
+  "flows": [
+    {
+      "from": "BM-12000-2C",
+      "to": "AC-040",
+      "type": "conveyor",
+      "material": "empty bottles",
+      "width_m": 0.8
+    },
+    {
+      "from": "AC-040",
+      "to": "RFC-12000",
+      "type": "conveyor",
+      "material": "empty bottles",
+      "width_m": 0.8
+    },
+    {
+      "from": "CES-200",
+      "to": "RFC-12000",
+      "type": "conveyor",
+      "material": "bottle caps",
+      "width_m": 0.6
+    },
+    {
+      "from": "RFC-12000",
+      "to": "IJC-300",
+      "type": "conveyor",
+      "material": "filled & capped bottles",
+      "width_m": 0.8
+    },
+    {
+      "from": "IJC-300",
+      "to": "LAB-12K-OPP",
+      "type": "conveyor",
+      "material": "coded bottles",
+      "width_m": 0.8
+    },
+    {
+      "from": "LAB-12K-OPP",
+      "to": "VISC-2D-12000",
+      "type": "conveyor",
+      "material": "labeled bottles",
+      "width_m": 0.8
+    },
+    {
+      "from": "VISC-2D-12000",
+      "to": "PC-600",
+      "type": "conveyor",
+      "material": "inspected bottles",
+      "width_m": 0.8
+    },
+    {
+      "from": "PC-600",
+      "to": "SW-6PK-30_1",
+      "type": "conveyor",
+      "material": "single bottles",
+      "width_m": 0.8
+    },
+    {
+      "from": "PC-600",
+      "to": "SW-6PK-30_2",
+      "type": "conveyor",
+      "material": "single bottles",
+      "width_m": 0.8
+    },
+    {
+      "from": "PC-600",
+      "to": "SW-6PK-30_3",
+      "type": "conveyor",
+      "material": "single bottles",
+      "width_m": 0.8
+    },
+    {
+      "from": "SW-6PK-30_1",
+      "to": "CP-12K_1",
+      "type": "conveyor",
+      "material": "6-pack bundles",
+      "width_m": 1.0
+    },
+    {
+      "from": "SW-6PK-30_2",
+      "to": "CP-12K_1",
+      "type": "conveyor",
+      "material": "6-pack bundles",
+      "width_m": 1.0
+    },
+    {
+      "from": "SW-6PK-30_3",
+      "to": "CP-12K_2",
+      "type": "conveyor",
+      "material": "6-pack bundles",
+      "width_m": 1.0
+    }
+  ],
+  "layout_suggestion": {
+    "arrangement": "linear_with_parallel_packaging",
+    "reasoning": "A largely linear flow for primary processing (forming, filling, labeling) with parallel branches for high-volume end-of-line packaging (shrink wrapping and case packing) to maintain throughput."
+  }
+}

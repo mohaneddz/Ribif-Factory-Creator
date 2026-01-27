@@ -1,0 +1,1373 @@
+{
+  "pipeline_metadata": {
+    "start_time": "2025-12-29T02:10:23.136498",
+    "pdf_source": "FICHE_IDENTITE_INDUSTRIELLE.pdf",
+    "stages_completed": [
+      "extraction",
+      "machine_extraction",
+      "enrichment",
+      "validation"
+    ]
+  },
+  "extraction_data": {
+    "ribif_metadata": {
+      "extraction_method": "Six-Stage RIBIF-Optimized Extraction",
+      "extraction_date": "2025-12-29 02:09:53",
+      "model_used": "llama-3.3-70b-versatile",
+      "api_provider": "Groq",
+      "extraction_mode": "Intelligent + Market Context",
+      "ribif_modules_support": [
+        1,
+        2,
+        4,
+        7,
+        8,
+        9
+      ],
+      "note": "Financial data (costs, prices, budgets) excluded - to be calculated in dedicated modules",
+      "processing_time_seconds": 36.88,
+      "source_file": "uploads\\FICHE_IDENTITE_INDUSTRIELLE.pdf",
+      "enrichment_date": "2025-12-29 02:10:23",
+      "enrichment_status": "completed"
+    },
+    "stage_1_informations_generales": {
+      "informations_generales": {
+        "nom_projet": "ALLO MAISON – Complexe Industriel Polymère & Matériaux Avancés",
+        "nom_entreprise": "SARL ALLO MAISON",
+        "raison_sociale": "SARL",
+        "type_projet": "Manufacturing et transformation de matériaux polymères et composites",
+        "secteur_activite": "Industrie des matériaux et des produits chimiques",
+        "description_projet": "Le projet ALLO MAISON vise à créer un complexe industriel pour la production de matériaux polymères, composites et avancés, en utilisant des technologies d'automatisation et d'industrie 5.0. Le projet couvrira une gamme de produits, notamment des panneaux polymères, des revêtements de sol, des portes, des panneaux muraux décoratifs et techniques, des pièces thermoformées, des articles moulés par injection et extrusion plastique, du verre de sécurité et des produits à base de résines polymères.",
+        "objectifs_strategiques": [
+          "Développer une production industrielle automatisée de haute qualité",
+          "Réduire les coûts et améliorer l'efficacité",
+          "Augmenter la capacité de production et la flexibilité",
+          "Développer de nouveaux produits et marchés",
+          "Réduire l'impact environnemental"
+        ],
+        "localisation": {
+          "pays": "Non spécifié",
+          "ville": "Non spécifié",
+          "zone": "Zone industrielle (à confirmer avec ANDI/AAPI)",
+          "adresse": "Non spécifié"
+        },
+        "taille_projet": {
+          "echelle": "Grande échelle",
+          "superficie_estimee": "Non spécifié"
+        },
+        "classification_danger": {
+          "niveau_danger": "Moyen à élevé",
+          "type_dangers": [
+            "Produits chimiques dangereux",
+            "Matériaux inflammables",
+            "Équipements sous pression",
+            "Risques de chute et de collision",
+            "Exposition à des substances toxiques"
+          ]
+        }
+      }
+    },
+    "stage_2_matieres_premieres": {
+      "matieres_premieres": [
+        {
+          "nom_materiau": "Polyuréthane (PU)",
+          "type": "Résine polymère",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 500,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Autorisation requise",
+            "Réglementation sur les produits chimiques"
+          ]
+        },
+        {
+          "nom_materiau": "Polyurée (2K)",
+          "type": "Résine polymère",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 200,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Autorisation requise",
+            "Réglementation sur les produits chimiques"
+          ]
+        },
+        {
+          "nom_materiau": "Résines époxy",
+          "type": "Résine polymère",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 300,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Autorisation requise",
+            "Réglementation sur les produits chimiques"
+          ]
+        },
+        {
+          "nom_materiau": "Isocyanates",
+          "type": "Produit chimique",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 100,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Autorisation requise",
+            "Réglementation sur les produits chimiques"
+          ]
+        },
+        {
+          "nom_materiau": "Polyols",
+          "type": "Produit chimique",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 150,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Autorisation requise",
+            "Réglementation sur les produits chimiques"
+          ]
+        },
+        {
+          "nom_materiau": "Solvants industriels",
+          "type": "Produit chimique",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 50,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Autorisation requise",
+            "Réglementation sur les produits chimiques"
+          ]
+        },
+        {
+          "nom_materiau": "Additifs chimiques",
+          "type": "Produit chimique",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 20,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Autorisation requise",
+            "Réglementation sur les produits chimiques"
+          ]
+        },
+        {
+          "nom_materiau": "PVC",
+          "type": "Matériau polymère",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 1000,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Réglementation sur les produits chimiques"
+          ]
+        },
+        {
+          "nom_materiau": "SPC",
+          "type": "Matériau polymère",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 500,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Réglementation sur les produits chimiques"
+          ]
+        },
+        {
+          "nom_materiau": "EPS",
+          "type": "Matériau polymère",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 200,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Réglementation sur les produits chimiques"
+          ]
+        },
+        {
+          "nom_materiau": "ASA",
+          "type": "Matériau polymère",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 100,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Réglementation sur les produits chimiques"
+          ]
+        },
+        {
+          "nom_materiau": "ABS",
+          "type": "Matériau polymère",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 300,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Réglementation sur les produits chimiques"
+          ]
+        },
+        {
+          "nom_materiau": "PC",
+          "type": "Matériau polymère",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 150,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Réglementation sur les produits chimiques"
+          ]
+        },
+        {
+          "nom_materiau": "Verre de sécurité laminé",
+          "type": "Matériau de construction",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 500,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Réglementation sur les produits de construction"
+          ]
+        },
+        {
+          "nom_materiau": "Verre ultra-mince flexible (UTG)",
+          "type": "Matériau de construction",
+          "categorie": "primary",
+          "quantite_estimee": {
+            "valeur": 100,
+            "unite": "tonnes",
+            "periode": "per year"
+          },
+          "specifications": "Conforme aux normes industrielles",
+          "qualite_requise": "Haute qualité",
+          "reglementations": [
+            "Réglementation sur les produits de construction"
+          ]
+        }
+      ]
+    },
+    "stage_3_produits_fabriques": {
+      "produits_fabriques": [
+        {
+          "nom_produit": "Panneaux polymères et composites",
+          "categorie": "finished",
+          "description": "Panneaux fabriqués à partir de matériaux polymères et composites tels que PU, PVC, SPC, EPS, ASA, ABS, PC",
+          "specifications_techniques": {
+            "dimensions": "Variées",
+            "poids": "Variés",
+            "materiaux": "PU, PVC, SPC, EPS, ASA, ABS, PC",
+            "normes": [
+              "ISO",
+              "ASTM"
+            ],
+            "proprietes": "Résistance aux chocs, aux UV, aux produits chimiques"
+          },
+          "volume_production": {
+            "capacite": "1000 unités par jour",
+            "unite": "unités",
+            "periode": "jour"
+          }
+        },
+        {
+          "nom_produit": "Revêtements de sol SPC à système clic étanche",
+          "categorie": "finished",
+          "description": "Revêtements de sol fabriqués à partir de matériaux SPC avec système clic étanche",
+          "specifications_techniques": {
+            "dimensions": "Variées",
+            "poids": "Variés",
+            "materiaux": "SPC",
+            "normes": [
+              "ISO",
+              "ASTM"
+            ],
+            "proprietes": "Résistance aux chocs, aux UV, aux produits chimiques, étanchéité"
+          },
+          "volume_production": {
+            "capacite": "500 unités par jour",
+            "unite": "unités",
+            "periode": "jour"
+          }
+        },
+        {
+          "nom_produit": "Portes intérieures, extérieures, techniques et grand format",
+          "categorie": "finished",
+          "description": "Portes fabriquées à partir de matériaux polymères",
+          "specifications_techniques": {
+            "dimensions": "Variées",
+            "poids": "Variés",
+            "materiaux": "Matériaux polymères",
+            "normes": [
+              "ISO",
+              "ASTM"
+            ],
+            "proprietes": "Résistance aux chocs, aux UV, aux produits chimiques"
+          },
+          "volume_production": {
+            "capacite": "200 unités par jour",
+            "unite": "unités",
+            "periode": "jour"
+          }
+        },
+        {
+          "nom_produit": "Panneaux muraux décoratifs et techniques",
+          "categorie": "finished",
+          "description": "Panneaux muraux fabriqués à partir de matériaux polymères et décorés avec film PVC, peinture robotisée, 3D",
+          "specifications_techniques": {
+            "dimensions": "Variées",
+            "poids": "Variés",
+            "materiaux": "Matériaux polymères, film PVC",
+            "normes": [
+              "ISO",
+              "ASTM"
+            ],
+            "proprietes": "Résistance aux chocs, aux UV, aux produits chimiques"
+          },
+          "volume_production": {
+            "capacite": "300 unités par jour",
+            "unite": "unités",
+            "periode": "jour"
+          }
+        },
+        {
+          "nom_produit": "Pièces thermoformées",
+          "categorie": "finished",
+          "description": "Pièces fabriquées à partir de matériaux polymères par thermoformage",
+          "specifications_techniques": {
+            "dimensions": "Variées",
+            "poids": "Variés",
+            "materiaux": "Matériaux polymères",
+            "normes": [
+              "ISO",
+              "ASTM"
+            ],
+            "proprietes": "Résistance aux chocs, aux UV, aux produits chimiques"
+          },
+          "volume_production": {
+            "capacite": "400 unités par jour",
+            "unite": "unités",
+            "periode": "jour"
+          }
+        },
+        {
+          "nom_produit": "Articles moulés par injection et extrusion plastique",
+          "categorie": "finished",
+          "description": "Articles fabriqués à partir de matériaux polymères par injection et extrusion plastique",
+          "specifications_techniques": {
+            "dimensions": "Variées",
+            "poids": "Variés",
+            "materiaux": "Matériaux polymères",
+            "normes": [
+              "ISO",
+              "ASTM"
+            ],
+            "proprietes": "Résistance aux chocs, aux UV, aux produits chimiques"
+          },
+          "volume_production": {
+            "capacite": "600 unités par jour",
+            "unite": "unités",
+            "periode": "jour"
+          }
+        },
+        {
+          "nom_produit": "Verre de sécurité laminé/trempé et verre ultra-mince flexible",
+          "categorie": "finished",
+          "description": "Verre de sécurité fabriqué par lamination, trempage et verre ultra-mince flexible",
+          "specifications_techniques": {
+            "dimensions": "Variées",
+            "poids": "Variés",
+            "materiaux": "Verre",
+            "normes": [
+              "ISO",
+              "ASTM"
+            ],
+            "proprietes": "Résistance aux chocs, aux UV, aux produits chimiques"
+          },
+          "volume_production": {
+            "capacite": "100 unités par jour",
+            "unite": "unités",
+            "periode": "jour"
+          }
+        },
+        {
+          "nom_produit": "Produits à base de résines polymères",
+          "categorie": "finished",
+          "description": "Produits fabriqués à partir de résines polymères telles que PU, polyurée, époxy, acrylique",
+          "specifications_techniques": {
+            "dimensions": "Variées",
+            "poids": "Variés",
+            "materiaux": "Résines polymères",
+            "normes": [
+              "ISO",
+              "ASTM"
+            ],
+            "proprietes": "Résistance aux chocs, aux UV, aux produits chimiques"
+          },
+          "volume_production": {
+            "capacite": "250 unités par jour",
+            "unite": "unités",
+            "periode": "jour"
+          }
+        },
+        {
+          "nom_produit": "Films décoratifs, techniques, LED et chauffants intégrés",
+          "categorie": "finished",
+          "description": "Films fabriqués à partir de matériaux polymères avec propriétés décoratives, techniques, LED et chauffantes",
+          "specifications_techniques": {
+            "dimensions": "Variées",
+            "poids": "Variés",
+            "materiaux": "Matériaux polymères",
+            "normes": [
+              "ISO",
+              "ASTM"
+            ],
+            "proprietes": "Résistance aux chocs, aux UV, aux produits chimiques"
+          },
+          "volume_production": {
+            "capacite": "350 unités par jour",
+            "unite": "unités",
+            "periode": "jour"
+          }
+        },
+        {
+          "nom_produit": "Systèmes constructifs modulaires et accessoires techniques",
+          "categorie": "finished",
+          "description": "Systèmes constructifs modulaires et accessoires techniques fabriqués à partir de matériaux polymères",
+          "specifications_techniques": {
+            "dimensions": "Variées",
+            "poids": "Variés",
+            "materiaux": "Matériaux polymères",
+            "normes": [
+              "ISO",
+              "ASTM"
+            ],
+            "proprietes": "Résistance aux chocs, aux UV, aux produits chimiques"
+          },
+          "volume_production": {
+            "capacite": "150 unités par jour",
+            "unite": "unités",
+            "periode": "jour"
+          }
+        }
+      ]
+    },
+    "stage_4_machines_equipements": {
+      "machines_production": [
+        {
+          "nom_machine": "Machine d'injection plastique",
+          "type": "Injection plastique",
+          "fabricant_recommande": {
+            "value": "KraussMaffei",
+            "source": "enriched",
+            "enrichment_confidence": "high"
+          },
+          "quantite_necessaire": {
+            "value": 5,
+            "source": "enriched",
+            "enrichment_confidence": "medium"
+          },
+          "use": "Production de pièces en plastique",
+          "specifications": {
+            "capacite": "100T → 5000T",
+            "puissance": {
+              "value": 150,
+              "unit": "kW",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "dimensions": {
+              "value": "6m x 4m x 3m",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "alimentation": {
+              "value": "380V/400V triphasé",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            }
+          },
+          "performance": {
+            "cadence": {
+              "value": 30,
+              "unit": "pièces/heure",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "rendement": {
+              "value": 0.9,
+              "unit": "%",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "temps_cycle": {
+              "value": 120,
+              "unit": "secondes",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            }
+          }
+        },
+        {
+          "nom_machine": "Machine d'extrusion",
+          "type": "Extrusion",
+          "fabricant_recommande": {
+            "value": "Davis-Standard",
+            "source": "enriched",
+            "enrichment_confidence": "high"
+          },
+          "quantite_necessaire": {
+            "value": 3,
+            "source": "enriched",
+            "enrichment_confidence": "medium"
+          },
+          "use": "Production de films et profils en plastique",
+          "specifications": {
+            "capacite": {
+              "value": "100 kg/h",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "puissance": {
+              "value": 100,
+              "unit": "kW",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "dimensions": {
+              "value": "8m x 2m x 2m",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "alimentation": {
+              "value": "380V/400V triphasé",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            }
+          },
+          "performance": {
+            "cadence": {
+              "value": 50,
+              "unit": "mètres/minute",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "rendement": {
+              "value": 0.85,
+              "unit": "%",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "temps_cycle": {
+              "value": 60,
+              "unit": "secondes",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            }
+          }
+        },
+        {
+          "nom_machine": "Machine de thermoformage",
+          "type": "Thermoformage",
+          "fabricant_recommande": {
+            "value": "Brown Machine Group",
+            "source": "enriched",
+            "enrichment_confidence": "high"
+          },
+          "quantite_necessaire": {
+            "value": 2,
+            "source": "enriched",
+            "enrichment_confidence": "medium"
+          },
+          "use": "Production de pièces thermoformées",
+          "specifications": {
+            "capacite": {
+              "value": "500 x 500 mm",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "puissance": {
+              "value": 50,
+              "unit": "kW",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "dimensions": {
+              "value": "4m x 2m x 2m",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "alimentation": {
+              "value": "380V/400V triphasé",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            }
+          },
+          "performance": {
+            "cadence": {
+              "value": 20,
+              "unit": "pièces/heure",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "rendement": {
+              "value": 0.9,
+              "unit": "%",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "temps_cycle": {
+              "value": 180,
+              "unit": "secondes",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            }
+          }
+        },
+        {
+          "nom_machine": "Presse membrane 3D",
+          "type": "Presse membrane 3D",
+          "fabricant_recommande": {
+            "value": "Kurz",
+            "source": "enriched",
+            "enrichment_confidence": "high"
+          },
+          "quantite_necessaire": {
+            "value": 1,
+            "source": "enriched",
+            "enrichment_confidence": "medium"
+          },
+          "use": "Production de films PVC thermofoil",
+          "specifications": {
+            "capacite": {
+              "value": "1000 x 1000 mm",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "puissance": {
+              "value": 20,
+              "unit": "kW",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "dimensions": {
+              "value": "3m x 2m x 2m",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "alimentation": {
+              "value": "380V/400V triphasé",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            }
+          },
+          "performance": {
+            "cadence": {
+              "value": 10,
+              "unit": "pièces/heure",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "rendement": {
+              "value": 0.85,
+              "unit": "%",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "temps_cycle": {
+              "value": 360,
+              "unit": "secondes",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            }
+          }
+        },
+        {
+          "nom_machine": "Machine de peinture et vernis robotisée",
+          "type": "Peinture et vernis robotisée",
+          "fabricant_recommande": {
+            "value": "Dürr",
+            "source": "enriched",
+            "enrichment_confidence": "high"
+          },
+          "quantite_necessaire": {
+            "value": 1,
+            "source": "enriched",
+            "enrichment_confidence": "medium"
+          },
+          "use": "Peinture et vernis de pièces",
+          "specifications": {
+            "capacite": {
+              "value": "500 x 500 mm",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "puissance": {
+              "value": 30,
+              "unit": "kW",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "dimensions": {
+              "value": "4m x 2m x 2m",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "alimentation": {
+              "value": "380V/400V triphasé",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            }
+          },
+          "performance": {
+            "cadence": {
+              "value": 15,
+              "unit": "pièces/heure",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "rendement": {
+              "value": 0.9,
+              "unit": "%",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "temps_cycle": {
+              "value": 240,
+              "unit": "secondes",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            }
+          }
+        },
+        {
+          "nom_machine": "Machine de production de portes polymère",
+          "type": "Production de portes polymère",
+          "fabricant_recommande": {
+            "value": "Weinig",
+            "source": "enriched",
+            "enrichment_confidence": "high"
+          },
+          "quantite_necessaire": {
+            "value": 2,
+            "source": "enriched",
+            "enrichment_confidence": "medium"
+          },
+          "use": "Production de portes polymère",
+          "specifications": {
+            "capacite": {
+              "value": "1200 x 2400 mm",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "puissance": {
+              "value": 40,
+              "unit": "kW",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "dimensions": {
+              "value": "6m x 3m x 2m",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "alimentation": {
+              "value": "380V/400V triphasé",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            }
+          },
+          "performance": {
+            "cadence": {
+              "value": 10,
+              "unit": "pièces/heure",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "rendement": {
+              "value": 0.85,
+              "unit": "%",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "temps_cycle": {
+              "value": 360,
+              "unit": "secondes",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            }
+          }
+        },
+        {
+          "nom_machine": "Machine de recyclage de pneus et granulats",
+          "type": "Recyclage de pneus et granulats",
+          "fabricant_recommande": {
+            "value": "EcoGreen",
+            "source": "enriched",
+            "enrichment_confidence": "high"
+          },
+          "quantite_necessaire": {
+            "value": 1,
+            "source": "enriched",
+            "enrichment_confidence": "medium"
+          },
+          "use": "Recyclage de pneus et granulats",
+          "specifications": {
+            "capacite": {
+              "value": "1000 kg/h",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "puissance": {
+              "value": 60,
+              "unit": "kW",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "dimensions": {
+              "value": "8m x 3m x 2m",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "alimentation": {
+              "value": "380V/400V triphasé",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            }
+          },
+          "performance": {
+            "cadence": {
+              "value": 5,
+              "unit": "tonnes/heure",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "rendement": {
+              "value": 0.8,
+              "unit": "%",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "temps_cycle": {
+              "value": 720,
+              "unit": "secondes",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            }
+          }
+        },
+        {
+          "nom_machine": "Machine de verre incassable et UTG",
+          "type": "Verre incassable et UTG",
+          "fabricant_recommande": {
+            "value": "Glaston",
+            "source": "enriched",
+            "enrichment_confidence": "high"
+          },
+          "quantite_necessaire": {
+            "value": 1,
+            "source": "enriched",
+            "enrichment_confidence": "medium"
+          },
+          "use": "Production de verre incassable et UTG",
+          "specifications": {
+            "capacite": {
+              "value": "1500 x 2500 mm",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "puissance": {
+              "value": 80,
+              "unit": "kW",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "dimensions": {
+              "value": "10m x 4m x 2m",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "alimentation": {
+              "value": "380V/400V triphasé",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            }
+          },
+          "performance": {
+            "cadence": {
+              "value": 8,
+              "unit": "pièces/heure",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "rendement": {
+              "value": 0.85,
+              "unit": "%",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "temps_cycle": {
+              "value": 450,
+              "unit": "secondes",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            }
+          }
+        },
+        {
+          "nom_machine": "Système de logistique robotisée",
+          "type": "Logistique robotisée",
+          "fabricant_recommande": {
+            "value": "KUKA",
+            "source": "enriched",
+            "enrichment_confidence": "high"
+          },
+          "quantite_necessaire": {
+            "value": 2,
+            "source": "enriched",
+            "enrichment_confidence": "medium"
+          },
+          "use": "Gestion de la logistique",
+          "specifications": {
+            "capacite": {
+              "value": "1000 kg",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "puissance": {
+              "value": 10,
+              "unit": "kW",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "dimensions": {
+              "value": "2m x 1m x 1m",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "alimentation": {
+              "value": "380V/400V triphasé",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            }
+          },
+          "performance": {
+            "cadence": {
+              "value": 20,
+              "unit": "pièces/heure",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "rendement": {
+              "value": 0.9,
+              "unit": "%",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "temps_cycle": {
+              "value": 180,
+              "unit": "secondes",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            }
+          }
+        },
+        {
+          "nom_machine": "AGV",
+          "type": "Véhicule automatisé",
+          "fabricant_recommande": {
+            "value": "Dematic",
+            "source": "enriched",
+            "enrichment_confidence": "high"
+          },
+          "quantite_necessaire": {
+            "value": 5,
+            "source": "enriched",
+            "enrichment_confidence": "medium"
+          },
+          "use": "Transport de matériel",
+          "specifications": {
+            "capacite": {
+              "value": "500 kg",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "puissance": {
+              "value": 5,
+              "unit": "kW",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "dimensions": {
+              "value": "1m x 0.5m x 0.5m",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "alimentation": {
+              "value": "24V DC",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            }
+          },
+          "performance": {
+            "cadence": {
+              "value": 30,
+              "unit": "pièces/heure",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "rendement": {
+              "value": 0.9,
+              "unit": "%",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "temps_cycle": {
+              "value": 120,
+              "unit": "secondes",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            }
+          }
+        },
+        {
+          "nom_machine": "ASRS",
+          "type": "Système de stockage automatisé",
+          "fabricant_recommande": {
+            "value": "SSI Schaefer",
+            "source": "enriched",
+            "enrichment_confidence": "high"
+          },
+          "quantite_necessaire": {
+            "value": 1,
+            "source": "enriched",
+            "enrichment_confidence": "medium"
+          },
+          "use": "Stockage de matériel",
+          "specifications": {
+            "capacite": {
+              "value": "1000 palettes",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "puissance": {
+              "value": 20,
+              "unit": "kW",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "dimensions": {
+              "value": "10m x 5m x 5m",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "alimentation": {
+              "value": "380V/400V triphasé",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            }
+          },
+          "performance": {
+            "cadence": {
+              "value": 10,
+              "unit": "pièces/heure",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            },
+            "rendement": {
+              "value": 0.9,
+              "unit": "%",
+              "source": "enriched",
+              "enrichment_confidence": "high"
+            },
+            "temps_cycle": {
+              "value": 360,
+              "unit": "secondes",
+              "source": "enriched",
+              "enrichment_confidence": "medium"
+            }
+          }
+        }
+      ]
+    },
+    "stage_5_processus_production": {
+      "processus_production": [
+        {
+          "numero_etape": 1,
+          "nom_etape": "Injection plastique",
+          "type_operation": "Transformation",
+          "description": "Injection de plastique pour la production de pièces",
+          "machines_utilisees": [
+            "Presse à injection"
+          ],
+          "inputs": [
+            "Granulats de plastique"
+          ],
+          "outputs": [
+            "Pièces moulées"
+          ],
+          "parametres_process": {
+            "temperature": "180-250°C",
+            "pression": "100-500 bar",
+            "vitesse": "10-50 mm/s",
+            "temps_cycle": "10-60 secondes",
+            "tolerances": "±0,1 mm"
+          }
+        },
+        {
+          "numero_etape": 2,
+          "nom_etape": "Extrusion",
+          "type_operation": "Transformation",
+          "description": "Extrusion de plastique pour la production de profilés",
+          "machines_utilisees": [
+            "Ligne d'extrusion"
+          ],
+          "inputs": [
+            "Granulats de plastique"
+          ],
+          "outputs": [
+            "Profilés plastiques"
+          ],
+          "parametres_process": {
+            "temperature": "150-250°C",
+            "pression": "50-200 bar",
+            "vitesse": "5-20 m/min",
+            "temps_cycle": "10-60 minutes",
+            "tolerances": "±0,5 mm"
+          }
+        },
+        {
+          "numero_etape": 3,
+          "nom_etape": "Thermoformage",
+          "type_operation": "Transformation",
+          "description": "Thermoformage de plastique pour la production de pièces",
+          "machines_utilisees": [
+            "Machine à thermoformer"
+          ],
+          "inputs": [
+            "Feuilles de plastique"
+          ],
+          "outputs": [
+            "Pièces thermoformées"
+          ],
+          "parametres_process": {
+            "temperature": "50-150°C",
+            "pression": "10-50 bar",
+            "vitesse": "5-10 mm/s",
+            "temps_cycle": "10-60 secondes",
+            "tolerances": "±0,5 mm"
+          }
+        },
+        {
+          "numero_etape": 4,
+          "nom_etape": "Peinture et vernis",
+          "type_operation": "Traitement de surface",
+          "description": "Peinture et vernis des pièces pour la protection et la décoration",
+          "machines_utilisees": [
+            "Ligne de peinture et vernis"
+          ],
+          "inputs": [
+            "Pièces à peindre"
+          ],
+          "outputs": [
+            "Pièces peintes et vernies"
+          ],
+          "parametres_process": {
+            "temperature": "20-50°C",
+            "pression": "1-5 bar",
+            "vitesse": "5-10 m/min",
+            "temps_cycle": "10-60 minutes",
+            "tolerances": "±0,1 mm"
+          }
+        },
+        {
+          "numero_etape": 5,
+          "nom_etape": "Assemblage",
+          "type_operation": "Assemblage",
+          "description": "Assemblage des pièces pour la production de produits finis",
+          "machines_utilisees": [
+            "Ligne d'assemblage"
+          ],
+          "inputs": [
+            "Pièces à assembler"
+          ],
+          "outputs": [
+            "Produits finis"
+          ],
+          "parametres_process": {
+            "temperature": "20-50°C",
+            "pression": "1-5 bar",
+            "vitesse": "5-10 m/min",
+            "temps_cycle": "10-60 minutes",
+            "tolerances": "±0,1 mm"
+          }
+        }
+      ],
+      "kpi_production": {
+        "oee_cible": "85%",
+        "trs_cible": "95%",
+        "taux_rebut_acceptable": "2%",
+        "temps_changement_serie": "30 minutes"
+      }
+    },
+    "stage_6_informations_complementaires": {
+      "aspects_reglementaires": {
+        "autorisations_requises": [
+          "Autorisation pour les produits dangereux",
+          "Autorisation pour les matières premières sensibles",
+          "Autorisation pour les émissions industrielles",
+          "Autorisation pour les déchets industriels"
+        ],
+        "normes_applicables": [
+          "Normes de sécurité industrielles",
+          "Normes de qualité des produits",
+          "Normes environnementales"
+        ],
+        "certifications": [
+          "Certification ISO 9001",
+          "Certification ISO 14001",
+          "Certification OHSAS 18001"
+        ],
+        "contraintes_environnementales": [
+          "Gestion des déchets industriels",
+          "Gestion des émissions industrielles",
+          "Gestion de l'eau industrielle"
+        ],
+        "produits_dangereux": [
+          {
+            "produit": "Polyuréthane (PU)",
+            "classification": "Produit chimique dangereux",
+            "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+          },
+          {
+            "produit": "Polyurée (2K)",
+            "classification": "Produit chimique dangereux",
+            "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+          },
+          {
+            "produit": "Résines époxy / polyaspartiques",
+            "classification": "Produit chimique dangereux",
+            "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+          },
+          {
+            "produit": "Isocyanates / polyols",
+            "classification": "Produit chimique dangereux",
+            "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+          },
+          {
+            "produit": "Solvants industriels (peinture, encres)",
+            "classification": "Produit chimique dangereux",
+            "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+          },
+          {
+            "produit": "Additifs chimiques (stabilisants, pigments concentrés)",
+            "classification": "Produit chimique dangereux",
+            "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+          },
+          {
+            "produit": "Verre de sécurité laminé (SGP/PVB)",
+            "classification": "Produit dangereux",
+            "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+          },
+          {
+            "produit": "UTG (verre ultra-mince flexible)",
+            "classification": "Produit dangereux",
+            "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+          }
+        ]
+      },
+      "analyse_risques": {
+        "risques_techniques": [
+          "Risque de dysfonctionnement des équipements",
+          "Risque de non-conformité des produits",
+          "Risque de sécurité industrielle"
+        ],
+        "risques_reglementaires": [
+          "Risque de non-conformité aux normes et réglementations",
+          "Risque de sanctions administratives"
+        ],
+        "risques_marche": [
+          "Risque de fluctuation de la demande",
+          "Risque de concurrence",
+          "Risque de changement des conditions du marché"
+        ],
+        "strategies_mitigation": [
+          "Mise en place d'un système de gestion de la qualité",
+          "Mise en place d'un système de gestion de l'environnement",
+          "Mise en place d'un système de gestion des risques"
+        ]
+      },
+      "opportunites": {
+        "innovation": "Développement de nouveaux produits et technologies",
+        "marche": "Expansion sur de nouveaux marchés",
+        "partenariats": "Partenariats avec d'autres entreprises pour développer de nouvelles technologies",
+        "subventions": "Obtention de subventions pour financer des projets de recherche et développement"
+      },
+      "recommandations": [
+        "Mettre en place un système de gestion de la qualité et de l'environnement",
+        "Développer des stratégies de mitigation des risques",
+        "Investir dans la recherche et développement pour améliorer les produits et les processus",
+        "Développer des partenariats avec d'autres entreprises pour accroître la compétitivité"
+      ]
+    }
+  },
+  "enriched_machines": [],
+  "validation_report": {
+    "error": "Enrichment modules not available"
+  }
+}

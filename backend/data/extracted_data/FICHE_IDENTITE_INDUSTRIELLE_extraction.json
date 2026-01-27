@@ -1,0 +1,1681 @@
+{
+  "ribif_metadata": {
+    "extraction_method": "Six-Stage RIBIF-Optimized Extraction",
+    "extraction_date": "2025-12-28 22:13:52",
+    "model_used": "gemini-2.5-flash",
+    "api_provider": "Google Gemini",
+    "extraction_mode": "Intelligent + Market Context",
+    "ribif_modules_support": [
+      1,
+      2,
+      4,
+      7,
+      8,
+      9
+    ],
+    "note": "Financial data (costs, prices, budgets) excluded - to be calculated in dedicated modules",
+    "processing_time_seconds": 150.41,
+    "source_file": "uploads\\FICHE_IDENTITE_INDUSTRIELLE.pdf"
+  },
+  "stage_1_informations_generales": {
+    "informations_generales": {
+      "nom_projet": "ALLO MAISON – Complexe Industriel Polymère & Matériaux Avancés",
+      "nom_entreprise": "SARL ALLO MAISON",
+      "raison_sociale": "SARL",
+      "type_projet": "Complexe industriel de transformation et fabrication",
+      "secteur_activite": "Industrie manufacturière, Matériaux de construction, Polymères et Composites, Verre de sécurité",
+      "description_projet": "Le projet ALLO MAISON est un complexe industriel de pointe dédié à la transformation et la fabrication automatisée de matériaux polymères, composites et de solutions constructives avancées. Il intègre les principes de l'Industrie 5.0 avec une automatisation intégrale, couvrant la production de panneaux polymères et composites (PU, PVC, SPC, EPS, ASA, ABS, PC), de revêtements de sol SPC, de portes techniques et grand format, de panneaux muraux décoratifs, de pièces thermoformées, d'articles moulés par injection et extrusion plastique, de verre de sécurité laminé/trempé et ultra-mince flexible (UTG), ainsi que de produits à base de résines polymères (PU, polyurée, époxy, acrylique). Le complexe inclut également le recyclage de pneus pour la production de granulats SBR/EPDM et est piloté par un 'Cerveau Digital 5.0' pour une gestion intelligente de la production, de la logistique robotisée (AGV/ASRS) et des processus.",
+      "objectifs_strategiques": [
+        "Substitution aux importations de matériaux et produits finis",
+        "Création de valeur locale et développement industriel",
+        "Positionnement sur les marchés nationaux et à l'export (MENA, Afrique, Europe)",
+        "Transfert technologique et adoption des principes de l'Industrie 5.0 (automatisation intégrale, IA, jumeau numérique)",
+        "Diversification de l'offre en matériaux avancés et solutions constructives",
+        "Optimisation des processus de production et logistiques par la robotisation et la digitalisation",
+        "Contribution à l'économie circulaire par le recyclage de matériaux"
+      ],
+      "localisation": {
+        "pays": "Algérie",
+        "ville": "Non spécifiée",
+        "zone": "Zone industrielle (à confirmer)",
+        "adresse": "Non spécifiée"
+      },
+      "taille_projet": {
+        "echelle": "Grande échelle",
+        "superficie_estimee": "50000 m²"
+      },
+      "classification_danger": {
+        "niveau_danger": "Élevé",
+        "type_dangers": [
+          "Gaz et vapeurs inflammables (zones ATEX)",
+          "Produits chimiques toxiques ou irritants (Polyuréthane, Polyurée, Résines époxy, Isocyanates, Polyols, Solvants industriels, Additifs chimiques)",
+          "Matériaux combustibles (polymères, plastiques)",
+          "Risques liés aux hautes pressions (injection, extrusion)",
+          "Risques mécaniques liés aux équipements lourds et robotisés"
+        ]
+      }
+    }
+  },
+  "stage_2_matieres_premieres": {
+    "matieres_premieres": [
+      {
+        "nom_materiau": "Polyuréthane (PU)",
+        "type": "Polymère / Résine",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 1500,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Formulations pour panneaux, revêtements et portes, en composants A et B",
+        "qualite_requise": "Qualité industrielle, haute réactivité, faible teneur en COV",
+        "reglementations": [
+          "Autorisation requise (Ministère de l'Énergie & Mines / Commerce / Environnement)",
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)",
+          "Transport de matières dangereuses"
+        ]
+      },
+      {
+        "nom_materiau": "Chlorure de Polyvinyle (PVC)",
+        "type": "Polymère",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 2000,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Granulés ou poudre pour extrusion de films, profils et panneaux, film thermofoil",
+        "qualite_requise": "Qualité extrusion/calandrage, stabilité UV, résistance mécanique",
+        "reglementations": [
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)"
+        ]
+      },
+      {
+        "nom_materiau": "Stone Plastic Composite (SPC)",
+        "type": "Matériau composite",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 3000,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Mélange de poudre de pierre calcaire et de polymères (PVC), pour revêtements de sol",
+        "qualite_requise": "Homogénéité, granulométrie contrôlée, résistance à l'abrasion",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Polystyrène Expansé (EPS)",
+        "type": "Polymère",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 800,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Granulés expansibles pour panneaux isolants et composites",
+        "qualite_requise": "Densité contrôlée, propriétés isolantes, ignifugé si nécessaire",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Acrylonitrile Styrène Acrylate (ASA)",
+        "type": "Polymère",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 400,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Granulés pour extrusion et injection, haute résistance aux intempéries",
+        "qualite_requise": "Stabilité UV, résistance aux chocs, bonne aptitude à la coloration",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Acrylonitrile Butadiène Styrène (ABS)",
+        "type": "Polymère",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 600,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Granulés pour injection et thermoformage, résistance aux chocs",
+        "qualite_requise": "Bonne aptitude au moulage, résistance mécanique, finition de surface",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Polycarbonate (PC)",
+        "type": "Polymère",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 300,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Granulés pour injection et extrusion, haute transparence, résistance aux chocs",
+        "qualite_requise": "Qualité optique, résistance thermique, ignifugé si nécessaire",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Polyurée (2K)",
+        "type": "Résine",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 500,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Composants A (isocyanate) et B (résine polyamine) pour revêtements et étanchéité",
+        "qualite_requise": "Réactivité rapide, haute résistance à l'abrasion et aux produits chimiques",
+        "reglementations": [
+          "Autorisation requise (Ministère de l'Énergie & Mines / Commerce / Environnement)",
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)",
+          "Transport de matières dangereuses"
+        ]
+      },
+      {
+        "nom_materiau": "Résines Époxy",
+        "type": "Résine",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 700,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Composants A (résine) et B (durcisseur) pour revêtements, adhésifs et composites",
+        "qualite_requise": "Haute adhérence, résistance chimique, durcissement contrôlé",
+        "reglementations": [
+          "Autorisation requise (Ministère de l'Énergie & Mines / Commerce / Environnement)",
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)",
+          "Transport de matières dangereuses"
+        ]
+      },
+      {
+        "nom_materiau": "Résines Acryliques",
+        "type": "Résine",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 400,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Liquide ou émulsion pour peintures, vernis et adhésifs",
+        "qualite_requise": "Stabilité UV, résistance aux intempéries, bonne adhérence",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Résines Polyaspartiques",
+        "type": "Résine",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 200,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Composants A et B pour revêtements à séchage rapide et haute performance",
+        "qualite_requise": "Résistance chimique et UV, séchage rapide, durabilité",
+        "reglementations": [
+          "Autorisation requise (Ministère de l'Énergie & Mines / Commerce / Environnement)",
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)",
+          "Transport de matières dangereuses"
+        ]
+      },
+      {
+        "nom_materiau": "Isocyanates",
+        "type": "Composant chimique",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 1000,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "MDI, TDI ou HDI pour la fabrication de PU et Polyurée",
+        "qualite_requise": "Haute pureté, réactivité contrôlée, faible teneur en monomères",
+        "reglementations": [
+          "Autorisation requise (Ministère de l'Énergie & Mines / Commerce / Environnement)",
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)",
+          "Transport de matières dangereuses",
+          "Manipulation en zone ATEX"
+        ]
+      },
+      {
+        "nom_materiau": "Polyols",
+        "type": "Composant chimique",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 1200,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Polyéther polyols, polyester polyols pour la fabrication de PU et Polyurée",
+        "qualite_requise": "Haute pureté, viscosité contrôlée, fonctionnalité spécifique",
+        "reglementations": [
+          "Autorisation requise (Ministère de l'Énergie & Mines / Commerce / Environnement)",
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)",
+          "Transport de matières dangereuses"
+        ]
+      },
+      {
+        "nom_materiau": "Polypropylène (PP)",
+        "type": "Polymère",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 900,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Granulés pour injection et extrusion de pièces diverses",
+        "qualite_requise": "Grade injection/extrusion, résistance mécanique, fluidité",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Polyéthylène (PE)",
+        "type": "Polymère",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 700,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Granulés (HDPE, LDPE) pour films, profils et pièces moulées",
+        "qualite_requise": "Grade film/extrusion, résistance à la déchirure, flexibilité",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Verre flotté (base)",
+        "type": "Matériau verrier",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 2500,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Feuilles de verre clair ou teinté, différentes épaisseurs (2mm à 19mm)",
+        "qualite_requise": "Qualité optique, sans défauts, conforme aux normes EN",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Verre ultra-mince flexible (UTG)",
+        "type": "Matériau verrier spécialisé",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 50,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Feuilles de verre ultra-mince (<0.5mm), flexible, pour applications spécifiques",
+        "qualite_requise": "Haute pureté, flexibilité, résistance aux rayures",
+        "reglementations": [
+          "Autorisation requise (Ministère de l'Énergie & Mines / Commerce / Environnement)"
+        ]
+      },
+      {
+        "nom_materiau": "Intercalaires SGP (SentryGlas Plus)",
+        "type": "Film polymère",
+        "categorie": "secondaire",
+        "quantite_estimee": {
+          "valeur": 150,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Film ionoplastique pour verre de sécurité laminé, haute rigidité et résistance",
+        "qualite_requise": "Transparence optique, adhérence au verre, résistance à l'humidité",
+        "reglementations": [
+          "Autorisation requise (Ministère de l'Énergie & Mines / Commerce / Environnement)"
+        ]
+      },
+      {
+        "nom_materiau": "Intercalaires PVB (Polyvinyl Butyral)",
+        "type": "Film polymère",
+        "categorie": "secondaire",
+        "quantite_estimee": {
+          "valeur": 300,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Film pour verre de sécurité laminé, différentes épaisseurs et teintes",
+        "qualite_requise": "Transparence optique, adhérence au verre, propriétés acoustiques",
+        "reglementations": [
+          "Autorisation requise (Ministère de l'Énergie & Mines / Commerce / Environnement)"
+        ]
+      },
+      {
+        "nom_materiau": "Stabilisants",
+        "type": "Additif chimique",
+        "categorie": "secondaire",
+        "quantite_estimee": {
+          "valeur": 100,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Stabilisants UV, thermiques, antioxydants pour polymères",
+        "qualite_requise": "Haute efficacité, faible migration, conformité réglementaire",
+        "reglementations": [
+          "Autorisation requise (Ministère de l'Énergie & Mines / Commerce / Environnement)",
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)"
+        ]
+      },
+      {
+        "nom_materiau": "Pigments concentrés / Masterbatches",
+        "type": "Additif colorant",
+        "categorie": "secondaire",
+        "quantite_estimee": {
+          "valeur": 200,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Concentrés de pigments sous forme de granulés ou poudre, large gamme de couleurs",
+        "qualite_requise": "Dispersion homogène, stabilité thermique, résistance à la lumière",
+        "reglementations": [
+          "Autorisation requise (Ministère de l'Énergie & Mines / Commerce / Environnement)",
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)"
+        ]
+      },
+      {
+        "nom_materiau": "Charges minérales (Carbonate de Calcium, Talc)",
+        "type": "Charge inorganique",
+        "categorie": "secondaire",
+        "quantite_estimee": {
+          "valeur": 1500,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Poudre fine, granulométrie contrôlée, pour SPC et composites",
+        "qualite_requise": "Haute pureté, blancheur, faible absorption d'huile",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Fibres de renforcement (Fibre de verre, Fibre de carbone)",
+        "type": "Matériau composite",
+        "categorie": "secondaire",
+        "quantite_estimee": {
+          "valeur": 300,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Tissus, mats, rovings ou fibres courtes pour renforcement de polymères",
+        "qualite_requise": "Résistance à la traction, compatibilité avec les résines, bonne imprégnation",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Solvants industriels",
+        "type": "Produit chimique",
+        "categorie": "consommable",
+        "quantite_estimee": {
+          "valeur": 50000,
+          "unite": "litres",
+          "periode": "par an"
+        },
+        "specifications": "Solvants pour nettoyage, dilution de peintures et encres (ex: acétone, MEK, xylène)",
+        "qualite_requise": "Pureté industrielle, faible teneur en impuretés, point d'éclair contrôlé",
+        "reglementations": [
+          "Autorisation requise (Ministère de l'Énergie & Mines / Commerce / Environnement)",
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)",
+          "Transport de matières dangereuses",
+          "Manipulation en zone ATEX"
+        ]
+      },
+      {
+        "nom_materiau": "Peinture industrielle",
+        "type": "Revêtement",
+        "categorie": "secondaire",
+        "quantite_estimee": {
+          "valeur": 30000,
+          "unite": "litres",
+          "periode": "par an"
+        },
+        "specifications": "Peintures à base de polymères (acryliques, polyuréthanes) pour application robotisée",
+        "qualite_requise": "Viscosité stable, séchage rapide, résistance aux UV et à l'abrasion",
+        "reglementations": [
+          "Autorisation requise (Ministère de l'Énergie & Mines / Commerce / Environnement)",
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)",
+          "Transport de matières dangereuses"
+        ]
+      },
+      {
+        "nom_materiau": "Vernis industriel",
+        "type": "Revêtement",
+        "categorie": "secondaire",
+        "quantite_estimee": {
+          "valeur": 15000,
+          "unite": "litres",
+          "periode": "par an"
+        },
+        "specifications": "Vernis de protection (UV, anti-rayures) pour surfaces polymères et composites",
+        "qualite_requise": "Transparence, dureté de surface, résistance chimique",
+        "reglementations": [
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)",
+          "Transport de matières dangereuses"
+        ]
+      },
+      {
+        "nom_materiau": "Encres industrielles",
+        "type": "Consommable",
+        "categorie": "consommable",
+        "quantite_estimee": {
+          "valeur": 5000,
+          "unite": "litres",
+          "periode": "par an"
+        },
+        "specifications": "Encres pour impression décorative ou marquage (jet d'encre, sérigraphie)",
+        "qualite_requise": "Adhérence sur polymères, résistance aux UV, séchage rapide",
+        "reglementations": [
+          "Autorisation requise (Ministère de l'Énergie & Mines / Commerce / Environnement)",
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)"
+        ]
+      },
+      {
+        "nom_materiau": "Agents de démoulage",
+        "type": "Consommable",
+        "categorie": "consommable",
+        "quantite_estimee": {
+          "valeur": 2000,
+          "unite": "litres",
+          "periode": "par an"
+        },
+        "specifications": "Agents à base de silicone, cire ou polymère pour injection et thermoformage",
+        "qualite_requise": "Efficacité de démoulage, non-transfert, faible résidu",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Pneus usagés",
+        "type": "Matière recyclée",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 1000,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Pneus de véhicules légers et lourds, collectés et triés",
+        "qualite_requise": "Sans corps étrangers métalliques majeurs, conformité aux normes de recyclage",
+        "reglementations": [
+          "Réglementation sur la gestion des déchets (Ministère de l'Environnement)",
+          "Autorisations de traitement des déchets"
+        ]
+      },
+      {
+        "nom_materiau": "Granulats SBR (Styrène Butadiène Caoutchouc)",
+        "type": "Matière recyclée",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 500,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Granulats de caoutchouc issus de pneus recyclés, différentes granulométries",
+        "qualite_requise": "Pureté, granulométrie homogène, faible teneur en fibres et métaux",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Granulats EPDM (Éthylène Propylène Diène Monomère)",
+        "type": "Matière recyclée",
+        "categorie": "primaire",
+        "quantite_estimee": {
+          "valeur": 200,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Granulats de caoutchouc EPDM recyclé, souvent colorés, différentes granulométries",
+        "qualite_requise": "Pureté, granulométrie homogène, stabilité des couleurs",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Composants LED",
+        "type": "Composant électronique",
+        "categorie": "secondaire",
+        "quantite_estimee": {
+          "valeur": 500000,
+          "unite": "unités",
+          "periode": "par an"
+        },
+        "specifications": "Puces LED, modules LED, bandes LED pour intégration dans films et panneaux",
+        "qualite_requise": "Luminosité, efficacité énergétique, durée de vie, conformité RoHS",
+        "reglementations": [
+          "Réglementation sur les équipements électriques et électroniques (RoHS, DEEE)"
+        ]
+      },
+      {
+        "nom_materiau": "Éléments chauffants",
+        "type": "Composant électrique",
+        "categorie": "secondaire",
+        "quantite_estimee": {
+          "valeur": 100000,
+          "unite": "mètres",
+          "periode": "par an"
+        },
+        "specifications": "Films résistifs, fils chauffants pour intégration dans films et panneaux",
+        "qualite_requise": "Puissance, résistance, flexibilité, sécurité électrique",
+        "reglementations": [
+          "Normes de sécurité électrique (CEI/EN)"
+        ]
+      },
+      {
+        "nom_materiau": "Quincaillerie pour menuiseries (charnières, poignées, serrures)",
+        "type": "Composant mécanique",
+        "categorie": "secondaire",
+        "quantite_estimee": {
+          "valeur": 200000,
+          "unite": "unités",
+          "periode": "par an"
+        },
+        "specifications": "Acier inoxydable, aluminium, alliages, polymères techniques",
+        "qualite_requise": "Résistance à la corrosion, durabilité, conformité aux normes de sécurité",
+        "reglementations": [
+          "Normes de sécurité et de performance pour la quincaillerie de bâtiment"
+        ]
+      },
+      {
+        "nom_materiau": "Joints d'étanchéité",
+        "type": "Composant d'étanchéité",
+        "categorie": "secondaire",
+        "quantite_estimee": {
+          "valeur": 50000,
+          "unite": "mètres",
+          "periode": "par an"
+        },
+        "specifications": "Profilés en EPDM, silicone, PVC pour portes et panneaux",
+        "qualite_requise": "Résistance aux UV, flexibilité, propriétés d'isolation thermique et acoustique",
+        "reglementations": []
+      },
+      {
+        "nom_materiau": "Adhésifs industriels",
+        "type": "Consommable",
+        "categorie": "consommable",
+        "quantite_estimee": {
+          "valeur": 10000,
+          "unite": "litres",
+          "periode": "par an"
+        },
+        "specifications": "Adhésifs polyuréthanes, époxy, hot-melt pour assemblage",
+        "qualite_requise": "Haute adhérence, temps de prise contrôlé, résistance à l'humidité",
+        "reglementations": [
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)"
+        ]
+      },
+      {
+        "nom_materiau": "Lubrifiants industriels",
+        "type": "Consommable",
+        "categorie": "consommable",
+        "quantite_estimee": {
+          "valeur": 2000,
+          "unite": "litres",
+          "periode": "par an"
+        },
+        "specifications": "Huiles et graisses pour machines, systèmes hydrauliques et robotiques",
+        "qualite_requise": "Stabilité thermique, résistance à l'oxydation, conformité aux spécifications des équipements",
+        "reglementations": [
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)"
+        ]
+      },
+      {
+        "nom_materiau": "Produits de nettoyage industriels",
+        "type": "Consommable",
+        "categorie": "consommable",
+        "quantite_estimee": {
+          "valeur": 3000,
+          "unite": "litres",
+          "periode": "par an"
+        },
+        "specifications": "Détergents, dégraissants pour nettoyage des équipements et surfaces",
+        "qualite_requise": "Efficacité, biodégradabilité si possible, sécurité d'utilisation",
+        "reglementations": [
+          "Réglementation sur les produits chimiques (REACH/CLP ou équivalent local)"
+        ]
+      },
+      {
+        "nom_materiau": "Matériaux d'emballage (films, palettes, cartons)",
+        "type": "Consommable",
+        "categorie": "consommable",
+        "quantite_estimee": {
+          "valeur": 500,
+          "unite": "tonnes",
+          "periode": "par an"
+        },
+        "specifications": "Films étirables, palettes bois/plastique, cartons ondulés pour produits finis",
+        "qualite_requise": "Résistance mécanique, protection des produits, conformité aux normes logistiques",
+        "reglementations": [
+          "Réglementation sur les emballages et déchets d'emballages"
+        ]
+      },
+      {
+        "nom_materiau": "Gaz industriels (Azote, Air comprimé)",
+        "type": "Utilitaire / Consommable",
+        "categorie": "consommable",
+        "quantite_estimee": {
+          "valeur": 100000,
+          "unite": "m³",
+          "periode": "par an"
+        },
+        "specifications": "Azote pour inertage (zones ATEX), air comprimé pour pneumatique et process",
+        "qualite_requise": "Pureté industrielle, pression constante",
+        "reglementations": [
+          "Réglementation sur les gaz sous pression, transport de matières dangereuses"
+        ]
+      },
+      {
+        "nom_materiau": "Eau industrielle (traitée)",
+        "type": "Utilitaire / Consommable",
+        "categorie": "consommable",
+        "quantite_estimee": {
+          "valeur": 50000,
+          "unite": "m³",
+          "periode": "par an"
+        },
+        "specifications": "Eau pour refroidissement, nettoyage, process (dureté, pH contrôlés)",
+        "qualite_requise": "Conformité aux normes industrielles pour l'eau de process",
+        "reglementations": [
+          "Réglementation sur les rejets industriels (Ministère de l'Environnement)"
+        ]
+      },
+      {
+        "nom_materiau": "Gaz naturel",
+        "type": "Utilitaire / Consommable",
+        "categorie": "consommable",
+        "quantite_estimee": {
+          "valeur": 2000000,
+          "unite": "m³",
+          "periode": "par an"
+        },
+        "specifications": "Combustible pour chauffage des fours, séchoirs et production d'énergie",
+        "qualite_requise": "Pouvoir calorifique standard, faible teneur en impuretés",
+        "reglementations": [
+          "Réglementation sur les installations de combustion, sécurité gaz"
+        ]
+      }
+    ]
+  },
+  "stage_3_produits_fabriques": {
+    "produits_fabriques": [
+      {
+        "nom_produit": "Panneaux polymères et composites",
+        "categorie": "Produit semi-fini / Composant",
+        "description": "Panneaux fabriqués à partir de divers polymères et composites, incluant le Polyuréthane (PU), le Polychlorure de vinyle (PVC), le Stone Plastic Composite (SPC), le Polystyrène expansé (EPS), l'Acrylonitrile Styrène Acrylate (ASA), l'Acrylonitrile Butadiène Styrène (ABS) et le Polycarbonate (PC). Destinés à des applications variées dans la construction et l'industrie.",
+        "specifications_techniques": {
+          "dimensions": "Non spécifié (potentiellement grand format, XXL)",
+          "poids": "Non spécifié",
+          "materiaux": "Polyuréthane (PU), Polychlorure de vinyle (PVC), Stone Plastic Composite (SPC), Polystyrène expansé (EPS), Acrylonitrile Styrène Acrylate (ASA), Acrylonitrile Butadiène Styrène (ABS), Polycarbonate (PC)",
+          "normes": [
+            "Non spécifié"
+          ],
+          "proprietes": "Matériaux composites et polymères pour diverses applications"
+        },
+        "volume_production": {
+          "capacite": "Non spécifié",
+          "unite": "Non spécifié",
+          "periode": "Non spécifié"
+        }
+      },
+      {
+        "nom_produit": "Revêtements de sol SPC à système clic étanche",
+        "categorie": "Produit fini",
+        "description": "Revêtements de sol fabriqués à partir de Stone Plastic Composite (SPC), dotés d'un système d'assemblage par clic garantissant une étanchéité. Conçus pour des installations rapides et durables.",
+        "specifications_techniques": {
+          "dimensions": "Non spécifié",
+          "poids": "Non spécifié",
+          "materiaux": "Stone Plastic Composite (SPC)",
+          "normes": [
+            "Non spécifié"
+          ],
+          "proprietes": "Étanche, système clic pour installation facile"
+        },
+        "volume_production": {
+          "capacite": "Non spécifié",
+          "unite": "Non spécifié",
+          "periode": "Non spécifié"
+        }
+      },
+      {
+        "nom_produit": "Portes intérieures, extérieures, techniques et grand format (polymère)",
+        "categorie": "Produit fini",
+        "description": "Portes fabriquées entièrement en polymère, incluant des modèles pour l'intérieur, l'extérieur, des portes techniques et des portes de grand format (jusqu'à XXL). La fabrication est entièrement automatisée.",
+        "specifications_techniques": {
+          "dimensions": "Standard à grand format (château XXL)",
+          "poids": "Non spécifié",
+          "materiaux": "Polymère",
+          "normes": [
+            "Non spécifié"
+          ],
+          "proprietes": "Techniques, grand format, durables"
+        },
+        "volume_production": {
+          "capacite": "Non spécifié",
+          "unite": "Non spécifié",
+          "periode": "Non spécifié"
+        }
+      },
+      {
+        "nom_produit": "Panneaux muraux décoratifs et techniques",
+        "categorie": "Produit fini",
+        "description": "Panneaux muraux conçus pour des applications décoratives et techniques, intégrant des films PVC, des finitions par peinture robotisée et des designs 3D.",
+        "specifications_techniques": {
+          "dimensions": "Non spécifié",
+          "poids": "Non spécifié",
+          "materiaux": "Film PVC, substrats pour peinture robotisée",
+          "normes": [
+            "Non spécifié"
+          ],
+          "proprietes": "Décoratifs, techniques, finition 3D, peinture robotisée"
+        },
+        "volume_production": {
+          "capacite": "Non spécifié",
+          "unite": "Non spécifié",
+          "periode": "Non spécifié"
+        }
+      },
+      {
+        "nom_produit": "Pièces thermoformées",
+        "categorie": "Produit semi-fini / Composant",
+        "description": "Pièces fabriquées par thermoformage, disponibles dans toutes les dimensions (petit, moyen, grand, double-station), à partir de matériaux polymères.",
+        "specifications_techniques": {
+          "dimensions": "Toutes dimensions (petit, moyen, grand, double-station)",
+          "poids": "Non spécifié",
+          "materiaux": "Polymères (implicite)",
+          "normes": [
+            "Non spécifié"
+          ],
+          "proprietes": "Formes complexes, adaptées à diverses applications"
+        },
+        "volume_production": {
+          "capacite": "Non spécifié",
+          "unite": "Non spécifié",
+          "periode": "Non spécifié"
+        }
+      },
+      {
+        "nom_produit": "Articles moulés par injection et extrusion plastique",
+        "categorie": "Produit semi-fini / Composant",
+        "description": "Articles et composants fabriqués par des procédés d'injection plastique (machines de 100T à 5000T) et d'extrusion (SPC, films PVC, profils), à partir de diverses matières plastiques.",
+        "specifications_techniques": {
+          "dimensions": "Non spécifié",
+          "poids": "Non spécifié",
+          "materiaux": "Plastique (SPC, PVC, autres polymères)",
+          "normes": [
+            "Non spécifié"
+          ],
+          "proprietes": "Précision dimensionnelle, adaptabilité aux formes complexes"
+        },
+        "volume_production": {
+          "capacite": "Non spécifié",
+          "unite": "Non spécifié",
+          "periode": "Non spécifié"
+        }
+      },
+      {
+        "nom_produit": "Verre de sécurité laminé/trempé et verre ultra-mince flexible (UTG)",
+        "categorie": "Produit fini / Semi-fini",
+        "description": "Verre de haute technologie incluant le verre de sécurité laminé (avec SGP/PVB), le verre trempé et le verre ultra-mince flexible (UTG). Ces produits sont conçus pour la sécurité et des applications avancées.",
+        "specifications_techniques": {
+          "dimensions": "Non spécifié",
+          "poids": "Non spécifié",
+          "materiaux": "Verre (avec SGP/PVB pour le laminé)",
+          "normes": [
+            "Non spécifié"
+          ],
+          "proprietes": "Sécurité (incassable), laminé, trempé, ultra-mince, flexible"
+        },
+        "volume_production": {
+          "capacite": "Non spécifié",
+          "unite": "Non spécifié",
+          "periode": "Non spécifié"
+        }
+      },
+      {
+        "nom_produit": "Produits à base de résines polymères",
+        "categorie": "Produit intermédiaire / Produit fini",
+        "description": "Gamme de produits formulés à partir de diverses résines polymères, incluant le Polyuréthane (PU), la Polyurée, l'Époxy et l'Acrylique. Ces produits peuvent être des revêtements, des adhésifs ou d'autres solutions constructives.",
+        "specifications_techniques": {
+          "dimensions": "Non spécifié",
+          "poids": "Non spécifié",
+          "materiaux": "Polyuréthane (PU), Polyurée, Époxy, Acrylique",
+          "normes": [
+            "Non spécifié"
+          ],
+          "proprietes": "Diverses propriétés selon la résine (ex: résistance, adhérence, flexibilité)"
+        },
+        "volume_production": {
+          "capacite": "Non spécifié",
+          "unite": "Non spécifié",
+          "periode": "Non spécifié"
+        }
+      },
+      {
+        "nom_produit": "Films décoratifs, techniques, LED et chauffants intégrés",
+        "categorie": "Produit semi-fini / Composant",
+        "description": "Films spécialisés avec des fonctionnalités décoratives, techniques, ou intégrant des technologies LED et chauffantes. Utilisés comme composants ou revêtements dans diverses applications.",
+        "specifications_techniques": {
+          "dimensions": "Non spécifié",
+          "poids": "Non spécifié",
+          "materiaux": "Polymères (implicite, ex: PVC pour films)",
+          "normes": [
+            "Non spécifié"
+          ],
+          "proprietes": "Décoratifs, techniques, intégration LED, fonction chauffante"
+        },
+        "volume_production": {
+          "capacite": "Non spécifié",
+          "unite": "Non spécifié",
+          "periode": "Non spécifié"
+        }
+      },
+      {
+        "nom_produit": "Systèmes constructifs modulaires et accessoires techniques",
+        "categorie": "Produit fini",
+        "description": "Solutions constructives complètes sous forme de systèmes modulaires, accompagnées d'accessoires techniques. Conçus pour une intégration facile et une flexibilité dans la construction.",
+        "specifications_techniques": {
+          "dimensions": "Non spécifié",
+          "poids": "Non spécifié",
+          "materiaux": "Polymères, composites, autres matériaux (implicite)",
+          "normes": [
+            "Non spécifié"
+          ],
+          "proprietes": "Modulaires, techniques, solutions constructives avancées"
+        },
+        "volume_production": {
+          "capacite": "Non spécifié",
+          "unite": "Non spécifié",
+          "periode": "Non spécifié"
+        }
+      }
+    ]
+  },
+  "stage_4_machines_equipements": {
+    "machines_production": [
+      {
+        "nom_machine": "Extrudeuse Bi-vis pour Panneaux/Profils SPC/PVC",
+        "type": "Extrusion de polymères",
+        "fabricant_recommande": "Leader industriel européen",
+        "quantite_necessaire": 2,
+        "specifications": {
+          "capacite": "1000-2000 kg/heure",
+          "puissance": "250-400 kW",
+          "dimensions": {
+            "longueur": "15",
+            "largeur": "3",
+            "hauteur": "3.5",
+            "unite": "m"
+          },
+          "poids": "20 tonnes",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "10-25 m/minute",
+          "rendement": "95 %",
+          "temps_cycle": "Continu"
+        }
+      },
+      {
+        "nom_machine": "Machine d'Injection Plastique Grande Capacité",
+        "type": "Moulage par injection",
+        "fabricant_recommande": "Leader industriel asiatique",
+        "quantite_necessaire": 3,
+        "specifications": {
+          "capacite": "1500-3000 Tonnes de force de fermeture",
+          "puissance": "150-300 kW",
+          "dimensions": {
+            "longueur": "12",
+            "largeur": "3",
+            "hauteur": "3",
+            "unite": "m"
+          },
+          "poids": "70 tonnes",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "30-120 cycles/heure",
+          "rendement": "98 %",
+          "temps_cycle": "30-120 secondes"
+        }
+      },
+      {
+        "nom_machine": "Machine de Thermoformage Grand Format Double-Station",
+        "type": "Thermoformage sous vide et pression",
+        "fabricant_recommande": "Spécialiste européen du thermoformage",
+        "quantite_necessaire": 2,
+        "specifications": {
+          "capacite": "Feuilles jusqu'à 3000x2000 mm",
+          "puissance": "100-200 kW",
+          "dimensions": {
+            "longueur": "10",
+            "largeur": "6",
+            "hauteur": "4",
+            "unite": "m"
+          },
+          "poids": "20 tonnes",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "10-30 cycles/heure",
+          "rendement": "92 %",
+          "temps_cycle": "2-6 minutes"
+        }
+      },
+      {
+        "nom_machine": "Presse Membrane 3D pour Film PVC Thermofoil",
+        "type": "Pressage et placage 3D",
+        "fabricant_recommande": "Fournisseur de machines pour menuiseries",
+        "quantite_necessaire": 1,
+        "specifications": {
+          "capacite": "Panneaux jusqu'à 2800x1300 mm",
+          "puissance": "50-80 kW",
+          "dimensions": {
+            "longueur": "5",
+            "largeur": "2.5",
+            "hauteur": "2.5",
+            "unite": "m"
+          },
+          "poids": "7 tonnes",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "15-25 cycles/heure",
+          "rendement": "95 %",
+          "temps_cycle": "2-4 minutes"
+        }
+      },
+      {
+        "nom_machine": "Cabine de Peinture Robotisée avec Système de Mélange Intelligent",
+        "type": "Application robotisée de peinture et vernis",
+        "fabricant_recommande": "Intégrateur de solutions robotiques",
+        "quantite_necessaire": 1,
+        "specifications": {
+          "capacite": "Pièces jusqu'à 3000x1500x1000 mm",
+          "puissance": "80-150 kW",
+          "dimensions": {
+            "longueur": "15",
+            "largeur": "8",
+            "hauteur": "5",
+            "unite": "m"
+          },
+          "poids": "15 tonnes",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "20-60 pièces/heure",
+          "rendement": "98 %",
+          "temps_cycle": "1-3 minutes (hors séchage)"
+        }
+      },
+      {
+        "nom_machine": "Ligne de Fabrication Automatisée de Portes Polymères",
+        "type": "Assemblage et finition de portes",
+        "fabricant_recommande": "Constructeur de lignes d'assemblage",
+        "quantite_necessaire": 1,
+        "specifications": {
+          "capacite": "Portes standard à grand format (jusqu'à 3000x1500 mm)",
+          "puissance": "120-250 kW",
+          "dimensions": {
+            "longueur": "30",
+            "largeur": "10",
+            "hauteur": "4",
+            "unite": "m"
+          },
+          "poids": "30 tonnes",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "10-20 portes/heure",
+          "rendement": "97 %",
+          "temps_cycle": "3-6 minutes"
+        }
+      },
+      {
+        "nom_machine": "Ligne de Recyclage de Pneus (Granulation SBR/EPDM)",
+        "type": "Recyclage mécanique",
+        "fabricant_recommande": "Spécialiste du recyclage de caoutchouc",
+        "quantite_necessaire": 1,
+        "specifications": {
+          "capacite": "1-3 tonnes/heure de granulats",
+          "puissance": "200-400 kW",
+          "dimensions": {
+            "longueur": "20",
+            "largeur": "10",
+            "hauteur": "8",
+            "unite": "m"
+          },
+          "poids": "40 tonnes",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "Continue",
+          "rendement": "90 % (matière récupérée)",
+          "temps_cycle": "Continu"
+        }
+      },
+      {
+        "nom_machine": "Four de Trempe du Verre Horizontal",
+        "type": "Traitement thermique du verre",
+        "fabricant_recommande": "Fabricant de fours pour verre",
+        "quantite_necessaire": 1,
+        "specifications": {
+          "capacite": "Verre jusqu'à 3600x2400 mm, épaisseur 4-19 mm",
+          "puissance": "800-1500 kW",
+          "dimensions": {
+            "longueur": "40",
+            "largeur": "6",
+            "hauteur": "3",
+            "unite": "m"
+          },
+          "poids": "80 tonnes",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "15-30 cycles/heure",
+          "rendement": "95 %",
+          "temps_cycle": "2-4 minutes"
+        }
+      },
+      {
+        "nom_machine": "Ligne de Lamination du Verre (SGP/PVB)",
+        "type": "Production de verre feuilleté",
+        "fabricant_recommande": "Fournisseur de lignes de verre feuilleté",
+        "quantite_necessaire": 1,
+        "specifications": {
+          "capacite": "Verre jusqu'à 3600x2400 mm",
+          "puissance": "150-300 kW",
+          "dimensions": {
+            "longueur": "25",
+            "largeur": "5",
+            "hauteur": "3",
+            "unite": "m"
+          },
+          "poids": "30 tonnes",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "10-20 panneaux/heure",
+          "rendement": "98 %",
+          "temps_cycle": "3-6 minutes (pré-lamination)"
+        }
+      },
+      {
+        "nom_machine": "Machine de Cintrage du Verre",
+        "type": "Façonnage du verre",
+        "fabricant_recommande": "Spécialiste du verre architectural",
+        "quantite_necessaire": 1,
+        "specifications": {
+          "capacite": "Verre jusqu'à 2500x1500 mm",
+          "puissance": "200-400 kW",
+          "dimensions": {
+            "longueur": "10",
+            "largeur": "5",
+            "hauteur": "3",
+            "unite": "m"
+          },
+          "poids": "20 tonnes",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "5-10 cycles/heure",
+          "rendement": "90 %",
+          "temps_cycle": "6-12 minutes"
+        }
+      },
+      {
+        "nom_machine": "Ligne de Production de Verre Ultra-Mince Flexible (UTG)",
+        "type": "Fabrication de verre spécialisé",
+        "fabricant_recommande": "Innovateur en matériaux avancés",
+        "quantite_necessaire": 1,
+        "specifications": {
+          "capacite": "Substrats de verre jusqu'à 700x700 mm, épaisseur < 0.1 mm",
+          "puissance": "100-200 kW",
+          "dimensions": {
+            "longueur": "20",
+            "largeur": "5",
+            "hauteur": "3",
+            "unite": "m"
+          },
+          "poids": "15 tonnes",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "50-100 pièces/heure",
+          "rendement": "90 %",
+          "temps_cycle": "0.5-1 minute"
+        }
+      },
+      {
+        "nom_machine": "Véhicules à Guidage Automatisé (AGV) / Robots Mobiles Autonomes (AMR)",
+        "type": "Manutention et transport interne",
+        "fabricant_recommande": "Fournisseur de solutions intralogistiques",
+        "quantite_necessaire": 20,
+        "specifications": {
+          "capacite": "1000-3000 kg par véhicule",
+          "puissance": "Batteries rechargeables",
+          "dimensions": {
+            "longueur": "1.5",
+            "largeur": "1",
+            "hauteur": "0.5",
+            "unite": "m"
+          },
+          "poids": "400 kg (à vide)",
+          "alimentation": "Station de recharge 400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "1-2 m/seconde",
+          "rendement": "99 % (disponibilité)",
+          "temps_cycle": "Continu"
+        }
+      },
+      {
+        "nom_machine": "Système de Stockage et de Récupération Automatisé (AS/RS)",
+        "type": "Stockage automatisé grande hauteur",
+        "fabricant_recommande": "Intégrateur de systèmes logistiques",
+        "quantite_necessaire": 2,
+        "specifications": {
+          "capacite": "Milliers de palettes/panneaux, charge utile 1500 kg par cycle",
+          "puissance": "50-100 kW (par allée)",
+          "dimensions": {
+            "longueur": "80",
+            "largeur": "2",
+            "hauteur": "25",
+            "unite": "m"
+          },
+          "poids": "75 tonnes (par allée)",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "30-60 mouvements/heure",
+          "rendement": "99 %",
+          "temps_cycle": "1-2 minutes"
+        }
+      },
+      {
+        "nom_machine": "Convoyeurs Industriels Automatisés",
+        "type": "Transport de matériaux et produits",
+        "fabricant_recommande": "Fournisseur de systèmes de convoyage",
+        "quantite_necessaire": 1,
+        "specifications": {
+          "capacite": "50-500 kg/mètre linéaire",
+          "puissance": "5-30 kW (par section)",
+          "dimensions": {
+            "longueur": "Modulaire",
+            "largeur": "Variable",
+            "hauteur": "Variable",
+            "unite": "m"
+          },
+          "poids": "Variable",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "0.5-2 m/seconde",
+          "rendement": "99 %",
+          "temps_cycle": "Continu"
+        }
+      },
+      {
+        "nom_machine": "Silos de Stockage de Polymères",
+        "type": "Stockage de matières premières en vrac",
+        "fabricant_recommande": "Constructeur de silos industriels",
+        "quantite_necessaire": 8,
+        "specifications": {
+          "capacite": "50-150 m³ (30-90 tonnes de granulés)",
+          "puissance": "N/A (système de transfert pneumatique)",
+          "dimensions": {
+            "longueur": "3-5 (diamètre)",
+            "largeur": "N/A",
+            "hauteur": "15-25",
+            "unite": "m"
+          },
+          "poids": "10 tonnes (à vide)",
+          "alimentation": "N/A"
+        },
+        "performance": {
+          "cadence": "N/A",
+          "rendement": "N/A",
+          "temps_cycle": "N/A"
+        }
+      },
+      {
+        "nom_machine": "Racks Cantilever pour Portes Grand Format",
+        "type": "Stockage de produits longs et volumineux",
+        "fabricant_recommande": "Fournisseur de solutions de rayonnage",
+        "quantite_necessaire": 1,
+        "specifications": {
+          "capacite": "Portes jusqu'à 3000x1500 mm, charge 500-1000 kg par bras",
+          "puissance": "N/A (passif)",
+          "dimensions": {
+            "longueur": "20",
+            "largeur": "3",
+            "hauteur": "8",
+            "unite": "m"
+          },
+          "poids": "2 tonnes (par module)",
+          "alimentation": "N/A"
+        },
+        "performance": {
+          "cadence": "N/A",
+          "rendement": "N/A",
+          "temps_cycle": "N/A"
+        }
+      },
+      {
+        "nom_machine": "Mélangeurs et Systèmes de Dosage pour Résines Polymères",
+        "type": "Préparation de résines multi-composants",
+        "fabricant_recommande": "Spécialiste des équipements de mélange",
+        "quantite_necessaire": 3,
+        "specifications": {
+          "capacite": "10-100 litres/minute",
+          "puissance": "10-30 kW",
+          "dimensions": {
+            "longueur": "2",
+            "largeur": "1.5",
+            "hauteur": "2",
+            "unite": "m"
+          },
+          "poids": "1000 kg",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "Continue",
+          "rendement": "99 % (précision de dosage)",
+          "temps_cycle": "Continu"
+        }
+      },
+      {
+        "nom_machine": "Ligne d'Usinage CNC pour Revêtements de Sol SPC (Système Clic)",
+        "type": "Profilage et usinage de panneaux",
+        "fabricant_recommande": "Fabricant de machines pour revêtements de sol",
+        "quantite_necessaire": 1,
+        "specifications": {
+          "capacite": "20-40 m/minute de panneaux SPC",
+          "puissance": "80-150 kW",
+          "dimensions": {
+            "longueur": "15",
+            "largeur": "3",
+            "hauteur": "2.5",
+            "unite": "m"
+          },
+          "poids": "15 tonnes",
+          "alimentation": "400V/3 phases/50Hz"
+        },
+        "performance": {
+          "cadence": "20-40 m/minute",
+          "rendement": "96 %",
+          "temps_cycle": "Continu"
+        }
+      }
+    ]
+  },
+  "stage_5_processus_production": {
+    "processus_production": [
+      {
+        "numero_etape": 1,
+        "nom_etape": "Injection plastique",
+        "type_operation": "Fabrication",
+        "description": "Production de pièces moulées par injection, couvrant une large gamme de tonnages pour diverses applications.",
+        "machines_utilisees": [
+          "Machines d'injection plastique (100T → 5000T)"
+        ],
+        "inputs": [
+          "Polymères (PU, PVC, SPC, EPS, ASA, ABS, PC)"
+        ],
+        "outputs": [
+          "Articles moulés par injection"
+        ],
+        "parametres_process": {
+          "temperature": "Non spécifié",
+          "pression": "Non spécifié",
+          "vitesse": "Non spécifié",
+          "temps_cycle": "Non spécifié",
+          "tolerances": "Non spécifié"
+        }
+      },
+      {
+        "numero_etape": 2,
+        "nom_etape": "Extrusion",
+        "type_operation": "Fabrication",
+        "description": "Processus d'extrusion pour la production de panneaux, films et profils à base de polymères.",
+        "machines_utilisees": [
+          "Extrudeuses"
+        ],
+        "inputs": [
+          "Polymères (SPC, PVC)"
+        ],
+        "outputs": [
+          "Panneaux polymères et composites",
+          "Revêtements de sol SPC",
+          "Films PVC",
+          "Profils"
+        ],
+        "parametres_process": {
+          "temperature": "Non spécifié",
+          "pression": "Non spécifié",
+          "vitesse": "Non spécifié",
+          "temps_cycle": "Non spécifié",
+          "tolerances": "Non spécifié"
+        }
+      },
+      {
+        "numero_etape": 3,
+        "nom_etape": "Thermoformage",
+        "type_operation": "Fabrication",
+        "description": "Mise en forme de pièces par thermoformage, adaptée à différentes tailles et configurations (petit, moyen, grand, double-station).",
+        "machines_utilisees": [
+          "Machines de thermoformage (petit, moyen, grand, double-station)"
+        ],
+        "inputs": [
+          "Feuilles ou plaques polymères"
+        ],
+        "outputs": [
+          "Pièces thermoformées toutes dimensions"
+        ],
+        "parametres_process": {
+          "temperature": "Non spécifié",
+          "pression": "Non spécifié",
+          "vitesse": "Non spécifié",
+          "temps_cycle": "Non spécifié",
+          "tolerances": "Non spécifié"
+        }
+      },
+      {
+        "numero_etape": 4,
+        "nom_etape": "Presse membrane 3D",
+        "type_operation": "Revêtement / Finition",
+        "description": "Application de film PVC thermofoil sur des surfaces pour créer des panneaux muraux décoratifs et techniques avec un effet 3D.",
+        "machines_utilisees": [
+          "Presses membrane 3D"
+        ],
+        "inputs": [
+          "Film PVC thermofoil",
+          "Panneaux/pièces à revêtir"
+        ],
+        "outputs": [
+          "Panneaux muraux décoratifs et techniques (film PVC)"
+        ],
+        "parametres_process": {
+          "temperature": "Non spécifié",
+          "pression": "Non spécifié",
+          "vitesse": "Non spécifié",
+          "temps_cycle": "Non spécifié",
+          "tolerances": "Non spécifié"
+        }
+      },
+      {
+        "numero_etape": 5,
+        "nom_etape": "Peinture & vernis robotisés",
+        "type_operation": "Finition / Revêtement",
+        "description": "Application robotisée de peinture et vernis, intégrant des systèmes de mélange intelligents et l'intelligence artificielle pour une précision optimale.",
+        "machines_utilisees": [
+          "Robots de peinture",
+          "Systèmes de mélange intelligents"
+        ],
+        "inputs": [
+          "Peintures",
+          "Vernis",
+          "Solvants industriels",
+          "Pièces à peindre"
+        ],
+        "outputs": [
+          "Panneaux muraux décoratifs et techniques (peinture robotisée)",
+          "Produits à base de résines polymères (PU, polyurée, époxy, acrylique)"
+        ],
+        "parametres_process": {
+          "temperature": "Non spécifié",
+          "pression": "Non spécifié",
+          "vitesse": "Non spécifié",
+          "temps_cycle": "Non spécifié",
+          "tolerances": "Non spécifié"
+        }
+      },
+      {
+        "numero_etape": 6,
+        "nom_etape": "Fabrication de portes polymère full automatisées",
+        "type_operation": "Assemblage / Fabrication",
+        "description": "Production entièrement automatisée de portes intérieures, extérieures, techniques et grand format en polymère, du standard au format XXL.",
+        "machines_utilisees": [
+          "Lignes de production de portes polymère automatisées"
+        ],
+        "inputs": [
+          "Composants polymères",
+          "Panneaux polymères"
+        ],
+        "outputs": [
+          "Portes intérieures, extérieures, techniques et grand format (polymère)"
+        ],
+        "parametres_process": {
+          "temperature": "Non spécifié",
+          "pression": "Non spécifié",
+          "vitesse": "Non spécifié",
+          "temps_cycle": "Non spécifié",
+          "tolerances": "Non spécifié"
+        }
+      },
+      {
+        "numero_etape": 7,
+        "nom_etape": "Recyclage pneus & granulats SBR/EPDM",
+        "type_operation": "Recyclage / Transformation",
+        "description": "Processus de recyclage des pneus usagés pour la production de granulats SBR/EPDM.",
+        "machines_utilisees": [
+          "Équipements de recyclage de pneus"
+        ],
+        "inputs": [
+          "Pneus usagés"
+        ],
+        "outputs": [
+          "Granulats SBR/EPDM"
+        ],
+        "parametres_process": {
+          "temperature": "Non spécifié",
+          "pression": "Non spécifié",
+          "vitesse": "Non spécifié",
+          "temps_cycle": "Non spécifié",
+          "tolerances": "Non spécifié"
+        }
+      },
+      {
+        "numero_etape": 8,
+        "nom_etape": "Traitement du verre de sécurité",
+        "type_operation": "Transformation / Fabrication",
+        "description": "Production de verre incassable et UTG (verre ultra-mince flexible) par des procédés de lamination, trempe et cintrage.",
+        "machines_utilisees": [
+          "Lignes de lamination",
+          "Fours de trempe",
+          "Machines de cintrage"
+        ],
+        "inputs": [
+          "Verre brut",
+          "SGP/PVB (pour lamination)",
+          "UTG (verre ultra-mince flexible)"
+        ],
+        "outputs": [
+          "Verre de sécurité laminé/trempé",
+          "Verre ultra-mince flexible (UTG)"
+        ],
+        "parametres_process": {
+          "temperature": "Non spécifié",
+          "pression": "Non spécifié",
+          "vitesse": "Non spécifié",
+          "temps_cycle": "Non spécifié",
+          "tolerances": "Non spécifié"
+        }
+      },
+      {
+        "numero_etape": 9,
+        "nom_etape": "Logistique robotisée",
+        "type_operation": "Support / Manutention",
+        "description": "Gestion entièrement automatisée des flux logistiques, du stockage et de la manutention des matières premières, produits en cours et produits finis, sans intervention manuelle.",
+        "machines_utilisees": [
+          "AGV (Automated Guided Vehicles)",
+          "AMR (Autonomous Mobile Robots)",
+          "ASRS (Automated Storage and Retrieval Systems)",
+          "Silos",
+          "Buffers intelligents",
+          "Convoyeurs",
+          "Racks cantilever"
+        ],
+        "inputs": [
+          "Matières premières",
+          "Produits en cours (WIP)",
+          "Produits finis (PF)"
+        ],
+        "outputs": [
+          "Flux logistiques optimisés",
+          "Stockage organisé"
+        ],
+        "parametres_process": {
+          "temperature": "Non spécifié",
+          "pression": "Non spécifié",
+          "vitesse": "Non spécifié",
+          "temps_cycle": "Non spécifié",
+          "tolerances": "Non spécifié"
+        }
+      },
+      {
+        "numero_etape": 10,
+        "nom_etape": "Pilotage Digital 5.0 (CERVEAU DIGITAL)",
+        "type_operation": "Contrôle / Optimisation",
+        "description": "Système centralisé de décision automatique pour la matière et les processus, pilotage de la production et de la logistique, jumeau numérique de l'usine, optimisation des délais et de l'énergie, et gestion de la sécurité industrielle et cybersécurité.",
+        "machines_utilisees": [
+          "MES (Manufacturing Execution System)",
+          "APS (Advanced Planning and Scheduling)",
+          "WMS (Warehouse Management System)",
+          "IA (Intelligence Artificielle)",
+          "Digital Twin"
+        ],
+        "inputs": [
+          "Données de production",
+          "Données logistiques",
+          "Données énergétiques",
+          "Données de sécurité"
+        ],
+        "outputs": [
+          "Décisions automatiques",
+          "Plans de production optimisés",
+          "Gestion logistique",
+          "Rapports d'optimisation",
+          "Jumeau numérique usine"
+        ],
+        "parametres_process": {
+          "temperature": "Non spécifié",
+          "pression": "Non spécifié",
+          "vitesse": "Non spécifié",
+          "temps_cycle": "Non spécifié",
+          "tolerances": "Non spécifié"
+        }
+      }
+    ],
+    "kpi_production": {
+      "oee_cible": "85%",
+      "trs_cible": "90%",
+      "taux_rebut_acceptable": "0.5%",
+      "temps_changement_serie": "30 minutes"
+    }
+  },
+  "stage_6_informations_complementaires": {
+    "aspects_reglementaires": {
+      "autorisations_requises": [
+        "Autorisations pour produits dangereux (Ministère de l’Énergie & Mines, Commerce, Environnement)",
+        "Enregistrement au Registre de Commerce pour les activités industrielles listées",
+        "Demande foncière industrielle (avec ANDI/AAPI)",
+        "Programme prévisionnel d’importation",
+        "Autorisations spécifiques pour l'implantation en zone ATEX",
+        "Autorisations liées aux utilités industrielles lourdes"
+      ],
+      "normes_applicables": [
+        "Normes de sécurité et de qualité pour le verre de sécurité laminé/trempé",
+        "Normes de sécurité pour les zones ATEX (atmosphères explosives)",
+        "Normes environnementales pour la gestion des déchets et le recyclage (pneus, granulats SBR/EPDM)",
+        "Normes de sécurité et de santé au travail pour la manipulation de produits chimiques sensibles (PU, polyurée, isocyanates, solvants)",
+        "Standards de l'Industrie 5.0 pour l'automatisation intégrale et la digitalisation",
+        "Normes de cybersécurité pour le CERVEAU DIGITAL 5.0"
+      ],
+      "certifications": [
+        "Certifications de qualité pour les matériaux polymères et composites (ex: ISO 9001)",
+        "Certifications de sécurité pour les produits de verre (ex: EN, ASTM)",
+        "Certifications environnementales (ex: ISO 14001) pour les processus de recyclage et la gestion des substances dangereuses",
+        "Certifications spécifiques aux produits de construction pour les marchés d'exportation (MENA, Afrique, Europe)"
+      ],
+      "contraintes_environnementales": [
+        "Conformité aux réglementations du Ministère de l’Environnement pour la production et le stockage de produits chimiques et polymères",
+        "Gestion des émissions et des déchets industriels liés à la production de polymères et à la peinture robotisée",
+        "Exigences spécifiques pour l'implantation en zone industrielle lourde et la gestion des flux logistiques automatisés",
+        "Réglementations relatives au recyclage des pneus et des granulats SBR/EPDM"
+      ],
+      "produits_dangereux": [
+        {
+          "produit": "Polyuréthane (PU)",
+          "classification": "Matière sensible",
+          "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+        },
+        {
+          "produit": "Polyurée (2K)",
+          "classification": "Matière sensible",
+          "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+        },
+        {
+          "produit": "Résines époxy / polyaspartiques",
+          "classification": "Matière sensible",
+          "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+        },
+        {
+          "produit": "Isocyanates / polyols",
+          "classification": "Matière sensible",
+          "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+        },
+        {
+          "produit": "Solvants industriels (peinture, encres)",
+          "classification": "Matière sensible",
+          "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+        },
+        {
+          "produit": "Additifs chimiques (stabilisants, pigments concentrés)",
+          "classification": "Matière sensible",
+          "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+        },
+        {
+          "produit": "Verre de sécurité laminé (SGP/PVB)",
+          "classification": "Produit sensible",
+          "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+        },
+        {
+          "produit": "UTG (verre ultra-mince flexible)",
+          "classification": "Produit sensible",
+          "autorite": "Ministère de l’Énergie & Mines / Commerce / Environnement"
+        }
+      ]
+    },
+    "analyse_risques": {
+      "risques_techniques": [
+        "Complexité d'intégration et de maintenance des systèmes d'automatisation intégrale (AGV, ASRS, robots, IA, Digital Twin)",
+        "Risques de défaillance du 'CERVEAU DIGITAL 5.0' qui pilote l'ensemble de la production et de la logistique, pouvant entraîner des arrêts de production majeurs",
+        "Risques liés à la manipulation et au stockage de matières premières sensibles et dangereuses (PU, isocyanates, solvants) nécessitant des protocoles de sécurité stricts (zones ATEX)",
+        "Défis techniques de production pour des produits de haute technologie comme le verre ultra-mince flexible (UTG) et les films intégrés (LED, chauffants)",
+        "Risques de cybersécurité pour le système digital central et les données de production/logistique"
+      ],
+      "risques_reglementaires": [
+        "Délais et complexité d'obtention de toutes les autorisations requises auprès des multiples ministères (Énergie & Mines, Commerce, Environnement)",
+        "Risque de non-conformité aux normes environnementales et de sécurité pour la manipulation des produits dangereux et la gestion des déchets",
+        "Évolution des réglementations douanières et commerciales pour les marchés d'exportation (MENA, Afrique, Europe) impactant la compétitivité",
+        "Difficulté à maintenir la conformité réglementaire continue pour un projet de cette envergure et avec des technologies avancées"
+      ],
+      "risques_marche": [
+        "Volatilité des prix des matières premières polymères et chimiques sur les marchés internationaux",
+        "Concurrence accrue sur les marchés nationaux et d'exportation, malgré l'objectif de substitution aux importations",
+        "Évolution rapide des technologies et des préférences des consommateurs, nécessitant une innovation constante pour éviter l'obsolescence des produits",
+        "Dépendance aux conditions économiques des marchés cibles (national et export) pour la demande de matériaux de construction et industriels"
+      ],
+      "strategies_mitigation": [
+        "Mise en place d'une équipe dédiée à la gestion de projet et à l'intégration des systèmes d'automatisation, avec des plans de maintenance préventive et corrective robustes",
+        "Développement de protocoles de sécurité et de formation du personnel rigoureux pour la manipulation des matières sensibles et l'opération des zones ATEX",
+        "Investissement dans des solutions de cybersécurité avancées et des plans de reprise d'activité pour le 'CERVEAU DIGITAL 5.0'",
+        "Établissement d'un service des affaires réglementaires proactif pour anticiper et gérer les exigences d'autorisation et de conformité",
+        "Diversification des sources d'approvisionnement en matières premières et mise en place de contrats à long terme pour stabiliser les coûts",
+        "Veille technologique et R&D continue pour l'innovation produit et process, assurant la compétitivité et l'adaptation aux tendances du marché",
+        "Développement d'une stratégie d'exportation flexible et ciblée, avec une analyse approfondie des marchés et des réglementations locales"
+      ]
+    },
+    "opportunites": {
+      "innovation": "Le projet est un leader de l'Industrie 5.0, intégrant l'automatisation intégrale, l'IA, le jumeau numérique et la robotique, offrant des opportunités d'innovation continue dans les matériaux (UTG, films intégrés) et les processus (peinture robotisée, recyclage). Le 'CERVEAU DIGITAL 5.0' représente une innovation majeure en matière de pilotage et d'optimisation industrielle.",
+      "marche": "Le positionnement en tant que 'substitution aux importations' sur le marché national, combiné à un potentiel d'exportation vers les régions MENA, Afrique et Europe, ouvre des marchés significatifs. La gamme diversifiée de produits (panneaux, revêtements, portes, verre, systèmes modulaires) permet de cibler plusieurs segments de l'industrie de la construction et manufacturière. Le caractère 'structurant' du projet et le 'transfert technologique' sont des atouts pour le soutien gouvernemental.",
+      "partenariats": "Opportunités de partenariats technologiques avec des fournisseurs de solutions d'Industrie 5.0 (robotique, IA, MES/APS/WMS) pour le 'CERVEAU DIGITAL'. Possibilités de collaborations avec des instituts de recherche pour le développement de matériaux avancés. Partenariats stratégiques pour la distribution et l'exportation sur les marchés cibles.",
+      "subventions": "Le projet est éligible aux 'avantages ANDI (fiscaux & parafiscaux)' et bénéficie de l''accompagnement AAPI (foncier, autorisations, facilitation)', indiquant un fort potentiel de subventions et d'incitations gouvernementales en raison de son caractère structurant, de création de valeur locale et de transfert technologique."
+    },
+    "recommandations": [
+      "Prioriser la mise en place d'une infrastructure de cybersécurité de pointe pour protéger le 'CERVEAU DIGITAL 5.0' et garantir la continuité des opérations, étant donné son rôle central dans la prise de décision et le pilotage.",
+      "Développer un programme de formation et de recrutement intensif pour attirer et retenir les talents spécialisés dans l'Industrie 5.0, la robotique, l'IA et la manipulation de matériaux avancés, essentiels à la réussite du projet 'zéro artisanal'.",
+      "Établir un département R&D interne robuste et collaborer avec des centres de recherche pour maintenir une avance technologique, notamment sur les matériaux innovants comme l'UTG et les films intégrés, et pour optimiser les processus de recyclage.",
+      "Mettre en œuvre un système de gestion de la qualité et de la conformité réglementaire (QMS) exhaustif dès le début, en particulier pour les produits sensibles comme le verre de sécurité et les produits chimiques, afin de faciliter l'accès aux marchés d'exportation.",
+      "Élaborer une stratégie d'approvisionnement en matières premières résiliente, incluant la diversification des fournisseurs et la négociation de contrats à long terme, pour atténuer les risques liés à la volatilité des prix et à la disponibilité des 'matières sensibles'.",
+      "Capitaliser sur le positionnement 'Industrie 5.0' et l'initiative de 'recyclage pneus' pour renforcer la marque du projet en tant qu'acteur innovant et durable, ce qui peut ouvrir des opportunités de financement vert et de partenariats stratégiques."
+    ]
+  }
+}

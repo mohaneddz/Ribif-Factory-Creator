@@ -1,0 +1,11 @@
+{
+  "total_machines": 0,
+  "successful_scraping": 0,
+  "failed_scraping": 0,
+  "successful_enrichment": 0,
+  "failed_enrichment": 0,
+  "average_completeness": 0.0,
+  "total_images": 0,
+  "total_datasheets": 0,
+  "machines_with_errors": []
+}

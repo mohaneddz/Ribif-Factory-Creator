@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+:root {
+  --bg-dark: #0b0c10;
+  --panel-bg: #1f2833;
+  --accent-cyan: #66fcf1;
+  --text-gray: #c5c6c7;
+  --success: #45a29e;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-gray);
+}
+
+@font-face {
+  font-family: "Neue Einstellung";
+  src: url("reg.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+.glass-panel {
+  background: rgba(31, 40, 51, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-200%);
+  }
+
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+html,
+body {
+  font-family: 'Neue Einstellung', sans-serif !important;
+}
