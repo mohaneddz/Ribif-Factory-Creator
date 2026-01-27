@@ -1,0 +1,13 @@
+.env
+__pycache__/
+data/
+uploads/
+output/
+logs/
+.next/**
+.vscode/**
+backend/cache/search/**
+backend/utils/module_2/assets_cache/**
+backend/cache/negotiations/**
+backend/cache/module_4/**
+backend/test_enrichment_1.json
