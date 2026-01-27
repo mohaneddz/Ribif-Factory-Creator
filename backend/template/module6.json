@@ -1,0 +1,111 @@
+{
+  "company_name": "ALLO MAISON",
+  "project_name": "Complexe Industriel Polymère & Matériaux Avancés",
+  "calculation_date": "2026-01-29",
+  "total_tco": 436602503257.1,
+  "average_annual_tco": 87320500651.42,
+  "tco_per_unit_revenue": 0,
+  "machine_tco": [
+    {
+      "machine_name": "Machine de thermoformage grand format double-station",
+      "category": "Thermoformage",
+      "total_tco": 411548000.0,
+      "annual_tco": 34295666.67,
+      "initial_cost": 196560000.0,
+      "estimated_purchase_price": 175500000.0,
+      "estimation_confidence": "high"
+    },
+    {
+      "machine_name": "Presse à injection plastique (moyenne)",
+      "category": "Injection plastique",
+      "total_tco": 119340000.0,
+      "annual_tco": 9945000.0,
+      "initial_cost": 59400000.0,
+      "estimation_confidence": "medium"
+    },
+    {
+      "machine_name": "Ligne d'extrusion de profils/panneaux",
+      "category": "Extrusion",
+      "total_tco": 426905000.0,
+      "annual_tco": 35575416.67,
+      "initial_cost": 189280000.0,
+      "estimation_confidence": "high"
+    }
+  ],
+  "product_tco": [
+    {
+      "nom_produit": "Revêtements de sol SPC à système clic étanche",
+      "category": "Revêtements",
+      "total_tco": 5153625.71
+    },
+    {
+      "nom_produit": "Panneaux polymères et composites",
+      "category": "Matériaux de construction",
+      "total_tco": 5153625.71
+    }
+  ],
+  "raw_materials_tco": [
+    {
+      "nom_materiau": "Polyuréthane (PU)",
+      "categorie": "Plastique",
+      "total_tco": 28875000.0,
+      "estimation_confidence": "medium"
+    },
+    {
+      "nom_materiau": "Polyurée (2K)",
+      "categorie": "Résine",
+      "total_tco": 21620000.0,
+      "estimation_confidence": "medium"
+    },
+    {
+      "nom_materiau": "Résines époxy / polyaspartiques",
+      "categorie": "Chimique",
+      "total_tco": 23766000.0,
+      "estimation_confidence": "medium"
+    }
+  ],
+  "stage_5_processus_production": {
+    "kpi_production": {
+      "oee_cible": "85%",
+      "trs_cible": "85%",
+      "taux_rebut_acceptable": "2%",
+      "temps_changement_serie": "30 minutes"
+    },
+    "processus": [
+      {
+        "nom_etape": "Préparation Matières Premières",
+        "description": "Stockage automatisé des granulés et additifs avec dosage gravimétrique.",
+        "outputs": ["Mélange polymère prêt à l'emploi"]
+      },
+      {
+        "nom_etape": "Extrusion Polymère",
+        "description": "Production continue de feuilles, profils et tubes polymères.",
+        "outputs": ["Profilés SPC", "Feuilles polymères"]
+      }
+    ]
+  },
+  "stage_6_informations_complementaires": {
+    "analyse_risques": {
+      "risques_marche": [
+        "Volatilité des prix des résines et composites",
+        "Concurrence sur les marchés MENA / Europe"
+      ],
+      "strategies_mitigation": [
+        "Plan de maintenance prédictive",
+        "Veille réglementaire continue"
+      ]
+    },
+    "aspects_reglementaires": {
+      "autorisations_requises": [
+        "Autorisation ATEX pour stockage produits chimiques",
+        "Permis de construire industriel"
+      ],
+      "certifications": [
+        "ISO 9001",
+        "ISO 14001",
+        "ISO 45001"
+      ]
+    }
+  },
+  "project_id": null
+}

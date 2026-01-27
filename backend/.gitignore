@@ -1,0 +1,8 @@
+**/cache/**
+**/__pycache__/**
+data/**
+logs/**
+utils/module_2/assets_cache/**
+utils/module_2/images/**
+.env
+.env.example

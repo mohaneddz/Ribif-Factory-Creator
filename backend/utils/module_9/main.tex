@@ -1,0 +1,414 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- PACKAGES ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[default]{sourcesanspro} % Modern, UI-friendly font
+\usepackage{microtype}              % Professional kerning/spacing
+\usepackage{setspace}               % Line spacing control
+\usepackage{lipsum}                 % Generates Lorem Ipsum placeholder text
+
+% --- LAYOUT ---
+\usepackage{geometry}
+\geometry{top=2.5cm, bottom=2.5cm, left=2cm, right=2cm}
+\setstretch{1.3}       % 1.3x Line spacing for readability
+\setlength{\parskip}{1em}
+\setlength{\parindent}{0pt}
+
+% --- GRAPHICS & COLORS ---
+\usepackage{xcolor}
+\usepackage{fontawesome5}
+\usepackage{tabularray}
+\usepackage{tikz}
+\usepackage{fancyhdr}
+\usepackage[most]{tcolorbox}
+\usepackage{multicol}
+
+% --- LIBRARIES ---
+\usetikzlibrary{calc, positioning, shadows, arrows.meta, patterns}
+\tcbuselibrary{skins, raster}
+
+% --- BRAND PALETTE (Matches React Code) ---
+\definecolor{BrandPrimary}{HTML}{4F46E5}   % Indigo 600
+\definecolor{BrandDark}{HTML}{0F172A}      % Slate 900
+\definecolor{BrandText}{HTML}{334155}      % Slate 700
+\definecolor{BrandLight}{HTML}{F8FAFC}     % Slate 50
+\definecolor{BrandWhite}{HTML}{FFFFFF}
+\definecolor{BrandSuccess}{HTML}{10B981}   % Emerald 500
+\definecolor{BrandWarning}{HTML}{F59E0B}   % Amber 500
+\definecolor{BrandDanger}{HTML}{EF4444}    % Red 500
+
+% --- MACRO: IMAGE PLACEHOLDER ---
+\newcommand{\placeholder}[3]{
+    \begin{center}
+    \begin{tikzpicture}
+        \node[
+            fill=BrandLight, 
+            draw=BrandDark!20, 
+            line width=1.5pt, 
+            dashed, 
+            minimum width=#1, 
+            minimum height=#2, 
+            align=center, 
+            text=BrandText!50,
+            rounded corners=4pt
+        ] {
+            \faImage\\ \vspace{0.2cm}
+            \textbf{#3}\\ 
+            \footnotesize #1 x #2
+        };
+    \end{tikzpicture}
+    \end{center}
+}
+
+% --- MACRO: SECTION HEADER ---
+\newcommand{\indheader}[2]{
+    \newpage
+    \vspace*{0.5cm}
+    \noindent
+    \begin{tikzpicture}
+        \node[fill=BrandPrimary, text=BrandWhite, minimum width=2cm, minimum height=2cm, font=\fontsize{30}{30}\bfseries] (num) at (0,0) {#1};
+        \node[anchor=west, fill=BrandDark, minimum height=2cm, minimum width=\textwidth-2.1cm, text=BrandWhite, font=\fontsize{16}{20}\bfseries\selectfont, align=left, inner xsep=20pt] at ($(num.east)+(0.1,0)$) {\MakeUppercase{#2}};
+    \end{tikzpicture}
+    \vspace{1cm}
+}
+
+% --- MACRO: ASSET CARD ---
+\newtcolorbox{assetcard}[2]{
+    enhanced,
+    breakable,
+    colback=BrandWhite,
+    colframe=BrandDark,
+    coltext=BrandText,
+    boxrule=0.5pt,
+    left=15pt, right=15pt, top=15pt, bottom=15pt,
+    title={\textbf{#1} \hfill \small #2},
+    coltitle=BrandWhite,
+    fonttitle=\bfseries\large,
+    attach boxed title to top left={xshift=0pt, yshift=0pt},
+    boxed title style={sharp corners, size=small, colback=BrandPrimary, frame hidden},
+    drop shadow={opacity=0.1, shadow xshift=3pt, shadow yshift=-3pt},
+    sidebyside,
+    sidebyside align=top,
+    lefthand width=5cm, 
+    segmentation style={solid, BrandLight!80!black, line width=0.5pt}
+}
+
+% --- FOOTER ---
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[L]{\color{BrandText!50}\scriptsize \textbf{ALLO MAISON} \textbullet\ MODULE 9 \textbullet\ TECHNICAL REFERENCE}
+\fancyfoot[R]{\color{BrandPrimary}\textbf{PAGE \thepage}}
+
+% ==============================================================================
+% DOCUMENT START
+% ==============================================================================
+\begin{document}
+
+% ==============================================================================
+% SENIOR DESIGNER COVER PAGE
+% ==============================================================================
+\begin{titlepage}
+    \pagecolor{BrandDark} 
+    
+    \begin{tikzpicture}[remember picture, overlay]
+        
+        % --- 1. BACKGROUND GEOMETRY ---
+        \draw[step=2cm, BrandWhite!5, ultra thin] (current page.south west) grid (current page.north east);
+        
+        % Abstract Network Pattern
+        \begin{scope}[shift={(current page.north east)}, xshift=-5cm, yshift=-8cm, rotate=15]
+            \foreach \x in {0,1,2,3} {
+                \foreach \y in {0,1,2,3,4} {
+                    \fill[BrandPrimary!40] (\x*1.5, \y*1.5) circle (3pt);
+                    \draw[BrandPrimary!20, thin] (\x*1.5, \y*1.5) -- (\x*1.5 + 1.5, \y*1.5);
+                    \draw[BrandPrimary!20, thin] (\x*1.5, \y*1.5) -- (\x*1.5, \y*1.5 + 1.5);
+                }
+            }
+        \end{scope}
+
+        % --- 2. THE DYNAMIC SHAPE ---
+        \fill[BrandPrimary] 
+            (current page.south west) -- 
+            ($(current page.south west)+(8cm,0)$) -- 
+            ($(current page.north west)+(14cm,0)$) -- 
+            (current page.north west) -- cycle;
+            
+        \fill[BrandPrimary!80!black, opacity=0.3] 
+            (current page.south west) -- 
+            ($(current page.south west)+(4cm,0)$) -- 
+            ($(current page.north west)+(10cm,0)$) -- 
+            (current page.north west) -- cycle;
+
+        % --- 3. THE "MODULE" IDENTIFIER ---
+        \node[anchor=north west, inner sep=0, text=BrandWhite, opacity=0.1] 
+            at ($(current page.north west)+(0.5cm,-2cm)$) 
+            {\fontsize{180}{180}\selectfont \textbf{5.0}};
+            
+        \node[anchor=north west, inner sep=0, text=BrandWhite] 
+            at ($(current page.north west)+(2cm,-4cm)$) 
+            {\fontsize{80}{80}\selectfont \textbf{5.0}};
+
+        % --- 4. MAIN TITLES ---
+        \node[anchor=west, text=BrandWhite, align=left] 
+            at ($(current page.west)+(2cm, 2cm)$) {
+            
+            {\fontsize{10}{12}\selectfont \bfseries \MakeUppercase{Technical Documentation Series}}\\[0.4cm]
+            {\fontsize{45}{50}\selectfont \textbf{DIGITAL TWIN}}\\[0.2cm]
+            {\fontsize{45}{50}\selectfont \textbf{\& PROCESS}}\\[0.2cm]
+            {\fontsize{45}{50}\selectfont \textbf{CATALOGUE}}\\[1.5cm]
+            
+           
+        };
+
+        % --- 5. BOTTOM METADATA BAR ---
+        \node[anchor=south west, inner sep=0] at (current page.south west) {
+            \begin{tikzpicture}
+                \fill[BrandWhite] (0,0) rectangle (\paperwidth, 2.5cm);
+                \node[anchor=west, text=BrandText, align=left] at (2cm, 1.25cm) {
+                    \textbf{PROJECT:}\\
+                    ALLO MAISON IND.
+                };
+                \node[anchor=west, text=BrandText, align=left] at (8cm, 1.25cm) {
+                    \textbf{DATE:}\\
+                    DEC 2025
+                };
+        
+            \end{tikzpicture}
+        };
+
+    \end{tikzpicture}
+\end{titlepage}
+
+\nopagecolor
+\pagecolor{white}
+\color{BrandText}
+
+% ==============================================================================
+% 01. PROCESSUS
+% ==============================================================================
+\indheader{01}{PROCESS \& WORKFLOW}
+
+\begin{minipage}{0.55\textwidth}
+    \textbf{\large OPERATIONAL OVERVIEW}
+    \par
+    \lipsum[1][1-5] % REPLACE WITH YOUR PROJECT DESCRIPTION
+    \par
+    \vspace{0.5cm}
+    \textbf{KEY OBJECTIVES:}
+    \begin{itemize}
+        \item \lipsum[2][1]
+        \item \lipsum[2][2]
+        \item \lipsum[2][3]
+    \end{itemize}
+\end{minipage}
+\hfill
+\begin{minipage}{0.40\textwidth}
+    % IMAGE PLACEHOLDER
+    \placeholder{6cm}{5cm}{FACTORY LAYOUT RENDER}
+    \vspace{0.2cm}
+    \centering \textit{\footnotesize Fig 1.1: General Layout}
+\end{minipage}
+
+\vspace{1cm}
+
+\begin{tcolorbox}[colback=BrandLight, colframe=BrandDark, title=\textbf{CORE PILLARS}, fonttitle=\bfseries]
+    \begin{multicols}{3}
+        \textbf{1. AUTOMATION}
+        \par \lipsum[3][1-2]
+        \columnbreak
+        \textbf{2. CONNECTIVITY}
+        \par \lipsum[3][3-4]
+        \columnbreak
+        \textbf{3. SUSTAINABILITY}
+        \par \lipsum[3][5-6]
+    \end{multicols}
+\end{tcolorbox}
+
+% ==============================================================================
+% 02. PROCESS ARCHITECTURE
+% ==============================================================================
+\indheader{02}{PROCESS ARCHITECTURE}
+
+\textbf{WORKFLOW DESCRIPTION}
+\par
+\lipsum[4][1-4]
+
+\vspace{1cm}
+
+% GENERIC FLOWCHART
+\begin{center}
+\begin{tikzpicture}[
+    node distance=0.8cm,
+    step/.style={rectangle, draw=BrandDark, thick, fill=white, minimum width=3.2cm, minimum height=1.5cm, align=center, font=\bfseries\small, rounded corners=2pt},
+    arrow/.style={->, >=latex, line width=1.5pt, BrandPrimary}
+]
+    \node[step] (1) {STEP 01\\ \scriptsize INPUT};
+    \node[step, right=of 1] (2) {STEP 02\\ \scriptsize PROCESS A};
+    \node[step, right=of 2] (3) {STEP 03\\ \scriptsize PROCESS B};
+    \node[step, below=of 1] (4) {STEP 04\\ \scriptsize TRANSFORMATION};
+    \node[step, right=of 4] (5) {STEP 05\\ \scriptsize FINISHING};
+    \node[step, right=of 5, fill=BrandDark, text=white] (6) {STEP 06\\ \scriptsize OUTPUT};
+
+    \draw[arrow] (1) -- (2);
+    \draw[arrow] (2) -- (3);
+    \draw[arrow] (3) -- (5);
+    \draw[arrow] (1) -- (4);
+    \draw[arrow] (4) -- (5);
+    \draw[arrow] (5) -- (6);
+\end{tikzpicture}
+\end{center}
+
+\vspace{0.5cm}
+\lipsum[5][1-3]
+
+% ==============================================================================
+% 03. MACHINES
+% ==============================================================================
+\indheader{03}{MACHINE ASSETS}
+
+\lipsum[6][1-2]
+
+\vspace{0.5cm}
+
+% ASSET 01
+\begin{assetcard}{MACHINE REF-01}{CATEGORY A}
+    \placeholder{4.5cm}{3cm}{ASSET PHOTO}
+    \tcblower
+    \begin{tblr}{colspec={X[l] X[r]}, rowsep=3pt, coltext=BrandText}
+        \textbf{Manufacturer} & Brand Name \\
+        \textbf{Capacity} & 000 Units/Hr \\
+        \textbf{Power} & 00 kW \\
+        \textbf{Status} & \textbf{Operational} \\
+    \end{tblr}
+    \vspace{0.3cm}
+    \lipsum[7][1-2]
+\end{assetcard}
+
+\vspace{0.5cm}
+
+% ASSET 02
+\begin{assetcard}{MACHINE REF-02}{CATEGORY B}
+    \placeholder{4.5cm}{3cm}{ASSET PHOTO}
+    \tcblower
+    \begin{tblr}{colspec={X[l] X[r]}, rowsep=3pt, coltext=BrandText}
+        \textbf{Manufacturer} & Brand Name \\
+        \textbf{Capacity} & 000 Units/Hr \\
+        \textbf{Power} & 00 kW \\
+        \textbf{Status} & \textbf{Maintenance} \\
+    \end{tblr}
+    \vspace{0.3cm}
+    \lipsum[8][1-2]
+\end{assetcard}
+
+% ==============================================================================
+% 04. PRODUCTS
+% ==============================================================================
+\indheader{04}{PRODUCT CATALOG}
+
+\lipsum[9][1-3]
+
+\vspace{1cm}
+
+\begin{tblr}{
+    width=\linewidth,
+    colspec={|Q[c,m,1.5cm]|X[l,m]|X[l,m]|Q[c,m,2.5cm]|},
+    hlines={1pt, BrandDark!20}, 
+    hline{1,Z}={2pt, BrandDark},
+    row{1}={font=\bfseries, bg=BrandDark, fg=BrandWhite},
+    rowsep=8pt
+}
+    REF ID & PRODUCT NAME & MATERIAL COMPOSITION & CATEGORY \\
+    \textbf{A-001} & \textbf{Product Name Alpha} & Lorem Ipsum Material & Type A \\
+    \textbf{B-002} & \textbf{Product Name Beta} & Dolor Sit Amet & Type B \\
+    \textbf{C-003} & \textbf{Product Name Gamma} & Consectetur Adipiscing & Type C \\
+    \textbf{D-004} & \textbf{Product Name Delta} & Elit Sed Do & Type D \\
+\end{tblr}
+
+% ==============================================================================
+% 05. LOGISTICS
+% ==============================================================================
+\indheader{05}{LOGISTICS \& SUPPLY CHAIN}
+
+\begin{multicols}{2}
+\noindent\textbf{\large INBOUND FLOW}
+
+\lipsum[10][1-3]
+\begin{itemize}
+    \item Metric A: 0000 Units
+    \item Metric B: 00\% Efficiency
+\end{itemize}
+
+\columnbreak
+
+\noindent\textbf{\large OUTBOUND FLOW}
+
+\lipsum[11][1-3]
+\begin{itemize}
+    \item Metric C: 0000 Pallets
+    \item Metric D: 00h Lead Time
+\end{itemize}
+\end{multicols}
+
+\vspace{0.3cm}
+\placeholder{12cm}{3.5cm}{LOGISTICS MAP}
+
+% ==============================================================================
+% 06. DIGITAL TWIN (SPECIFIC TO REACT CODE)
+% ==============================================================================
+\indheader{06}{DIGITAL TWIN INTERFACE}
+
+\textbf{INTERFACE GUIDE: TWIN MANAGER v5.0}
+\par
+The Digital Twin interface provides a real-time, browser-based supervision of the factory floor. It is built using \textbf{React.js} and \textbf{Three.js} to render a 3D interactive scene alongside critical live data.
+
+\vspace{0.5cm}
+
+\section*{\faDesktop\ 1. 3D VISUALIZATION (CANVAS)}
+The Dashboard features a \texttt{ComplexFactoryScene} that renders the physical layout:
+\begin{itemize}
+    \item \textbf{Assets:} Displays CNC Machines, Robot Arms, and Conveyor Belts.
+    \item \textbf{Status Indicators:} Machines change color dynamically based on their health state: 
+    \textcolor{BrandSuccess}{\textbf{Green (Running)}}, \textcolor{BrandWarning}{\textbf{Amber (Idle)}}, or \textcolor{BrandDanger}{\textbf{Red (Warning)}}.
+    \item \textbf{Animation:} Robot arms and AGVs (Automated Guided Vehicles) move in sync with the production cycle time.
+\end{itemize}
+
+\vspace{0.5cm}
+
+\section*{\faChartLine\ 2. PREDICTIVE MAINTENANCE (SCATTER CHART)}
+The Maintenance module utilizes a \textbf{Risk Matrix Scatter Chart} to correlate three key variables:
+\begin{itemize}
+    \item \textbf{X-Axis:} Temperature (°C).
+    \item \textbf{Y-Axis:} Machine Health (\%).
+    \item \textbf{Z-Axis (Point Size):} Vibration levels.
+\end{itemize}
+\textbf{Logic:} The system triggers a \texttt{status="warning"} if Temperature > 90°C. This allows operators to visualize outliers (machines that are hot and vibrating) before failure occurs.
+
+\vspace{0.5cm}
+
+\section*{\faCalculator\ 3. TCO OPTIMIZATION (BAR CHART)}
+The \textbf{Total Cost of Ownership (TCO)} calculator projects financial data over 10 years based on live telemetry.
+\begin{itemize}
+    \item \textbf{Calculation:} \texttt{Total = CAPEX + (Power * Hours * Cost) + Maintenance}.
+    \item \textbf{Stacked Bar Chart:} Visualizes the accumulation of OPEX (Energy + Maintenance) on top of the initial CAPEX investment.
+    \item \textbf{User Inputs:} Financial directors can adjust Energy Cost (€/kWh) and Years to simulate different ROI scenarios.
+\end{itemize}
+
+\vspace{0.5cm}
+
+\section*{\faShieldAlt\ 4. SAFETY \& ATEX MONITORING}
+For hazardous zones (e.g., Painting Robot), the system monitors air quality.
+\begin{itemize}
+    \item \textbf{Data Viz:} An Area Chart tracks PPM (Parts Per Million) of VOCs/Solvents in real-time.
+    \item \textbf{Automation:} If concentration spikes, ventilation status switches to "100\%" instantly.
+\end{itemize}
+
+\vfill
+\begin{center}
+    \rule{\textwidth}{0.5pt}\\
+    \vspace{0.2cm}
+    \textbf{ALLO MAISON} - INTERNAL TECHNICAL REFERENCE - END OF DOCUMENT
+\end{center}
+
+\end{document}

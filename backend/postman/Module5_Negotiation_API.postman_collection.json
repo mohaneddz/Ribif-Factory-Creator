@@ -1,0 +1,255 @@
+{
+  "info": {
+    "_postman_id": "module5-negotiation-api",
+    "name": "Module 5 - AI Email Negotiation",
+    "description": "API endpoints for automated email-based supplier negotiations.\n\nWorkflow:\n1. Start negotiation with suppliers (sends initial RFQ emails)\n2. Check for supplier replies\n3. Run negotiation rounds (AI generates counter-offers)\n4. Accept, reject, or close negotiations\n\n**Setup:**\n- Set the `base_url` variable (default: http://localhost:5000)\n- Set `smtp_username` and `smtp_password` for sending emails\n- Set `buyer_email` to your sender email address",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "smtp_username",
+      "value": "blib645@gmail.com",
+      "type": "string"
+    },
+    {
+      "key": "smtp_password",
+      "value": "YOUR_APP_PASSWORD_HERE",
+      "type": "string"
+    },
+    {
+      "key": "buyer_email",
+      "value": "blib645@gmail.com",
+      "type": "string"
+    },
+    {
+      "key": "thread_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Start Negotiation",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"suppliers\": [\n    {\n      \"supplier_name\": \"Test Supplier\",\n      \"email_address\": \"blahaibrahim2005@gmail.com\",\n      \"website\": \"https://example-supplier.com\",\n      \"region\": \"Europe\",\n      \"price_estimate\": \"500,000 EUR - 800,000 EUR\",\n      \"phone_number\": \"+49 123 456789\"\n    }\n  ],\n  \"machine\": {\n    \"nom_machine\": \"Industrial Extrusion Line\",\n    \"type\": \"Polymer Extrusion\",\n    \"quantite_necessaire\": 2\n  },\n  \"buyer_requirements\": {\n    \"target_price\": 450000,\n    \"max_price\": 550000,\n    \"currency\": \"EUR\",\n    \"preferred_incoterms\": [\"DDP\", \"CIF\", \"FOB\"],\n    \"max_lead_time_days\": 90,\n    \"min_warranty_months\": 24,\n    \"max_deposit_pct\": 30\n  },\n  \"buyer_email\": \"{{buyer_email}}\",\n  \"buyer_company\": \"RIBIF Algeria\",\n  \"buyer_contact_name\": \"Ibrahim\",\n  \"send_emails\": true,\n  \"smtp_host\": \"smtp.gmail.com\",\n  \"smtp_port\": 587,\n  \"smtp_username\": \"{{smtp_username}}\",\n  \"smtp_password\": \"{{smtp_password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/module5/negotiations/start",
+          "host": ["{{base_url}}"],
+          "path": ["api", "module5", "negotiations", "start"]
+        },
+        "description": "Start negotiations with one or more suppliers.\n\nThis will:\n1. Create negotiation threads for each supplier\n2. Generate personalized RFQ emails using AI\n3. Send the emails if `send_emails` is true\n\n**Note:** For Gmail, use an App Password (not your regular password).\nGenerate one at: https://myaccount.google.com/apppasswords"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData.threads && jsonData.threads.length > 0) {",
+              "    pm.collectionVariables.set('thread_id', jsonData.threads[0].thread_id);",
+              "    console.log('Saved thread_id:', jsonData.threads[0].thread_id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. List Negotiations",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/module5/negotiations/list",
+          "host": ["{{base_url}}"],
+          "path": ["api", "module5", "negotiations", "list"]
+        },
+        "description": "List all negotiation threads.\n\nOptional query params:\n- `project_id`: Filter by project\n- `status`: Filter by status (draft, initial_sent, pending_reply, negotiating, accepted, rejected, closed)"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get Negotiation Details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/module5/negotiations/{{thread_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "module5", "negotiations", "{{thread_id}}"]
+        },
+        "description": "Get details of a specific negotiation thread including all emails exchanged."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Check for Replies",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"thread_ids\": [\"{{thread_id}}\"],\n  \"timeout_s\": 0,\n  \"imap_host\": \"imap.gmail.com\",\n  \"imap_port\": 993,\n  \"imap_username\": \"{{smtp_username}}\",\n  \"imap_password\": \"{{smtp_password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/module5/negotiations/check-replies",
+          "host": ["{{base_url}}"],
+          "path": ["api", "module5", "negotiations", "check-replies"]
+        },
+        "description": "Check inbox for supplier replies and match them to negotiation threads.\n\nThe system will:\n1. Poll the inbox for emails from tracked suppliers\n2. Parse supplier responses using AI to extract offers\n3. Update thread state with the new offers\n\nSet `timeout_s` > 0 to wait for new emails (long-polling)."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Run Negotiation Round",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"send_email\": true,\n  \"auto_accept\": true,\n  \"smtp_host\": \"smtp.gmail.com\",\n  \"smtp_port\": 587,\n  \"smtp_username\": \"{{smtp_username}}\",\n  \"smtp_password\": \"{{smtp_password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/module5/negotiations/{{thread_id}}/negotiate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "module5", "negotiations", "{{thread_id}}", "negotiate"]
+        },
+        "description": "Run a negotiation round for a specific thread.\n\nThis will:\n1. Evaluate the current supplier offer\n2. Compute an AI-powered counter-offer\n3. Generate a professional negotiation email\n4. Send the email if `send_email` is true\n\nIf `auto_accept` is true, the system will automatically accept offers that meet the buyer's criteria."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Accept Offer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"send_email\": true,\n  \"smtp_host\": \"smtp.gmail.com\",\n  \"smtp_port\": 587,\n  \"smtp_username\": \"{{smtp_username}}\",\n  \"smtp_password\": \"{{smtp_password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/module5/negotiations/{{thread_id}}/accept",
+          "host": ["{{base_url}}"],
+          "path": ["api", "module5", "negotiations", "{{thread_id}}", "accept"]
+        },
+        "description": "Manually accept the current offer and send an acceptance email."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Reject Offer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Price too high after multiple rounds\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/module5/negotiations/{{thread_id}}/reject",
+          "host": ["{{base_url}}"],
+          "path": ["api", "module5", "negotiations", "{{thread_id}}", "reject"]
+        },
+        "description": "Reject and close the negotiation with an optional reason."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Close Negotiation",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/module5/negotiations/{{thread_id}}/close",
+          "host": ["{{base_url}}"],
+          "path": ["api", "module5", "negotiations", "{{thread_id}}", "close"]
+        },
+        "description": "Close a negotiation thread without accepting or rejecting."
+      },
+      "response": []
+    },
+    {
+      "name": "9. Get Negotiations Summary",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"project_id\": null\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/module5/negotiations/summary",
+          "host": ["{{base_url}}"],
+          "path": ["api", "module5", "negotiations", "summary"]
+        },
+        "description": "Get a summary of all negotiations including status breakdown and best offers."
+      },
+      "response": []
+    },
+    {
+      "name": "Text Negotiation (Direct)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"buyer_requirements\": {\n    \"target_price\": 450000,\n    \"max_price\": 550000,\n    \"currency\": \"EUR\",\n    \"preferred_incoterms\": [\"DDP\", \"DAP\", \"CIF\"],\n    \"max_lead_time_days\": 90,\n    \"min_warranty_months\": 24,\n    \"max_deposit_pct\": 30,\n    \"max_moq\": 2\n  },\n  \"supplier_offer\": {\n    \"price\": \"520000 EUR\",\n    \"incoterm\": \"FOB\",\n    \"lead_time_days\": 120,\n    \"warranty_months\": 12,\n    \"payment_terms\": \"50% deposit, 50% before shipping\"\n  },\n  \"negotiation_state\": {\n    \"round\": 1\n  },\n  \"email_context\": {\n    \"buyer_company\": \"RIBIF Algeria\",\n    \"supplier_company\": \"Test Supplier\",\n    \"product_name\": \"Extrusion Line\",\n    \"quantity\": 2,\n    \"contact_name\": \"Hans Mueller\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/module5/text/negotiation",
+          "host": ["{{base_url}}"],
+          "path": ["api", "module5", "text", "negotiation"]
+        },
+        "description": "Direct text-based negotiation without email workflow. Useful for testing the AI negotiation logic."
+      },
+      "response": []
+    }
+  ]
+}

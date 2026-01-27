@@ -1,0 +1,196 @@
+{
+  "ribif_metadata": {
+    "enrichment_method": "Module4 Parallel Machines (Vertex Gemini + Classification + Budget50s)",
+    "processing_time_seconds": 192.65,
+    "model_used": "gemini-2.5-flash",
+    "enrichment_date": "2026-01-29T22:15:11Z",
+    "api_provider": "Vertex",
+    "items_in": 14,
+    "machines_out": 14,
+    "note": "Template extracted from latest ALLO MAISON run."
+  },
+  "machines_enriched": [
+    {
+      "machine_input": {
+        "nom_machine": "Machine de thermoformage grand format double-station",
+        "type": "Machine de thermoformage",
+        "fabricant_recommande": "Kiefel, Illig, Gabler",
+        "quantite_necessaire": 1,
+        "use": "Production de pièces thermoformées XXL",
+        "specifications": {
+          "capacite": "Feuilles jusqu'à 3000x2000mm, 30 cycles/heure",
+          "puissance": "180 kW",
+          "dimensions": "10m x 5m x 4m",
+          "alimentation": "400V, 3 phases"
+        },
+        "performance": {
+          "cadence": "20-40 cycles/heure",
+          "rendement": "90%"
+        },
+        "assets": {
+          "image_urls": [
+            "https://www.kiefel.com/uploads/thermoformer-large.jpg",
+            "https://www.illig.de/uploads/thermoformer-double.jpg"
+          ],
+          "datasheet_urls": [
+            "https://www.kiefel.com/datasheets/kmd_series.pdf"
+          ],
+          "cad_urls": [
+            "https://www.gabler.com/cad/thermoformer-model-x.step"
+          ]
+        },
+        "best_image_url": "https://www.kiefel.com/uploads/thermoformer-large.jpg",
+        "image_quality_score": 0.75,
+        "manufacturer_website": "https://www.kiefel.com",
+        "product_page_url": "https://www.kiefel.com/en/thermoforming/machines",
+        "completeness_score": 0.65
+      },
+      "suppliers": [
+        {
+          "supplier_name": "Kiefel GmbH",
+          "region": "Germany",
+          "price_estimate": "€950k - €1.8M",
+          "price_type": "EXW",
+          "notes": "Piste directe OEM, garantie complète.",
+          "relevance_score": 0.98
+        },
+        {
+          "supplier_name": "ILLIG Maschinenbau",
+          "region": "Germany",
+          "price_estimate": "€900k - €1.7M",
+          "price_type": "FOB",
+          "notes": "Fabricant allemand avec options de personnalisation.",
+          "relevance_score": 0.95
+        },
+        {
+          "supplier_name": "MENA Industrial Solutions",
+          "region": "UAE (MENA)",
+          "price_estimate": "€1.05M - €1.95M CIF Algiers",
+          "price_type": "CIF",
+          "notes": "Distributeur régional capable d'assistance douanière.",
+          "relevance_score": 0.88
+        }
+      ]
+    },
+    {
+      "machine_input": {
+        "nom_machine": "Presse à injection plastique (moyenne)",
+        "type": "Machine de moulage par injection",
+        "fabricant_recommande": "Engel, KraussMaffei, Arburg",
+        "quantite_necessaire": 2,
+        "use": "Moulage de pièces polymères (100T-1000T)",
+        "specifications": {
+          "capacite": "350T force de fermeture",
+          "puissance": "75 kW"
+        },
+        "performance": {
+          "cadence": "60-100 cycles/heure",
+          "rendement": "95%"
+        },
+        "assets": {
+          "image_urls": [
+            "https://www.engelglobal.com/images/injection-press-medium.jpg"
+          ],
+          "datasheet_urls": [
+            "https://www.engelglobal.com/datasheets/victory_350t.pdf"
+          ]
+        },
+        "best_image_url": "https://www.engelglobal.com/images/injection-press-medium.jpg",
+        "image_quality_score": 0.6,
+        "manufacturer_website": "https://www.engelglobal.com",
+        "product_page_url": "https://www.engelglobal.com/en/products/machines",
+        "completeness_score": 0.65
+      },
+      "suppliers": [
+        {
+          "supplier_name": "Engel Austria GmbH",
+          "region": "Austria",
+          "price_estimate": "$380k - $450k USD",
+          "price_type": "EXW",
+          "notes": "Livraison directe avec support mondial.",
+          "relevance_score": 0.95
+        },
+        {
+          "supplier_name": "Haitian International",
+          "region": "China",
+          "price_estimate": "$120k - $180k USD",
+          "price_type": "FOB",
+          "notes": "Volume élevé, options économiques.",
+          "relevance_score": 0.8
+        },
+        {
+          "supplier_name": "PlastEquip Algérie",
+          "region": "Algeria",
+          "price_estimate": "$400k - $500k USD",
+          "price_type": "DDP Algiers",
+          "notes": "Distributeur local, prend en charge les formalités.",
+          "relevance_score": 0.88
+        }
+      ]
+    },
+    {
+      "machine_input": {
+        "nom_machine": "Ligne d'extrusion de profils/panneaux",
+        "type": "Machine d'extrusion",
+        "fabricant_recommande": "Battenfeld-Cincinnati, KraussMaffei Berstorff",
+        "quantite_necessaire": 2,
+        "use": "Production continue de profils SPC et films PVC",
+        "specifications": {
+          "capacite": "800 kg/heure",
+          "puissance": "250 kW"
+        },
+        "performance": {
+          "cadence": "10-15 m/min",
+          "rendement": "92%"
+        },
+        "assets": {
+          "image_urls": [
+            "https://www.battenfeld-cincinnati.com/images/extrusion-line-profile.jpg"
+          ],
+          "datasheet_urls": [
+            "https://www.battenfeld-cincinnati.com/resources/extrusion-profile-line.pdf"
+          ]
+        },
+        "best_image_url": "https://www.battenfeld-cincinnati.com/images/extrusion-line-profile.jpg",
+        "image_quality_score": 0.7,
+        "manufacturer_website": "https://www.battenfeld-cincinnati.com",
+        "product_page_url": "https://www.battenfeld-cincinnati.com/en/products/extrusion",
+        "completeness_score": 0.68
+      },
+      "suppliers": [
+        {
+          "supplier_name": "Battenfeld-Cincinnati",
+          "region": "Germany",
+          "price_estimate": "€1.2M - €1.8M",
+          "price_type": "EXW",
+          "notes": "Ligne premium avec support global.",
+          "relevance_score": 0.95
+        },
+        {
+          "supplier_name": "KraussMaffei Berstorff",
+          "region": "Germany",
+          "price_estimate": "€1.1M - €1.7M",
+          "price_type": "EXW",
+          "notes": "Réputation sur lignes complexes et service Europe.",
+          "relevance_score": 0.93
+        },
+        {
+          "supplier_name": "Nanjing Haisi Extrusion",
+          "region": "China",
+          "price_estimate": "$450k - $700k USD",
+          "price_type": "FOB",
+          "notes": "Option coûts maîtrisés, besoin de qualification.",
+          "relevance_score": 0.8
+        }
+      ]
+    }
+  ],
+  "sourcing_metadata": {
+    "api_provider": "Vertex",
+    "model_used": "gemini-2.5-flash",
+    "processing_time_seconds": 192.65,
+    "note": "Synthèse enrichie avec budgets, images, fournisseurs."
+  },
+  "project_id": null,
+  "module1_id": null
+}

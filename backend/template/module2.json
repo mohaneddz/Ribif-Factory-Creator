@@ -1,0 +1,237 @@
+{
+  "layout_2d": "/download/layout_square.png",
+  "layout_dxf": "/download/layout_square.dxf",
+  "layout_realistic": "/download/realistic_layout.png",
+  "layout_realistic_clean": "/download/realistic_clean.png",
+  "layout_3d": "/download/factory_model.glb",
+  "pipeline_links": {
+    "layout_reasoning": "Disposition parallèle pour séparer les flux d'extrusion, d'injection, de verre de sécurité et de recyclage tout en conservant une logistique centralisée (AGV / ASRS).",
+    "groups": [
+      {
+        "name": "Stockage Matières Premières Polymères",
+        "machines": [
+          "Stockage en vrac_1",
+          "Stockage en vrac_2",
+          "Stockage en vrac_3",
+          "Stockage en vrac_4",
+          "Stockage en vrac_5",
+          "Stockage en vrac_6"
+        ],
+        "purpose": "Stockage et distribution des granulés polymères pour toutes les lignes de production."
+      },
+      {
+        "name": "Transformation Polymères Primaire",
+        "machines": [
+          "Injection plastique_1",
+          "Injection plastique_2",
+          "Extrusion de polymères_1",
+          "Extrusion de polymères_2",
+          "Thermoformage_1",
+          "Thermoformage_2"
+        ],
+        "purpose": "Moulage, extrusion et thermoformage en parallèle pour gagner en réactivité."
+      },
+      {
+        "name": "Finition et Assemblage Polymères",
+        "machines": [
+          "Revêtement 3D",
+          "Application de revêtement robotisée",
+          "Assemblage et fabrication de portes"
+        ],
+        "purpose": "Peinture, vernissage et assemblage automatisés avant stockage fini."
+      },
+      {
+        "name": "Traitement du Verre",
+        "machines": [
+          "Traitement thermique du verre",
+          "Assemblage de verre de sécurité",
+          "Façonnage du verre"
+        ],
+        "purpose": "Chaines spécialisées pour produire verre trempé, laminé et cintré."
+      },
+      {
+        "name": "Recyclage",
+        "machines": [
+          "Recyclage et granulation"
+        ],
+        "purpose": "Recyclage des pneus en granulats SBR/EPDM destinés aux composites."
+      },
+      {
+        "name": "Manutention et Stockage Général",
+        "machines": [
+          "Manutention automatisée_1",
+          "Manutention automatisée_2",
+          "Manutention automatisée_3",
+          "Manutention automatisée_4",
+          "Manutention automatisée_5",
+          "Stockage automatisé"
+        ],
+        "purpose": "AGV et ASRS pour transporter, bufferiser et expédier les produits finis."
+      }
+    ],
+    "flows": [
+      {
+        "from": "Stockage en vrac_1",
+        "to": "Injection plastique_1",
+        "type": "conveyor",
+        "material": "Granulés polymères",
+        "width_m": 0.3
+      },
+      {
+        "from": "Stockage en vrac_2",
+        "to": "Injection plastique_2",
+        "type": "conveyor",
+        "material": "Granulés polymères",
+        "width_m": 0.3
+      },
+      {
+        "from": "Stockage en vrac_3",
+        "to": "Extrusion de polymères_1",
+        "type": "conveyor",
+        "material": "Granulés polymères",
+        "width_m": 0.3
+      },
+      {
+        "from": "Stockage en vrac_4",
+        "to": "Extrusion de polymères_2",
+        "type": "conveyor",
+        "material": "Granulés polymères",
+        "width_m": 0.3
+      },
+      {
+        "from": "Extrusion de polymères_1",
+        "to": "Thermoformage_1",
+        "type": "conveyor",
+        "material": "Films/Panneaux polymères",
+        "width_m": 1.0
+      },
+      {
+        "from": "Extrusion de polymères_2",
+        "to": "Thermoformage_2",
+        "type": "conveyor",
+        "material": "Films/Panneaux polymères",
+        "width_m": 1.0
+      },
+      {
+        "from": "Extrusion de polymères_1",
+        "to": "Revêtement 3D",
+        "type": "conveyor",
+        "material": "Panneaux polymères bruts",
+        "width_m": 1.0
+      },
+      {
+        "from": "Injection plastique_1",
+        "to": "Application de revêtement robotisée",
+        "type": "conveyor",
+        "material": "Pièces moulées",
+        "width_m": 0.8
+      },
+      {
+        "from": "Injection plastique_2",
+        "to": "Application de revêtement robotisée",
+        "type": "conveyor",
+        "material": "Pièces moulées",
+        "width_m": 0.8
+      },
+      {
+        "from": "Thermoformage_1",
+        "to": "Application de revêtement robotisée",
+        "type": "conveyor",
+        "material": "Pièces thermoformées",
+        "width_m": 0.8
+      },
+      {
+        "from": "Thermoformage_2",
+        "to": "Application de revêtement robotisée",
+        "type": "conveyor",
+        "material": "Pièces thermoformées",
+        "width_m": 0.8
+      },
+      {
+        "from": "Revêtement 3D",
+        "to": "Assemblage et fabrication de portes",
+        "type": "conveyor",
+        "material": "Panneaux revêtus 3D",
+        "width_m": 1.0
+      },
+      {
+        "from": "Application de revêtement robotisée",
+        "to": "Assemblage et fabrication de portes",
+        "type": "conveyor",
+        "material": "Pièces polymères peintes",
+        "width_m": 0.8
+      },
+      {
+        "from": "Extrusion de polymères_2",
+        "to": "Assemblage et fabrication de portes",
+        "type": "conveyor",
+        "material": "Profils polymères",
+        "width_m": 0.6
+      },
+      {
+        "from": "Traitement thermique du verre",
+        "to": "Assemblage de verre de sécurité",
+        "type": "conveyor",
+        "material": "Verre trempé",
+        "width_m": 1.2
+      },
+      {
+        "from": "Façonnage du verre",
+        "to": "Assemblage de verre de sécurité",
+        "type": "conveyor",
+        "material": "Verre cintré",
+        "width_m": 1.2
+      },
+      {
+        "from": "Assemblage et fabrication de portes",
+        "to": "Stockage automatisé",
+        "type": "conveyor",
+        "material": "Portes polymères finies",
+        "width_m": 1.0
+      },
+      {
+        "from": "Assemblage de verre de sécurité",
+        "to": "Stockage automatisé",
+        "type": "conveyor",
+        "material": "Verre de sécurité fini",
+        "width_m": 1.2
+      },
+      {
+        "from": "Recyclage et granulation",
+        "to": "Stockage automatisé",
+        "type": "conveyor",
+        "material": "Granulats SBR/EPDM",
+        "width_m": 0.6
+      }
+    ]
+  },
+  "product": {
+    "name": "Revêtements de sol SPC à système clic étanche",
+    "category": "Revêtements de sol",
+    "volume_production": {
+      "capacite": "100000",
+      "unite": "m²",
+      "periode": "par mois"
+    },
+    "target_output_per_hour": 1200,
+    "value_proposition": "Produits haut de gamme à base de SPC et polymères recyclés adaptés aux marchés MENA et Europe."
+  },
+  "layout_summary": {
+    "total_area_m2": 4200,
+    "zones": [
+      "Injection & extrusion",
+      "Thermoformage",
+      "Peinture & assemblage",
+      "Verre & recyclage",
+      "Logistique automatisée"
+    ],
+    "estimated_flow_per_hour": {
+      "polymers_m2": 1500,
+      "glass_sqm": 250
+    },
+    "logistics": "AGV centralisé + ASRS pour livraisons internes et buffer des produits finis."
+  },
+  "pipeline_stop_at": 6,
+  "status": "template",
+  "project_id": null
+}

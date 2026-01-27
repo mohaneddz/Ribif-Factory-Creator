@@ -1,0 +1,477 @@
+"""
+Main orchestration pipeline for factory layout generation.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+from typing import Any, Dict, List, Tuple
+
+import requests
+
+
+try:
+    from .config import (
+        BASE_DIR,
+        OUTPUT_DIR,
+        OUTPUT_DXF,
+        OUTPUT_PNG,
+        OUTPUT_VIDEO,
+        REALISTIC_PNG,
+        REALISTIC_CLEAN_PNG,
+        FINAL_GLB_PATH,
+        PUBLIC_MODELS_DIR,
+        TOP_VIEW_REALISTIC_BELTS,
+        MACHINE_PIPELINE_PROMPT,
+        VIDEO_PROMPT_GENERATION_PROMPT,
+        format_machine_list,
+    )
+    from .ai_manager import (
+        load_data,
+        load_pipeline,
+        normalize_flows,
+        should_regenerate_links,
+        expand_flows_to_instances,
+        prefetch_machine_images,
+        process_machine_images,
+        generate_message,
+        generate_image,
+        generate_video,
+        remove_background,
+        generate_3d_model,
+    )
+    from .layout_engine import generate_layout
+    from .renderer import FactoryRenderer
+    from .log_utils import section, info, warn, error, success, kv
+except ImportError:  # Fallback for running as a script.
+    from config import (
+        BASE_DIR,
+        OUTPUT_DIR,
+        OUTPUT_DXF,
+        OUTPUT_PNG,
+        OUTPUT_VIDEO,
+        REALISTIC_PNG,
+        REALISTIC_CLEAN_PNG,
+        FINAL_GLB_PATH,
+        PUBLIC_MODELS_DIR,
+        TOP_VIEW_REALISTIC_BELTS,
+        MACHINE_PIPELINE_PROMPT,
+        VIDEO_PROMPT_GENERATION_PROMPT,
+        format_machine_list,
+    )
+    from ai_manager import (
+        load_data,
+        load_pipeline,
+        normalize_flows,
+        should_regenerate_links,
+        expand_flows_to_instances,
+        prefetch_machine_images,
+        process_machine_images,
+        generate_message,
+        generate_image,
+        remove_background,
+        generate_3d_model,
+    )
+    from layout_engine import generate_layout
+    from renderer import FactoryRenderer
+    from log_utils import section, info, warn, error, success, kv
+
+
+class PipelineAbort(RuntimeError):
+    pass
+
+
+def _ensure_dirs() -> None:
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(PUBLIC_MODELS_DIR, exist_ok=True)
+
+
+def _parse_pipeline_response(text: str) -> Dict[str, Any]:
+    """Parse LLM response, extracting JSON even from markdown fences."""
+    import re
+    
+    if not text or not text.strip():
+        raise ValueError("Empty response from LLM")
+    
+    body = text.strip()
+    
+    # Try to extract JSON from markdown code fences
+    if "```" in body:
+        # Try ```json block first
+        json_match = re.search(r'```json\s*([\s\S]*?)```', body)
+        if json_match:
+            body = json_match.group(1).strip()
+        else:
+            # Try generic ``` block
+            generic_match = re.search(r'```\s*([\s\S]*?)```', body)
+            if generic_match:
+                body = generic_match.group(1).strip()
+    
+    # Try to find JSON object if response has extra text
+    if not body.startswith('{'):
+        json_start = body.find('{')
+        if json_start != -1:
+            # Find matching closing brace
+            depth = 0
+            for i, c in enumerate(body[json_start:], json_start):
+                if c == '{':
+                    depth += 1
+                elif c == '}':
+                    depth -= 1
+                    if depth == 0:
+                        body = body[json_start:i+1]
+                        break
+    
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError as exc:
+        # Log the problematic response for debugging
+        warn(f"Failed to parse JSON. Response head: {body[:500]}...")
+        raise ValueError(f"Pipeline response is not valid JSON: {exc}") from exc
+
+
+def _build_flows(machines: List[Dict[str, Any]], links_path: str, force_regen: bool) -> List[Tuple[str, str]]:
+    pipeline = None
+    if should_regenerate_links(links_path, force_regen):
+        m_list_str = format_machine_list(machines)
+        prompt = MACHINE_PIPELINE_PROMPT.replace("{machines_list}", m_list_str)
+        try:
+            resp = generate_message(
+                prompt=prompt,
+                system_instruction="You are a factory systems engineer.",
+            )
+            pipeline = _parse_pipeline_response(resp)
+            with open(links_path, "w", encoding="utf-8") as f:
+                json.dump(pipeline, f, indent=2)
+        except Exception as exc:
+            warn(f"LLM pipeline generation failed: {exc}")
+            warn("Falling back to linear flow based on machine order.")
+            pipeline = None  # Will use fallback below
+    else:
+        pipeline = load_pipeline(links_path)
+
+    if pipeline and "flows" in pipeline:
+        model_flows = normalize_flows(pipeline["flows"])
+        flows = expand_flows_to_instances(model_flows, machines)
+        return flows
+
+    # Fallback: linear chain
+    expanded = []
+    for m in machines:
+        model = str(m.get("model") or m.get("name") or "Machine")
+        count = int(m.get("count", 1) or 1)
+        if count <= 1:
+            expanded.append(model)
+        else:
+            for i in range(count):
+                expanded.append(f"{model}_{i+1}")
+    return [(expanded[i], expanded[i + 1]) for i in range(len(expanded) - 1)]
+
+
+def _persist_local_images(data_path: str, machines: List[Dict[str, Any]]) -> None:
+    try:
+        with open(data_path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+    except Exception:
+        return
+
+    if isinstance(raw, dict) and "machines" in raw:
+        items = raw.get("machines") or []
+    elif isinstance(raw, list):
+        items = raw
+    else:
+        return
+
+    changed = False
+    for i, m in enumerate(machines):
+        if i >= len(items):
+            break
+        img = m.get("image")
+        if not isinstance(img, str) or not img:
+            continue
+        if img.startswith("http://") or img.startswith("https://"):
+            continue
+        if os.path.isabs(img):
+            img = os.path.relpath(img, BASE_DIR)
+        if items[i].get("image") != img:
+            items[i]["image"] = img
+            changed = True
+
+    if changed:
+        try:
+            with open(data_path, "w", encoding="utf-8") as f:
+                json.dump(raw, f, indent=2)
+        except Exception:
+            pass
+
+
+def _ask_stop_step() -> int:
+    while True:
+        section("Interactive Mode")
+        info("Stop at which step?")
+        info("1) After pipeline/flows")
+        info("2) After layout generation")
+        info("3) After base DXF+PNG export")
+        info("4) After enhanced images (base + realistic)")
+        info("5) After background removal (rembg) + VIDEO")
+        info("6) After 3D model")
+        choice = input("Choose (1-6): ").strip()
+        if choice in ("1", "2", "3", "4", "5", "6"):
+            return int(choice)
+
+
+class Timer:
+    def __init__(self) -> None:
+        self.t0 = time.time()
+        self.start_total = self.t0
+        self.steps: List[Tuple[str, float]] = []
+
+    def log(self, name: str) -> None:
+        now = time.time()
+        duration = now - self.t0
+        self.steps.append((name, duration))
+        info(f"Time: {name} = {duration:.2f}s")
+        self.t0 = now
+
+    def log_custom(self, name: str, duration: float) -> None:
+        self.steps.append((name, duration))
+        info(f"Time: {name} = {duration:.2f}s")
+
+    def reset(self) -> None:
+        self.t0 = time.time()
+
+    def print_summary(self) -> None:
+        section("Timing Summary")
+        total = 0.0
+        for name, duration in self.steps:
+            print(f"{name:<30}: {duration:.2f}s")
+            total += duration
+        print("-" * 30)
+        print(f"{'TOTAL':<30}: {total:.2f}s")
+        wall = time.time() - self.start_total
+        if wall > 0.01:
+            print(f"{'WALL':<30}: {wall:.2f}s")
+        if total > wall + 0.05:
+            print("Note: some steps ran in parallel; TOTAL may exceed WALL.")
+
+
+def _run_step(timer: Timer, title: str, fn):
+    section(title)
+    try:
+        result = fn()
+        timer.log(title)
+        success("Done")
+        return result
+    except Exception as exc:
+        error(f"{title} failed")
+        kv("error_type", type(exc).__name__)
+        kv("message", str(exc))
+        raise PipelineAbort(str(exc)) from exc
+
+
+def run_pipeline(
+    data_path: str,
+    links_path: str,
+    seed: int,
+    force_links: bool = False,
+    skip_images: bool = False,
+    stop_at: int | None = None,
+    create_realistic_render: bool = True,
+    create_3d_model: bool = True,
+) -> None:
+    _ensure_dirs()
+    timer = Timer()
+
+    try:
+        # 1) Load data
+        machines = _run_step(timer, "Load data", lambda: load_data(data_path))
+
+        # 2+3) Parallel: download/clean images and generate flows
+        section("Parallel: images + flows")
+        img_start = None
+        flows_start = time.time()
+        executor = None
+        img_future = None
+
+        if stop_at is not None and stop_at <= 3:
+            img_start = time.time()
+            executor = ThreadPoolExecutor(max_workers=2)
+            img_future = executor.submit(prefetch_machine_images, machines, None)
+            flows_future = executor.submit(_build_flows, machines, links_path, force_links)
+        elif skip_images:
+            info("Skipping machine image processing.")
+            flows = _build_flows(machines, links_path, force_links)
+            timer.log_custom("Generate flows", time.time() - flows_start)
+        else:
+            img_start = time.time()
+            executor = ThreadPoolExecutor(max_workers=2)
+            img_future = executor.submit(process_machine_images, machines, None)
+            flows_future = executor.submit(_build_flows, machines, links_path, force_links)
+
+        try:
+            if stop_at is None or stop_at > 3:
+                if not skip_images:
+                    try:
+                        flows = flows_future.result()
+                        timer.log_custom("Generate flows", time.time() - flows_start)
+                    except Exception as exc:
+                        error("Generate flows failed")
+                        kv("error_type", type(exc).__name__)
+                        kv("message", str(exc))
+                        raise PipelineAbort(str(exc)) from exc
+            else:
+                try:
+                    flows = flows_future.result()
+                    timer.log_custom("Generate flows", time.time() - flows_start)
+                except Exception as exc:
+                    error("Generate flows failed")
+                    kv("error_type", type(exc).__name__)
+                    kv("message", str(exc))
+                    raise PipelineAbort(str(exc)) from exc
+
+            if stop_at == 1:
+                if img_future is not None:
+                    img_future.result()
+                    timer.log_custom("Download images", time.time() - (img_start or time.time()))
+                    _persist_local_images(data_path, machines)
+                info("Stopped after step 1")
+                timer.print_summary()
+                return
+
+            # 4) Generate layout + routes
+            timer.reset()
+            layout_data, paths = _run_step(timer, "Generate layout + routes", lambda: generate_layout(machines, flows, seed=seed))
+
+            if stop_at == 2:
+                if img_future is not None:
+                    img_future.result()
+                    timer.log_custom("Download images", time.time() - (img_start or time.time()))
+                    _persist_local_images(data_path, machines)
+                info("Stopped after step 2")
+                timer.print_summary()
+                return
+
+            # 5) Render DXF
+            renderer = FactoryRenderer()
+            _run_step(timer, "Render DXF", lambda: renderer.render_dxf(layout_data, paths, OUTPUT_DXF))
+
+            if img_future is not None:
+                if stop_at is not None and stop_at <= 3:
+                    try:
+                        img_future.result(timeout=30)
+                    except FutureTimeout:
+                        warn("Image prefetch still running; rendering PNG without waiting.")
+                else:
+                    img_future.result()
+                if img_future.done():
+                    timer.log_custom("Download images", time.time() - (img_start or time.time()))
+                    _persist_local_images(data_path, machines)
+
+            for placed in layout_data.get("placed", []):
+                machine = placed.get("machine", {})
+                if isinstance(machine, dict):
+                    placed["img_path"] = (
+                        machine.get("image_nobg_path") or machine.get("image_path") or machine.get("image")
+                    )
+        finally:
+            if executor is not None:
+                executor.shutdown(wait=True)
+
+        # 6) Render base PNG
+        _run_step(timer, "Render base PNG", lambda: renderer.render_png(layout_data, paths, images_map=None, output_path=OUTPUT_PNG))
+
+        if stop_at == 3:
+            info("Stopped after step 3")
+            timer.print_summary()
+            return
+
+        if not create_realistic_render:
+            info("Skipping realistic render.")
+        else:
+            # 7) Gemini: realistic render
+            def _render_realistic():
+                with open(OUTPUT_PNG, "rb") as f:
+                    layout_bytes = f.read()
+                images = generate_image(prompt=TOP_VIEW_REALISTIC_BELTS, images=[layout_bytes])
+                if not images:
+                    raise RuntimeError("No image returned from image generation.")
+                with open(REALISTIC_PNG, "wb") as f:
+                    f.write(images[0])
+            _run_step(timer, "Gemini realistic render", _render_realistic)
+
+        if stop_at == 4:
+            info("Stopped after step 4")
+            timer.print_summary()
+            return
+
+        if create_realistic_render:
+            # 8) Remove background
+            def _bg_remove():
+                with open(REALISTIC_PNG, "rb") as f:
+                    src = f.read()
+                clean = remove_background(src)
+                with open(REALISTIC_CLEAN_PNG, "wb") as f:
+                    f.write(clean)
+            _run_step(timer, "Background removal", _bg_remove)
+
+            _run_step(timer, "Background removal", _bg_remove)
+
+
+        if stop_at == 5:
+            info("Stopped after step 5")
+            timer.print_summary()
+            return
+
+        if not create_realistic_render and create_3d_model:
+            warn("Skipping 3D model because realistic render is disabled.")
+            create_3d_model = False
+
+        if create_3d_model:
+            # 9) Replicate: 3D model
+            def _gen_3d():
+                result = generate_3d_model(REALISTIC_CLEAN_PNG)
+                model_url = None
+                if isinstance(result, dict):
+                    model_url = result.get("model_file")
+                if not model_url and isinstance(result, str):
+                    model_url = result
+
+                if not model_url:
+                    raise RuntimeError("3D generation output did not include model_file.")
+
+                r = requests.get(model_url, timeout=120)
+                r.raise_for_status()
+                with open(FINAL_GLB_PATH, "wb") as f:
+                    f.write(r.content)
+            _run_step(timer, "Replicate 3D + download", _gen_3d)
+
+            success(f"Saved GLB: {FINAL_GLB_PATH}")
+        timer.print_summary()
+
+        if stop_at == 6:
+            info("Stopped after step 6")
+            return
+    except PipelineAbort:
+        warn("Pipeline stopped due to an error.")
+        timer.print_summary()
+        return
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", default="data.json")
+    ap.add_argument("--links", default=os.path.join(OUTPUT_DIR, "links.json"))
+    ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--force-links", action="store_true", help="Force regenerate Gemini pipeline links")
+    ap.add_argument("--i", "--interactive", action="store_true", help="Prompt for stop-at step")
+    args = ap.parse_args()
+
+    stop_at = _ask_stop_step() if args.i else None
+    run_pipeline(args.data, args.links, seed=args.seed, force_links=args.force_links, stop_at=stop_at)
+
+
+if __name__ == "__main__":
+    main()
