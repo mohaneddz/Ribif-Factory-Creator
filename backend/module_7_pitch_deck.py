@@ -322,17 +322,20 @@ class RIBIFModule8PitchDeck:
         
         # Build Presenton API request (v3)
         payload = {
-            "tone": "sales_pitch",
+            "tone": "default",
             "verbosity": "concise",
             "image_type": "stock",
             "language": "French (Français)" if is_french else "English",
             "export_as": "pdf",
             "content_generation": "condense",
-            "instructions": "Convert the provided company information into a compelling pitch deck that clearly presents the problem, solution, market opportunity, product, traction, team, and vision in a concise, investor-ready format.",
+            "theme": "professional-blue",
+            "standard_template": "general",
+            "instructions": "Research and create and pitch deck on given company",
             "markdown_emphasis": False,
-            "include_table_of_contents": True,
+            "include_table_of_contents": False,
             "include_title_slide": True,
-            "allow_access_to_user_info": False
+            "allow_access_to_user_info": False,
+            "content": pitch_content
         }
         
         generate_endpoint = f"{self.presenton_url}/api/v3/presentation/generate"

@@ -421,7 +421,21 @@ Respond ONLY with valid JSON containing estimates in DZD."""
 - Power supply: {specs.get('alimentation', 'N/A')}
 """
         
-        base_prompt = f"""Estimate the complete TCO for this industrial machine in Algeria:
+        base_prompt = f"""Estimate the complete TCO for this industrial machine in Algeria with realistic, defensible numbers.
+
+    Rules:
+    - All amounts must be numeric (no strings) and in DZD.
+    - Use realistic bounds and ratios:
+      * implementation_cost: 5–15% of estimated_purchase_price
+      * annual_operations_cost: 3–8% of estimated_purchase_price
+      * annual_maintenance_cost: 2–6% of estimated_purchase_price
+      * annual_downtime_cost: 1–4% of estimated_purchase_price
+      * resale_value: 30–50% of estimated_purchase_price at end of life
+      * disposal_cost: 1–3% of estimated_purchase_price
+      * lifetime_years: 8–15
+    - If supplier price signals exist, anchor estimated_purchase_price to them.
+    - If specs are missing, infer a conservative mid‑range price for the category.
+    - Round amounts to the nearest 1,000 DZD.
 
 MACHINE: {machine.get('name', 'Unknown')}
 ID: {machine.get('id', 'N/A')}

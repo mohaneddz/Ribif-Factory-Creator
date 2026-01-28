@@ -24,6 +24,11 @@ const fontStyle = `
   body, div, button, input, table, h1, h2, h3, p {
     font-family: 'Outfit', sans-serif;
   }
+
+    @keyframes progress {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(300%); }
+    }
 `;
 
 // ==========================================
@@ -37,9 +42,8 @@ const MODULES = [
     { id: 2, title: "Sourcing Global", icon: Globe, file: "Liste_Sourcing.xlsx", type: "sourcing", statusText: "Recherche fournisseurs..." },
     { id: 3, title: "Analyse TCO", icon: Calculator, file: "Rapport_TCO.json", type: "tco", statusText: "Calcul des coûts..." },
     { id: 4, title: "Business Plan", icon: Briefcase, file: "Business_Plan.xlsx", type: "businessplan", statusText: "Génération du plan..." },
-    { id: 5, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." },
-    { id: 6, title: "Plans Techniques", icon: Layers, file: "Layout_Usine.dwg", type: "plans", statusText: "Génération 2D/3D..." },
-    { id: 7, title: "Simulation Vidéo", icon: Video, file: "Visite_Virtuelle.mp4", type: "video", statusText: "Rendu temps réel..." },
+    { id: 5, title: "Pitch Deck", icon: Presentation, file: "Pitch_Deck.pdf", type: "pitchdeck", statusText: "Génération du pitch deck..." },
+    { id: 6, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." }
 ];
 
 const MODULE_LOADING_META: Record<string, { kicker: string; description: string; bullets: string[]; accent: string; glow: string }> = {
@@ -128,9 +132,13 @@ const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
     const tcoData = data || MOCK_TCO_DATA;
     const totalTco = tcoData.total_tco || 0;
     const avgAnnualTco = tcoData.average_annual_tco || 0;
-    const annualTco = tcoData.annual_tco || [];
+    const annualTco = tcoData.annual_tco || tcoData?.data?.annual_tco || [];
     const machineTco = tcoData.machine_tco || [];
+    const productTco = tcoData.product_tco || [];
     const rawMaterialsTco = tcoData.raw_materials_tco || [];
+    const totalMachinesTco = tcoData.total_machines_tco || 0;
+    const totalProductsTco = tcoData.total_products_tco || 0;
+    const totalMaterialsTco = tcoData.total_raw_materials_tco || 0;
     const calcDate = tcoData.calculation_date || new Date().toISOString().split('T')[0];
 
     if (loading) {
@@ -183,21 +191,37 @@ const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
                         <h3 className="font-bold text-slate-800">Évolution Annuelle des Coûts</h3>
                         <div className="flex gap-2">
                             <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-1 rounded-md">
-                                <div className="w-2 h-2 rounded-full bg-indigo-500" /> Total
+                                <div className="w-2 h-2 rounded-full bg-indigo-500" /> Machines
+                            </span>
+                            <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-1 rounded-md">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500" /> Produits
+                            </span>
+                            <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-1 rounded-md">
+                                <div className="w-2 h-2 rounded-full bg-amber-500" /> Matières
                             </span>
                         </div>
                     </div>
                     <div className="flex-1 flex items-end justify-between px-4 gap-4 pb-2">
                         {annualTco.length > 0 ? annualTco.map((year: any, i: number) => {
-                            const maxVal = Math.max(...annualTco.map((y: any) => y.total_tco || 0));
-                            const heightPct = maxVal > 0 ? ((year.total_tco || 0) / maxVal) * 100 : 0;
+                            const maxVal = Math.max(1, ...annualTco.map((y: any) => y.total_tco || 0));
+                            const totalVal = year.total_tco || 0;
+                            const heightPct = maxVal > 0 ? (totalVal / maxVal) * 100 : 0;
+                            const machinesVal = year.machines_tco || 0;
+                            const productsVal = year.products_tco || 0;
+                            const materialsVal = year.raw_materials_tco || 0;
+                            const totalParts = machinesVal + productsVal + materialsVal || 1;
+                            const machinesPct = (machinesVal / totalParts) * 100;
+                            const productsPct = (productsVal / totalParts) * 100;
+                            const materialsPct = (materialsVal / totalParts) * 100;
                             return (
                                 <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
                                     <div className="text-[10px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        {((year.total_tco || 0) / 1000000000).toFixed(1)}Mrd
+                                        {(totalVal / 1000000000).toFixed(1)} Mrd
                                     </div>
-                                    <div className="w-full bg-indigo-50 rounded-t-xl relative overflow-hidden group-hover:bg-indigo-100 transition-colors" style={{ height: `${Math.max(heightPct, 10)}%` }}>
-                                        <div className="absolute bottom-0 left-0 right-0 top-4 bg-indigo-500 rounded-t-lg opacity-80" />
+                                    <div className="w-full bg-slate-50 rounded-t-xl relative overflow-hidden" style={{ height: `${Math.max(heightPct, 12)}%` }}>
+                                        <div className="absolute bottom-0 left-0 right-0" style={{ height: `${machinesPct}%`, backgroundColor: '#6366f1' }} />
+                                        <div className="absolute left-0 right-0" style={{ bottom: `${machinesPct}%`, height: `${productsPct}%`, backgroundColor: '#10b981' }} />
+                                        <div className="absolute left-0 right-0" style={{ bottom: `${machinesPct + productsPct}%`, height: `${materialsPct}%`, backgroundColor: '#f59e0b' }} />
                                     </div>
                                     <div className="text-xs font-bold text-slate-600">Année {year.year}</div>
                                 </div>
@@ -213,6 +237,15 @@ const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
                     <h3 className="font-bold text-slate-800 mb-4">Postes de Coûts</h3>
 
                     <div className="space-y-4">
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Répartition Totale</div>
+                            <div className="space-y-2 text-xs">
+                                <div className="flex justify-between"><span className="text-slate-500">Machines</span><span className="font-bold text-slate-700">{(totalMachinesTco / 1000000000).toFixed(2)} Mrd</span></div>
+                                <div className="flex justify-between"><span className="text-slate-500">Produits</span><span className="font-bold text-slate-700">{(totalProductsTco / 1000000000).toFixed(2)} Mrd</span></div>
+                                <div className="flex justify-between"><span className="text-slate-500">Matières</span><span className="font-bold text-slate-700">{(totalMaterialsTco / 1000000000).toFixed(2)} Mrd</span></div>
+                            </div>
+                        </div>
+
                         {rawMaterialsTco.length > 0 && (
                             <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                                 <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Matériaux (Top 3)</div>
@@ -227,11 +260,25 @@ const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
                             </div>
                         )}
 
+                        {productTco.length > 0 && (
+                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Produits (Top 3)</div>
+                                <div className="space-y-3">
+                                    {productTco.slice(0, 3).map((prod: any, i: number) => (
+                                        <div key={i} className="flex justify-between items-center">
+                                            <div className="text-xs font-bold text-slate-700 truncate max-w-[120px]">{prod.nom_produit}</div>
+                                            <div className="text-xs font-medium text-slate-500">{((prod.total_tco || 0) / 1000000).toFixed(0)}M</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {machineTco.length > 0 && (
                             <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                                 <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Machines ({machineTco.length})</div>
                                 <div className="space-y-3">
-                                    {machineTco.slice(0, 5).map((mac: any, i: number) => (
+                                    {machineTco.map((mac: any, i: number) => (
                                         <div key={i} className="space-y-2">
                                             <div className="text-xs font-bold text-slate-700 truncate">{mac.machine_name}</div>
                                             {mac.cost_breakdown && (
@@ -556,7 +603,12 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
 
     const renderOverlayContent = () => {
         if (!activeTab) return null;
-        const data = MOCK_BUSINESS_PLAN_DATA;
+        const data = businessPlanData?.data || {};
+        const bmc = data.bmc_content || {};
+        const capex = data.capex_data || {};
+        const opex = data.opex_data || {};
+        const pricing = data.pricing_data || {};
+        const roi = data.financial_data || {};
 
         switch (activeTab) {
             case 'bmc':
@@ -566,37 +618,37 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
                         <div className="grid grid-cols-3 gap-4">
                             <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                                 <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-2">Partenaires Clés</div>
-                                <p className="text-sm text-slate-600">{data.bmc.partners}</p>
+                                <p className="text-sm text-slate-600">{Array.isArray(bmc.partners) ? bmc.partners.join(" • ") : bmc.partners}</p>
                             </div>
                             <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
                                 <div className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-2">Activités Clés</div>
-                                <p className="text-sm text-slate-600">{data.bmc.activities}</p>
+                                <p className="text-sm text-slate-600">{Array.isArray(bmc.activities) ? bmc.activities.join(" • ") : bmc.activities}</p>
                             </div>
                             <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
                                 <div className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-2">Propositions de Valeur</div>
-                                <p className="text-sm text-slate-600">{data.bmc.value_propositions}</p>
+                                <p className="text-sm text-slate-600">{Array.isArray(bmc.value_propositions) ? bmc.value_propositions.join(" • ") : bmc.value_propositions}</p>
                             </div>
                             <div className="bg-sky-50 p-4 rounded-xl border border-sky-100">
                                 <div className="text-xs font-bold text-sky-600 uppercase tracking-widest mb-2">Ressources Clés</div>
-                                <p className="text-sm text-slate-600">{data.bmc.resources}</p>
+                                <p className="text-sm text-slate-600">{Array.isArray(bmc.resources) ? bmc.resources.join(" • ") : bmc.resources}</p>
                             </div>
                             <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
                                 <div className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-2">Relations Clients</div>
-                                <p className="text-sm text-slate-600">{data.bmc.relationships}</p>
+                                <p className="text-sm text-slate-600">{Array.isArray(bmc.relationships) ? bmc.relationships.join(" • ") : bmc.relationships}</p>
                             </div>
                             <div className="bg-rose-50 p-4 rounded-xl border border-rose-100">
                                 <div className="text-xs font-bold text-rose-600 uppercase tracking-widest mb-2">Segments Clients</div>
-                                <p className="text-sm text-slate-600">{data.bmc.segments}</p>
+                                <p className="text-sm text-slate-600">{Array.isArray(bmc.segments) ? bmc.segments.join(" • ") : bmc.segments}</p>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4 mt-4">
                             <div className="bg-slate-800 p-4 rounded-xl text-white">
                                 <div className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-2">Structure de Coûts</div>
-                                <p className="text-sm">{data.bmc.cost_structure}</p>
+                                <p className="text-sm">{Array.isArray(bmc.cost_structure) ? bmc.cost_structure.join(" • ") : bmc.cost_structure}</p>
                             </div>
                             <div className="bg-emerald-600 p-4 rounded-xl text-white">
                                 <div className="text-xs font-bold text-emerald-200 uppercase tracking-widest mb-2">Flux de Revenus</div>
-                                <p className="text-sm">{data.bmc.revenue_streams}</p>
+                                <p className="text-sm">{Array.isArray(bmc.revenue_streams) ? bmc.revenue_streams.join(" • ") : bmc.revenue_streams}</p>
                             </div>
                         </div>
                     </div>
@@ -607,11 +659,11 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
                         <h3 className="text-lg font-bold text-slate-800 mb-4">Capital Expenditures (CapEx)</h3>
                         <div className="space-y-3">
                             {[
-                                { label: 'Équipements', value: data.capex.equipment.total },
-                                { label: 'Infrastructure', value: data.capex.infrastructure.total },
-                                { label: 'Véhicules', value: data.capex.vehicles.total },
-                                { label: 'Licences', value: data.capex.licenses.total },
-                                { label: 'Fonds de roulement', value: data.capex.working_capital },
+                                { label: 'Équipements', value: capex?.equipment?.total },
+                                { label: 'Infrastructure', value: capex?.infrastructure?.total },
+                                { label: 'Véhicules', value: capex?.vehicles?.total },
+                                { label: 'Licences', value: capex?.licenses?.total },
+                                { label: 'Fonds de roulement', value: capex?.working_capital },
                             ].map((item, i) => (
                                 <div key={i} className="flex justify-between items-center p-4 bg-slate-50 rounded-xl">
                                     <span className="font-medium text-slate-700">{item.label}</span>
@@ -620,7 +672,7 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
                             ))}
                             <div className="flex justify-between items-center p-4 bg-indigo-600 text-white rounded-xl">
                                 <span className="font-bold">TOTAL CAPEX</span>
-                                <span className="font-black text-xl">{(data.capex.total_capex / 1000000000).toFixed(2)} Mrd DZD</span>
+                                <span className="font-black text-xl">{((capex?.total_capex || 0) / 1000000000).toFixed(2)} Mrd DZD</span>
                             </div>
                         </div>
                     </div>
@@ -631,14 +683,14 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
                         <h3 className="text-lg font-bold text-slate-800 mb-4">Operating Expenses (OpEx) - Annuel</h3>
                         <div className="space-y-3">
                             {[
-                                { label: 'Matières Premières', value: data.opex.raw_materials.annual_cost },
-                                { label: 'Énergie', value: data.opex.energy.annual_cost },
-                                { label: 'Personnel', value: data.opex.personnel.annual_cost },
-                                { label: 'Maintenance', value: data.opex.maintenance.annual_cost },
-                                { label: 'Loyer', value: data.opex.rent.annual_cost },
-                                { label: 'Assurance', value: data.opex.insurance.annual_cost },
-                                { label: 'Marketing', value: data.opex.marketing.annual_cost },
-                                { label: 'Administratif', value: data.opex.administrative.annual_cost },
+                                { label: 'Matières Premières', value: opex?.raw_materials?.annual_cost },
+                                { label: 'Énergie', value: opex?.energy?.annual_cost },
+                                { label: 'Personnel', value: opex?.personnel?.annual_cost },
+                                { label: 'Maintenance', value: opex?.maintenance?.annual_cost },
+                                { label: 'Loyer', value: opex?.rent?.annual_cost },
+                                { label: 'Assurance', value: opex?.insurance?.annual_cost },
+                                { label: 'Marketing', value: opex?.marketing?.annual_cost },
+                                { label: 'Administratif', value: opex?.administrative?.annual_cost },
                             ].map((item, i) => (
                                 <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
                                     <span className="font-medium text-slate-700">{item.label}</span>
@@ -647,7 +699,7 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
                             ))}
                             <div className="flex justify-between items-center p-4 bg-slate-800 text-white rounded-xl">
                                 <span className="font-bold">TOTAL OPEX ANNUEL</span>
-                                <span className="font-black text-xl">{(data.opex.total_annual_opex / 1000000000).toFixed(2)} Mrd DZD</span>
+                                <span className="font-black text-xl">{((opex?.total_annual_opex || 0) / 1000000000).toFixed(2)} Mrd DZD</span>
                             </div>
                         </div>
                     </div>
@@ -666,7 +718,7 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
                                 </tr>
                             </thead>
                             <tbody>
-                                {data.pricing.products.map((p, i) => (
+                                {(pricing.products || []).map((p: any, i: number) => (
                                     <tr key={i} className="border-b border-slate-100">
                                         <td className="py-3 font-medium text-slate-700">{p.name}</td>
                                         <td className="py-3 text-right text-slate-600">{p.unit_price_dzd.toLocaleString()} DZD</td>
@@ -678,11 +730,11 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
                         </table>
                         <div className="mt-4 p-4 bg-emerald-600 text-white rounded-xl flex justify-between items-center">
                             <span className="font-bold">TOTAL ANNÉE 1</span>
-                            <span className="font-black text-xl">{(data.pricing.total_annual_revenue_year1 / 1000000000).toFixed(2)} Mrd DZD</span>
+                            <span className="font-black text-xl">{((pricing.total_annual_revenue_year1 || 0) / 1000000000).toFixed(2)} Mrd DZD</span>
                         </div>
                         <div className="mt-4 p-4 bg-slate-50 rounded-xl">
                             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Stratégie</div>
-                            <p className="text-sm text-slate-700">{data.pricing.pricing_strategy}</p>
+                            <p className="text-sm text-slate-700">{pricing.pricing_strategy}</p>
                         </div>
                     </div>
                 );
@@ -693,20 +745,20 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-emerald-50 p-6 rounded-xl border border-emerald-100">
                                 <div className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-2">VAN (NPV)</div>
-                                <div className="text-3xl font-black text-emerald-700">{(data.roi.npv / 1000000000).toFixed(2)} Mrd</div>
+                                <div className="text-3xl font-black text-emerald-700">{((roi.npv || 0) / 1000000000).toFixed(2)} Mrd</div>
                                 <div className="text-sm text-emerald-600 mt-1">DZD</div>
                             </div>
                             <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-100">
                                 <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-2">TRI (IRR)</div>
-                                <div className="text-3xl font-black text-indigo-700">{(data.roi.irr * 100).toFixed(1)}%</div>
+                                <div className="text-3xl font-black text-indigo-700">{((roi.irr || 0) * 100).toFixed(1)}%</div>
                             </div>
                             <div className="bg-amber-50 p-6 rounded-xl border border-amber-100">
                                 <div className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-2">Période de Récupération</div>
-                                <div className="text-3xl font-black text-amber-700">{data.roi.payback.toFixed(1)} ans</div>
+                                <div className="text-3xl font-black text-amber-700">{(roi.payback || 0).toFixed(1)} ans</div>
                             </div>
                             <div className="bg-slate-100 p-6 rounded-xl border border-slate-200">
                                 <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Investissement Total</div>
-                                <div className="text-3xl font-black text-slate-700">{(data.roi.total_investment / 1000000000).toFixed(2)} Mrd</div>
+                                <div className="text-3xl font-black text-slate-700">{((roi.total_investment || 0) / 1000000000).toFixed(2)} Mrd</div>
                                 <div className="text-sm text-slate-500 mt-1">DZD</div>
                             </div>
                         </div>
@@ -908,12 +960,6 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
                                 </button>
                             </div>
                             {renderOverlayContent()}
-                            <div className="mt-6 pt-6 border-t border-slate-100 flex justify-end">
-                                <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all">
-                                    <Download size={14} />
-                                    Exporter cette section
-                                </button>
-                            </div>
                         </motion.div>
                     </motion.div>
                 )}
@@ -2056,10 +2102,9 @@ const ModuleLoadingView = ({ module, progress }: { module: any; progress: number
                     <div className="flex items-center gap-3 mb-6">
                         <Loader2 className="animate-spin text-indigo-600" size={20} />
                         <span className="text-sm font-bold text-slate-700">{module.statusText}</span>
-                        <span className="ml-auto text-xs font-black text-slate-500">{Math.round(safeProgress)}%</span>
                     </div>
                     <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-6">
-                        <div className="h-full bg-indigo-600 transition-all" style={{ width: `${Math.max(safeProgress, 6)}%` }} />
+                        <div className="h-full bg-indigo-600 animate-[progress_1.2s_ease-in-out_infinite]" style={{ width: "35%" }} />
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                         {meta.bullets.map((item) => (
@@ -2235,11 +2280,16 @@ export default function FactoryCopilot() {
         }
         if (moduleType === 'catalogue') {
             window.open('/catalog_output.pdf', '_blank', 'noopener,noreferrer');
+            return;
+        }
+        if (moduleType === 'pitchdeck') {
+            const url = pitchDeckData?.pdf_download_url;
+            if (url) window.open(url, '_blank', 'noopener,noreferrer');
         }
     };
 
     const handleDownloadAll = () => {
-        const urls = [businessPlanData?.download_url, '/catalog_output.pdf'];
+        const urls = [businessPlanData?.download_url, pitchDeckData?.pdf_download_url, '/catalog_output.pdf'];
         urls.forEach((url) => {
             if (url) window.open(url, '_blank', 'noopener,noreferrer');
         });
@@ -2425,10 +2475,10 @@ export default function FactoryCopilot() {
                                             </button>
                                             <button
                                                 onClick={() => handleArtifactDownload(idx)}
-                                                disabled={MODULES[idx].type !== 'businessplan' && MODULES[idx].type !== 'catalogue'}
+                                                disabled={MODULES[idx].type !== 'businessplan' && MODULES[idx].type !== 'catalogue' && MODULES[idx].type !== 'pitchdeck'}
                                                 className={clsx(
                                                     "w-8 h-8 flex items-center justify-center rounded-full transition-colors",
-                                                    (MODULES[idx].type !== 'businessplan' && MODULES[idx].type !== 'catalogue')
+                                                    (MODULES[idx].type !== 'businessplan' && MODULES[idx].type !== 'catalogue' && MODULES[idx].type !== 'pitchdeck')
                                                         ? "text-slate-300 cursor-not-allowed"
                                                         : "text-slate-400 hover:bg-slate-100 hover:text-indigo-600"
                                                 )}

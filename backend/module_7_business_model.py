@@ -138,6 +138,11 @@ class BusinessPlanOutput(BaseModel):
     payback_years: float
     sheets: List[str] = []
     download_url: str = ""
+    bmc_content: Dict[str, Any] = {}
+    capex_data: Dict[str, Any] = {}
+    opex_data: Dict[str, Any] = {}
+    pricing_data: Dict[str, Any] = {}
+    financial_data: Dict[str, Any] = {}
 
 
 # ============================================
@@ -313,7 +318,12 @@ Respond ONLY with the requested JSON, no explanatory text."""
             irr_percent=financial_data["irr"] * 100,
             payback_years=financial_data["payback"],
             sheets=sheets_created,
-            download_url=f"{base_url}/download/{filename}"
+            download_url=f"{base_url}/download/{filename}",
+            bmc_content=bmc_content,
+            capex_data=capex_data,
+            opex_data=opex_data,
+            pricing_data=pricing_data,
+            financial_data=financial_data
         )
 
     def _calculate_financials_with_estimates(self, input_data: BusinessPlanInput, 
