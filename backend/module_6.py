@@ -336,6 +336,24 @@ Respond ONLY with valid JSON containing estimates in DZD."""
                 f"Missing required machine estimate fields {missing} for {machine.get('name', 'Unknown')}"
             )
 
+        numeric_keys = [
+            "estimated_purchase_price",
+            "implementation_cost",
+            "annual_operations_cost",
+            "annual_maintenance_cost",
+            "annual_downtime_cost",
+            "resale_value",
+            "disposal_cost",
+            "lifetime_years",
+        ]
+        for key in numeric_keys:
+            try:
+                float(result.get(key))
+            except (TypeError, ValueError):
+                raise ValueError(
+                    f"Invalid numeric value for {key} in machine estimate for {machine.get('name', 'Unknown')}: {result.get(key)}"
+                )
+
         return {
             "estimated_purchase_price": result.get("estimated_purchase_price"),
             "implementation_cost": result.get("implementation_cost"),
@@ -403,7 +421,7 @@ Respond ONLY with valid JSON containing estimates in DZD."""
 - Power supply: {specs.get('alimentation', 'N/A')}
 """
         
-        prompt = f"""Estimate the complete TCO for this industrial machine in Algeria:
+        base_prompt = f"""Estimate the complete TCO for this industrial machine in Algeria:
 
 MACHINE: {machine.get('name', 'Unknown')}
 ID: {machine.get('id', 'N/A')}
@@ -444,14 +462,25 @@ Respond in JSON:
     "notes": "<justification>"
 }}"""
 
+        retry_prompt = base_prompt + "\nIMPORTANT: Do not return null for any numeric fields. All numeric fields must be valid numbers."
+
         try:
-            result = self.call_gemini(prompt)
+            result = self.call_gemini(base_prompt)
             if result:
+                validated = self._validate_machine_estimate(result, machine)
                 print(f"✅ LLM estimation SUCCESS for machine: {machine.get('name', 'Unknown')}")
-                return self._validate_machine_estimate(result, machine)
+                return validated
             raise ValueError(f"Empty LLM response for machine: {machine.get('name', 'Unknown')}")
-        except Exception as e:
-            raise ValueError(f"LLM estimation failed for machine {machine.get('name', 'Unknown')}: {e}")
+        except Exception as first_error:
+            try:
+                result = self.call_gemini(retry_prompt)
+                if result:
+                    validated = self._validate_machine_estimate(result, machine)
+                    print(f"✅ LLM estimation SUCCESS for machine: {machine.get('name', 'Unknown')}")
+                    return validated
+                raise ValueError(f"Empty LLM response for machine: {machine.get('name', 'Unknown')}")
+            except Exception as e:
+                raise ValueError(f"LLM estimation failed for machine {machine.get('name', 'Unknown')}: {e}") from first_error
 
     def estimate_product_costs(
         self, 

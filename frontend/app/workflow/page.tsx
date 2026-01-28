@@ -30,6 +30,8 @@ const fontStyle = `
 // 1. CONFIGURATION
 // ==========================================
 
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+
 const MODULES = [
     { id: 1, title: "Analyse Specs", icon: FileText, file: "Specs_V1.pdf", type: "specs", statusText: "Extraction des données..." },
     { id: 2, title: "Sourcing Global", icon: Globe, file: "Liste_Sourcing.xlsx", type: "sourcing", statusText: "Recherche fournisseurs..." },
@@ -536,7 +538,7 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
     const totalPages = pitchDeckData?.data?.slides?.length || 10; // Use real slide count if available
 
     // Get pitch deck file info
-    const fallbackPdfUrl = "/pdf_dash.pdf";
+    const fallbackPdfUrl = "";
     const pitchDeckPdfUrl = pitchDeckData?.pdf_download_url || fallbackPdfUrl;
     const pitchDeckFilename = pitchDeckData?.pdf_filename || pitchDeckData?.filename || 'pitch_deck.pdf';
     const businessPlanFilename = businessPlanData?.filename || 'business_plan.pdf';
@@ -756,7 +758,7 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
                                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all"
                             >
                                 <Download size={14} />
-                                Business Plan PDF
+                                Business Plan XLSX
                             </a>
                         )}
                         {pitchDeckPdfUrl && (
@@ -1097,34 +1099,6 @@ const SpecsView = ({ data }: any) => {
                     </div>
                 )}
 
-                {/* Machines Section */}
-                {machines.length > 0 && (
-                    <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm">
-                        <div className="flex justify-between items-center mb-4">
-                            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Machines & Équipements</div>
-                            <span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-full text-xs font-bold">{machines.length} machines</span>
-                        </div>
-                        <div className="max-h-80 overflow-y-auto space-y-3 pr-2">
-                            {machines.map((machine: any, i: number) => (
-                                <div key={i} className="p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-purple-200 transition-all">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div className="font-bold text-slate-800">{machine.nom_machine}</div>
-                                        <span className="px-2 py-0.5 bg-purple-50 text-purple-600 rounded text-xs font-medium">x{typeof machine.quantite_necessaire === 'object' ? machine.quantite_necessaire?.value : machine.quantite_necessaire}</span>
-                                    </div>
-                                    <div className="text-xs text-slate-500 mb-2">{machine.type}</div>
-                                    <div className="text-xs text-indigo-600 font-medium mb-2">Fabricant: {typeof machine.fabricant_recommande === 'object' ? machine.fabricant_recommande?.value : machine.fabricant_recommande}</div>
-                                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
-                                        <span><strong>Capacité:</strong> {typeof machine.specifications?.capacite === 'object' ? machine.specifications?.capacite?.value : machine.specifications?.capacite}</span>
-                                        <span><strong>Puissance:</strong> {typeof machine.specifications?.puissance === 'object' ? `${machine.specifications?.puissance?.value} ${machine.specifications?.puissance?.unit || 'kW'}` : machine.specifications?.puissance}</span>
-                                        <span><strong>Rendement:</strong> {typeof machine.performance?.rendement === 'object' ? `${(machine.performance?.rendement?.value * 100).toFixed(0)}%` : machine.performance?.rendement}</span>
-                                        <span><strong>Cadence:</strong> {typeof machine.performance?.cadence === 'object' ? `${machine.performance?.cadence?.value} ${machine.performance?.cadence?.unit || ''}` : machine.performance?.cadence}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
                 {/* Machines with AI Generated Images */}
                 {enrichedMachines.length > 0 && (
                     <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm">
@@ -1150,7 +1124,7 @@ const SpecsView = ({ data }: any) => {
                         {/* Machine Cards Grid with Images */}
                         <div className="grid grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2">
                             {enrichedMachines.map((machine: any, i: number) => {
-                                const hasImage = machine.image_url && machine.image_status === 'success';
+                                const hasImage = Boolean(machine.image_url);
                                 const hasError = machine.enrichment_error || machine.image_status === 'error';
 
                                 return (
@@ -2122,29 +2096,15 @@ export default function FactoryCopilot() {
     const [pitchDeckData, setPitchDeckData] = useState<any>(null);
     const [businessPlanLoading, setBusinessPlanLoading] = useState(false);
 
-    // This effect runs the "Animation" progress bars only after data is received
+    // Animate loading progress while a module is running
     useEffect(() => {
-        if (status === 'processing' && currentModule < MODULES.length) {
+        if (status === 'processing' && !artifacts.includes(currentModule)) {
             const timer = setTimeout(() => {
-                if (subStep < 4) {
-                    setSubStep(s => s + 1);
-                } else {
-                    setArtifacts(prev => [...new Set([...prev, currentModule])]);
-                    if (currentModule < MODULES.length - 1) {
-                        setCurrentModule(m => {
-                            const next = m + 1;
-                            setSelectedModule(prev => (prev === m ? next : prev));
-                            return next;
-                        });
-                        setSubStep(0);
-                    } else {
-                        setStatus('finished');
-                    }
-                }
-            }, 800); // 800ms per sub-step for visual flow
+                setSubStep(s => (s + 1) % 5);
+            }, 800);
             return () => clearTimeout(timer);
         }
-    }, [status, currentModule, subStep]);
+    }, [status, currentModule, subStep, artifacts]);
 
     // ----------------------------------------------------
     // REAL FILE UPLOAD HANDLER
@@ -2153,30 +2113,93 @@ export default function FactoryCopilot() {
         if (!e.target.files || e.target.files.length === 0) return;
 
         const file = e.target.files[0];
-        setStatus('uploading');
+        setStatus('processing');
+        setArtifacts([]);
+        setCurrentModule(0);
+        setSelectedModule(0);
+        setSubStep(0);
+        setExtractedData(null);
+        setModule4Data(null);
+        setTcoData(null);
+        setBusinessPlanData(null);
+        setPitchDeckData(null);
 
         try {
-            console.log(`📄 Placeholder upload: ${file.name}`);
-            console.log("🧩 Using placeholder data (backend disabled)...");
+            const formData = new FormData();
+            formData.append('file', file);
 
-            setSelectedModule(0);
-            setExtractedData(MOCK_EXTRACTED_DATA);
+            const module1Res = await fetch(`${API_BASE}/api/module1/process`, {
+                method: 'POST',
+                body: formData
+            });
+            const module1Json = await module1Res.json();
+            if (!module1Res.ok) throw new Error(module1Json?.error || 'Module 1 failed');
+
+            const module1Data = module1Json?.data || module1Json;
+            setExtractedData(module1Data);
+            setArtifacts(prev => [...new Set([...prev, 0])]);
+
             setStatus('processing');
+            setCurrentModule(1);
+            setSelectedModule(1);
+            setSubStep(0);
 
             setModule4Loading(true);
-            setModule4Data(MOCK_MODULE4_DATA);
+            const module4Res = await fetch(`${API_BASE}/api/module4/enrich`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(module1Data)
+            });
+            const module4Json = await module4Res.json();
+            if (!module4Res.ok) throw new Error(module4Json?.error || 'Module 4 failed');
+            setModule4Data(module4Json);
             setModule4Loading(false);
+            setArtifacts(prev => [...new Set([...prev, 1])]);
+            setCurrentModule(2);
+            setSelectedModule(2);
+            setSubStep(0);
 
             setTcoLoading(true);
-            setTcoData(MOCK_TCO_DATA);
+            const module6Res = await fetch(`${API_BASE}/api/module6/tco-from-sourcing`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(module4Json)
+            });
+            const module6Json = await module6Res.json();
+            if (!module6Res.ok) throw new Error(module6Json?.error || 'Module 6 failed');
+            setTcoData(module6Json);
             setTcoLoading(false);
+            setArtifacts(prev => [...new Set([...prev, 2])]);
+            setCurrentModule(3);
+            setSelectedModule(3);
+            setSubStep(0);
 
             setBusinessPlanLoading(true);
-            setBusinessPlanData(MOCK_BUSINESS_PLAN_RESPONSE);
-            setPitchDeckData(MOCK_PITCH_DECK_RESPONSE);
+            const businessPlanRes = await fetch(`${API_BASE}/api/module7/business-plan`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(module6Json)
+            });
+            const businessPlanJson = await businessPlanRes.json();
+            if (!businessPlanRes.ok) throw new Error(businessPlanJson?.error || 'Business Plan failed');
+            setBusinessPlanData(businessPlanJson);
+
+            const pitchDeckRes = await fetch(`${API_BASE}/api/module7/pitch-deck`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(module6Json)
+            });
+            const pitchDeckJson = await pitchDeckRes.json();
+            if (!pitchDeckRes.ok) throw new Error(pitchDeckJson?.error || 'Pitch Deck failed');
+            setPitchDeckData(pitchDeckJson);
             setBusinessPlanLoading(false);
+            setArtifacts(prev => [...new Set([...prev, 3])]);
+            setStatus('finished');
         } catch (error) {
-            console.error("❌ Placeholder setup error:", error);
+            console.error("❌ Workflow error:", error);
+            setModule4Loading(false);
+            setTcoLoading(false);
+            setBusinessPlanLoading(false);
             setStatus('idle');
         }
     };
@@ -2201,6 +2224,25 @@ export default function FactoryCopilot() {
         if (artifacts.includes(idx) || status === 'finished' || idx === currentModule) {
             setSelectedModule(idx);
         }
+    };
+
+    const handleArtifactDownload = (idx: number) => {
+        const moduleType = MODULES[idx]?.type;
+        if (moduleType === 'businessplan') {
+            const url = businessPlanData?.download_url;
+            if (url) window.open(url, '_blank', 'noopener,noreferrer');
+            return;
+        }
+        if (moduleType === 'catalogue') {
+            window.open('/catalog_output.pdf', '_blank', 'noopener,noreferrer');
+        }
+    };
+
+    const handleDownloadAll = () => {
+        const urls = [businessPlanData?.download_url, '/catalog_output.pdf'];
+        urls.forEach((url) => {
+            if (url) window.open(url, '_blank', 'noopener,noreferrer');
+        });
     };
 
     const selectedModuleItem = MODULES[selectedModule];
@@ -2381,7 +2423,16 @@ export default function FactoryCopilot() {
                                             <button onClick={() => regenerateOne(idx)} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors">
                                                 <RefreshCw size={14} />
                                             </button>
-                                            <button className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors">
+                                            <button
+                                                onClick={() => handleArtifactDownload(idx)}
+                                                disabled={MODULES[idx].type !== 'businessplan' && MODULES[idx].type !== 'catalogue'}
+                                                className={clsx(
+                                                    "w-8 h-8 flex items-center justify-center rounded-full transition-colors",
+                                                    (MODULES[idx].type !== 'businessplan' && MODULES[idx].type !== 'catalogue')
+                                                        ? "text-slate-300 cursor-not-allowed"
+                                                        : "text-slate-400 hover:bg-slate-100 hover:text-indigo-600"
+                                                )}
+                                            >
                                                 <Download size={14} />
                                             </button>
                                         </div>
@@ -2397,7 +2448,10 @@ export default function FactoryCopilot() {
                     </div>
                     {status === 'finished' && (
                         <div className="p-6 border-t border-slate-100 bg-white">
-                            <button className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
+                            <button
+                                onClick={handleDownloadAll}
+                                className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+                            >
                                 <Download size={16} /> TOUT TÉLÉCHARGER
                             </button>
                         </div>

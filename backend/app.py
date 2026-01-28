@@ -2,9 +2,11 @@ import os
 import sys
 import json
 import base64
+import shutil
+from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from module_1 import RIBIFExtractor
@@ -20,11 +22,84 @@ CORS(app, resources={r"/*": {"origins": "*"}}) # Allow Next.js to call this
 UPLOAD_FOLDER = 'uploads'
 OUTPUT_FOLDER = 'data/extracted_data'
 IMAGES_FOLDER = 'data/machine_images'
+TEMP_OUTPUT_FOLDER = 'data/temp_outputs'
+DOWNLOAD_FOLDERS = [
+    Path('data/7_business_plan'),
+    Path('data/7_pitch_deck'),
+    Path(TEMP_OUTPUT_FOLDER),
+    Path(OUTPUT_FOLDER)
+]
+BASE_URL = os.getenv("BACKEND_BASE_URL", "http://localhost:5000")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 os.makedirs(IMAGES_FOLDER, exist_ok=True)
+os.makedirs(TEMP_OUTPUT_FOLDER, exist_ok=True)
 
 extractor = RIBIFExtractor()
+
+def reset_temp_outputs() -> None:
+    """Clear temp JSON outputs from previous workflow runs."""
+    if os.path.exists(TEMP_OUTPUT_FOLDER):
+        for filename in os.listdir(TEMP_OUTPUT_FOLDER):
+            file_path = os.path.join(TEMP_OUTPUT_FOLDER, filename)
+            if os.path.isfile(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception:
+                    pass
+    else:
+        os.makedirs(TEMP_OUTPUT_FOLDER, exist_ok=True)
+
+def write_temp_json(module_name: str, payload: dict) -> dict:
+    """Write module output to temp folder and return download metadata."""
+    os.makedirs(TEMP_OUTPUT_FOLDER, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{module_name}_{timestamp}.json"
+    filepath = os.path.join(TEMP_OUTPUT_FOLDER, filename)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(payload, f, indent=2, ensure_ascii=False)
+    return {
+        "filename": filename,
+        "filepath": filepath,
+        "download_url": f"{BASE_URL}/download/{filename}"
+    }
+
+def cleanup_temp_outputs() -> None:
+    """Remove temp JSON outputs and any leftover temp files."""
+    if os.path.exists(TEMP_OUTPUT_FOLDER):
+        for filename in os.listdir(TEMP_OUTPUT_FOLDER):
+            file_path = os.path.join(TEMP_OUTPUT_FOLDER, filename)
+            if os.path.isfile(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception:
+                    pass
+
+def cleanup_temp_images() -> None:
+    """Remove generated images from temp folders after workflow completion."""
+    # Module 4 generated images
+    module4_images_dir = Path(OUTPUT_FOLDER) / "module_4_images"
+    if module4_images_dir.exists() and module4_images_dir.is_dir():
+        shutil.rmtree(module4_images_dir, ignore_errors=True)
+
+    # Module 1 machine images
+    if os.path.exists(IMAGES_FOLDER):
+        for filename in os.listdir(IMAGES_FOLDER):
+            file_path = os.path.join(IMAGES_FOLDER, filename)
+            if os.path.isfile(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception:
+                    pass
+
+@app.route('/download/<path:filename>', methods=['GET'])
+def download_file(filename):
+    safe_name = os.path.basename(filename)
+    for folder in DOWNLOAD_FOLDERS:
+        candidate = folder / safe_name
+        if candidate.exists() and candidate.is_file():
+            return send_file(candidate, as_attachment=True)
+    return jsonify({"error": "File not found"}), 404
 
 def generate_machine_image(machine_name: str, machine_type: str, manufacturer: str = None) -> dict:
     """
@@ -99,6 +174,9 @@ def process_module_1():
     filepath = os.path.join(UPLOAD_FOLDER, filename)
     file.save(filepath)
 
+    # Clear previous temp outputs at the start of a new workflow
+    reset_temp_outputs()
+
     print(f"📥 Processing: {filename}...")
 
     try:
@@ -170,22 +248,6 @@ def process_module_1():
             enriched_machines.append(enriched_machine)
             print()
         
-        # Build enriched machines without images for now
-        enriched_machines = []
-        for machine_data in machines:
-            enriched_machines.append({
-                "nom_machine": machine_data.get('nom_machine', 'Unknown'),
-                "type": machine_data.get('type', 'industrial machine'),
-                "fabricant_recommande": machine_data.get('fabricant_recommande', ''),
-                "quantite_necessaire": machine_data.get('quantite_necessaire', 1),
-                "use": machine_data.get('use', ''),
-                "specifications": machine_data.get('specifications', {}),
-                "performance": machine_data.get('performance', {}),
-                "image_url": None,
-                "image_status": "skipped",
-                "source": "vertex_extraction"
-            })
-        
         # ========================================
         # STAGE 3: Combine & Save Final Results
         # ========================================
@@ -220,6 +282,7 @@ def process_module_1():
         print("📦 Ready for RIBIF Modules 2-9")
         print("💡 Financial analysis: Module 6 (TCO) & Module 7 (Business Plan)\n")
         
+        write_temp_json("module1_extraction", final_result)
         return jsonify({"message": "Success", "data": final_result})
         
     except Exception as e:
@@ -314,6 +377,7 @@ def enrich_machines_module4():
         print(f"📦 Enriched {len(result.get('machines_enriched', []))} machines with suppliers")
         print("="*70 + "\n")
         
+        write_temp_json("module4_sourcing", result)
         return jsonify(result)
         
     except Exception as e:
@@ -337,7 +401,7 @@ def calculate_tco_from_sourcing():
     Output (JSON):
         TCO calculation result with machine_tco, product_tco, etc.
     """
-    from backend.module_6 import RIBIFModule6TCO
+    from module_6 import RIBIFModule6TCO
     
     try:
         print("\n" + "="*70)
@@ -432,13 +496,39 @@ def calculate_tco_from_sourcing():
             )
             all_machine_tcos.append(machine_tco)
             
-            # Create product TCO from machine (simplified)
-            product_tco = tco_calculator.calculate_product_tco(
-                product={"nom_produit": f"Production from {machine_name}", "categorie": machine_input_raw.get("use", "Industrial")},
-                machine_tco=machine_tco
-            )
-            all_product_tcos.append(product_tco)
+            # Product TCO is handled later from stage_3 outputs to avoid missing inputs
         
+        # Build product TCOs using stage_3 outputs (fallback heuristic)
+        products = stage_3.get("produits_fabriques", [])
+        if isinstance(products, dict):
+            products = products.get("produits_fabriques", [])
+        if products:
+            from module_6 import ProductTCO
+            avg_machine_annual = 0
+            if all_machine_tcos:
+                avg_machine_annual = sum(m.annual_tco for m in all_machine_tcos) / max(len(all_machine_tcos), 1)
+
+            for product in products:
+                nom_produit = product.get("nom_produit", "Unknown")
+                categorie = product.get("categorie", "finished")
+
+                landing_cost = avg_machine_annual * 0.05
+                holding_cost = avg_machine_annual * 0.03
+                quality_cost = avg_machine_annual * 0.02
+                administrative_cost = avg_machine_annual * 0.01
+
+                all_product_tcos.append(ProductTCO(
+                    nom_produit=nom_produit,
+                    categorie=categorie,
+                    landing_cost=round(landing_cost, 2),
+                    holding_cost=round(holding_cost, 2),
+                    quality_cost=round(quality_cost, 2),
+                    administrative_cost=round(administrative_cost, 2),
+                    total_tco=round(landing_cost + holding_cost + quality_cost + administrative_cost, 2)
+                ))
+        else:
+            print("⚠️ No stage_3 products found; product TCO skipped.")
+
         # Calculate raw material TCO if stage_2 data is available
         raw_material_tcos = []
         # Handle different data structures for matieres_premieres
@@ -453,7 +543,7 @@ def calculate_tco_from_sourcing():
         if raw_materials:
             print(f"\n📦 Processing {len(raw_materials)} raw materials...")
             raw_material_results = tco_calculator.estimate_raw_material_costs(raw_materials, use_llm=True)
-            from backend.module_6 import RawMaterialTCO
+            from module_6 import RawMaterialTCO
             for rm in raw_material_results:
                 raw_material_tcos.append(RawMaterialTCO(**rm))
         
@@ -511,6 +601,7 @@ def calculate_tco_from_sourcing():
         print(f"📊 Machines: {len(all_machine_tcos)} | Products: {len(all_product_tcos)} | Materials: {len(raw_material_tcos)}")
         print("="*70 + "\n")
         
+        write_temp_json("module6_tco", result)
         return jsonify(result)
         
     except Exception as e:
@@ -813,7 +904,7 @@ def calculate_tco():
             return jsonify({"error": "Missing required field: machine_input"}), 400
         
         # Initialize TCO calculator and process
-        from backend.module_6 import RIBIFModule6TCO
+        from module_6 import RIBIFModule6TCO
         tco_calculator = RIBIFModule6TCO()
         result = tco_calculator.process_input(data)
         
@@ -834,7 +925,7 @@ def generate_business_plan():
             return jsonify({"error": "No JSON data provided"}), 400
         
         # Initialize business plan generator
-        from backend.module_7_business_model import RIBIFModule7BusinessPlan, BusinessPlanInput
+        from module_7_business_model import RIBIFModule7BusinessPlan, BusinessPlanInput
         
         # Create input from TCO output structure
         bp_input = BusinessPlanInput(
@@ -858,6 +949,7 @@ def generate_business_plan():
         generator = RIBIFModule7BusinessPlan()
         result = generator.generate_business_plan(bp_input)
         
+        write_temp_json("module7_business_plan", result.model_dump())
         return jsonify({
             "message": "Business plan generated successfully",
             "filepath": result.filepath,
@@ -878,7 +970,7 @@ def generate_pitch_deck():
             return jsonify({"error": "No JSON data provided"}), 400
         
         # Initialize pitch deck generator
-        from backend.module_7_pitch_deck import RIBIFModule8PitchDeck, PitchDeckInput
+        from module_7_pitch_deck import RIBIFModule8PitchDeck, PitchDeckInput
         
         # Create input from TCO output structure (same as module 7)
         pd_input = PitchDeckInput(
@@ -905,8 +997,9 @@ def generate_pitch_deck():
         
         generator = RIBIFModule8PitchDeck()
         result = generator.generate_pitch_deck(pd_input)
-        
-        return jsonify({
+
+        write_temp_json("module7_pitch_deck", result.model_dump())
+        response_payload = {
             "message": "Pitch deck generated successfully",
             "filepath": result.filepath,
             "filename": result.filename,
@@ -915,7 +1008,13 @@ def generate_pitch_deck():
             "pdf_filename": result.pdf_filename,
             "pdf_download_url": result.pdf_download_url,
             "data": result.model_dump()
-        })
+        }
+
+        # Cleanup temp outputs after workflow finishes
+        cleanup_temp_outputs()
+        cleanup_temp_images()
+
+        return jsonify(response_payload)
     
     except ConnectionError as e:
         print(f"🔥 Presenton Connection Error: {e}")
