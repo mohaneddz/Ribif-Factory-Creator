@@ -16,6 +16,10 @@ PyMuPDF
 python-docx
 google-cloud-documentai
 
+# PDF & Imaging
+reportlab
+pillow
+
 # Data Processing & Validation
 Pydantic
 numpy

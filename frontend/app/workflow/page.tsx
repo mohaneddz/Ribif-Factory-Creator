@@ -1833,13 +1833,15 @@ const Page = React.forwardRef<HTMLDivElement, { pageNum: number; pdfDoc: any; sc
 );
 Page.displayName = 'Page';
 
-const CatalogueTechniqueView = () => {
+const CatalogueTechniqueView = ({ pdfUrl }: { pdfUrl?: string }) => {
     const bookRef = useRef<any>(null);
     const [pdfDoc, setPdfDoc] = useState<any>(null);
     const [numPages, setNumPages] = useState(0);
     const [currentPage, setCurrentPage] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [pdfJsLoaded, setPdfJsLoaded] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const resolvedPdfUrl = pdfUrl;
 
     // Load PDF.js from CDN
     useEffect(() => {
@@ -1863,20 +1865,30 @@ const CatalogueTechniqueView = () => {
 
         const loadPdf = async () => {
             try {
+                if (!resolvedPdfUrl) {
+                    setPdfDoc(null);
+                    setNumPages(0);
+                    setLoadError('Catalogue non disponible');
+                    setIsLoading(false);
+                    return;
+                }
+                setLoadError(null);
+                setIsLoading(true);
                 const pdfjsLib = (window as any).pdfjsLib;
-                const loadingTask = pdfjsLib.getDocument('/catalog_output.pdf');
+                const loadingTask = pdfjsLib.getDocument(resolvedPdfUrl);
                 const doc = await loadingTask.promise;
                 setPdfDoc(doc);
                 setNumPages(doc.numPages);
                 setIsLoading(false);
             } catch (err) {
                 console.error('Error loading PDF:', err);
+                setLoadError('Impossible de charger le catalogue');
                 setIsLoading(false);
             }
         };
 
         loadPdf();
-    }, [pdfJsLoaded]);
+    }, [pdfJsLoaded, resolvedPdfUrl]);
 
     const handlePageFlip = useCallback((e: any) => {
         setCurrentPage(e.data);
@@ -1895,8 +1907,9 @@ const CatalogueTechniqueView = () => {
     };
 
     const handleDownload = () => {
+        if (!resolvedPdfUrl) return;
         const link = document.createElement('a');
-        link.href = '/catalog_output.pdf';
+        link.href = resolvedPdfUrl;
         link.download = 'Catalogue_Technique.pdf';
         document.body.appendChild(link);
         link.click();
@@ -1909,6 +1922,16 @@ const CatalogueTechniqueView = () => {
                 <div className="text-center">
                     <Loader2 className="animate-spin text-indigo-400 mx-auto mb-4\" size={48} />
                     <p className="text-white font-bold">Chargement du catalogue...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900">
+                <div className="text-center">
+                    <p className="text-white font-bold">{loadError}</p>
                 </div>
             </div>
         );
@@ -2122,6 +2145,8 @@ export default function FactoryCopilot() {
     const [businessPlanData, setBusinessPlanData] = useState<any>(null);
     const [pitchDeckData, setPitchDeckData] = useState<any>(null);
     const [businessPlanLoading, setBusinessPlanLoading] = useState(false);
+    const [catalogData, setCatalogData] = useState<any>(null);
+    const [catalogLoading, setCatalogLoading] = useState(false);
 
     // Animate loading progress while a module is running
     useEffect(() => {
@@ -2150,6 +2175,7 @@ export default function FactoryCopilot() {
         setTcoData(null);
         setBusinessPlanData(null);
         setPitchDeckData(null);
+        setCatalogData(null);
 
         try {
             const formData = new FormData();
@@ -2222,12 +2248,34 @@ export default function FactoryCopilot() {
             setPitchDeckData(pitchDeckJson);
             setBusinessPlanLoading(false);
             setArtifacts(prev => [...new Set([...prev, 3])]);
+
+            setCurrentModule(4);
+            setSelectedModule(4);
+            setSubStep(0);
+
+            setCatalogLoading(true);
+            const module9Res = await fetch(`${API_BASE}/api/module9/catalog`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    module1_data: module1Data,
+                    module4_data: module4Json,
+                    output_format: 'pdf'
+                })
+            });
+            const module9Json = await module9Res.json();
+            if (!module9Res.ok) throw new Error(module9Json?.error || 'Module 9 failed');
+            setCatalogData(module9Json);
+            setCatalogLoading(false);
+            setArtifacts(prev => [...new Set([...prev, 4])]);
+
             setStatus('finished');
         } catch (error) {
             console.error("❌ Workflow error:", error);
             setModule4Loading(false);
             setTcoLoading(false);
             setBusinessPlanLoading(false);
+            setCatalogLoading(false);
             setStatus('idle');
         }
     };
@@ -2262,13 +2310,14 @@ export default function FactoryCopilot() {
             return;
         }
         if (moduleType === 'catalogue') {
-            window.open('/catalog_output.pdf', '_blank', 'noopener,noreferrer');
+            const url = catalogData?.data?.pdf_download_url;
+            if (url) window.open(url, '_blank', 'noopener,noreferrer');
             return;
         }
     };
 
     const handleDownloadAll = () => {
-        const urls = [businessPlanData?.download_url, '/catalog_output.pdf'];
+        const urls = [businessPlanData?.download_url, catalogData?.data?.pdf_download_url];
         urls.forEach((url) => {
             if (url) window.open(url, '_blank', 'noopener,noreferrer');
         });
@@ -2281,7 +2330,8 @@ export default function FactoryCopilot() {
 
     const selectedModuleItem = MODULES[selectedModule];
     const activeStagePrimary = MODULES[currentModule];
-    const overallProgress = Math.round(((currentModule * 4 + subStep) / (MODULES.length * 4)) * 100);
+    const completedPhases = Math.max(artifacts.length, status === 'finished' ? MODULES.length : 0);
+    const overallProgress = Math.round((completedPhases / MODULES.length) * 100);
     const isSelectedProcessing = status === 'processing' && selectedModule === currentModule && !artifacts.includes(currentModule);
     const isSelectedDone = artifacts.includes(selectedModule) || status === 'finished' || selectedModule < currentModule;
     const selectedProgress = isSelectedProcessing ? (subStep / 4) * 100 : isSelectedDone ? 100 : 0;
@@ -2421,7 +2471,7 @@ export default function FactoryCopilot() {
                                                 {selectedModuleItem.type === 'sourcing' && <SourcingView progress={selectedProgress} data={extractedData} module4Data={module4Data} loading={module4Loading} />}
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
-                                                {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView />}
+                                                {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url} />}
                                             </>
                                         )}
                                     </motion.div>

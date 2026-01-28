@@ -23,9 +23,11 @@ UPLOAD_FOLDER = 'uploads'
 OUTPUT_FOLDER = 'data/extracted_data'
 IMAGES_FOLDER = 'data/machine_images'
 TEMP_OUTPUT_FOLDER = 'data/temp_outputs'
+CATALOG_FOLDER = 'data/catalogs'
 DOWNLOAD_FOLDERS = [
     Path('data/7_business_plan'),
     Path('data/7_pitch_deck'),
+    Path(CATALOG_FOLDER),
     Path(TEMP_OUTPUT_FOLDER),
     Path(OUTPUT_FOLDER)
 ]
@@ -34,6 +36,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 os.makedirs(IMAGES_FOLDER, exist_ok=True)
 os.makedirs(TEMP_OUTPUT_FOLDER, exist_ok=True)
+os.makedirs(CATALOG_FOLDER, exist_ok=True)
 
 extractor = RIBIFExtractor()
 
@@ -1024,6 +1027,48 @@ def generate_pitch_deck():
         return jsonify({"error": str(e)}), 504
     except Exception as e:
         print(f"🔥 Pitch Deck Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/module9/catalog', methods=['POST'])
+def generate_catalog_module9():
+    """
+    Module 9: Industrial Technical Catalog (PDF + HTML)
+
+    Input (JSON):
+    {
+        "module1_data": { ... },
+        "module4_data": { ... },
+        "images_config": { ... },
+        "output_format": "pdf" | "html" | "both",
+        "output_dir": "data/catalogs",
+        "base_filename": "optional_base_name",
+        "image_base_path": "data"
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+
+        payload = data
+        if "module1_data" not in payload:
+            payload = {"module1_data": data}
+
+        from module_9 import RIBIFModule9Catalog, CatalogInput
+
+        catalog_input = CatalogInput(**payload)
+        generator = RIBIFModule9Catalog(image_base_path=catalog_input.image_base_path)
+        result = generator.generate_catalog(catalog_input, base_url=BASE_URL)
+
+        write_temp_json("module9_catalog", result.model_dump())
+        return jsonify({
+            "message": "Catalog generated successfully",
+            "data": result.model_dump()
+        })
+
+    except Exception as e:
+        print(f"🔥 Module 9 Catalog Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/module2/layout', methods=['POST'])
