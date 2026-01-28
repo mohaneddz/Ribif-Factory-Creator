@@ -7,7 +7,7 @@ import {
     FileText, Layers, Video, Globe, Check,
     Upload, Loader2, Download, RefreshCw, Sparkles, Building2,
     Info, Play, FileSearch, Eye, BrainCircuit, Calculator,
-    Briefcase, X, FileSpreadsheet, Presentation, ChevronLeft, ChevronRight, BookOpen
+    Briefcase, X, FileSpreadsheet, ChevronLeft, ChevronRight, BookOpen
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
@@ -42,8 +42,7 @@ const MODULES = [
     { id: 2, title: "Sourcing Global", icon: Globe, file: "Liste_Sourcing.xlsx", type: "sourcing", statusText: "Recherche fournisseurs..." },
     { id: 3, title: "Analyse TCO", icon: Calculator, file: "Rapport_TCO.json", type: "tco", statusText: "Calcul des coûts..." },
     { id: 4, title: "Business Plan", icon: Briefcase, file: "Business_Plan.xlsx", type: "businessplan", statusText: "Génération du plan..." },
-    { id: 5, title: "Pitch Deck", icon: Presentation, file: "Pitch_Deck.pdf", type: "pitchdeck", statusText: "Génération du pitch deck..." },
-    { id: 6, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." }
+    { id: 5, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." }
 ];
 
 const MODULE_LOADING_META: Record<string, { kicker: string; description: string; bullets: string[]; accent: string; glow: string }> = {
@@ -201,32 +200,35 @@ const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
                             </span>
                         </div>
                     </div>
-                    <div className="flex-1 flex items-end justify-between px-4 gap-4 pb-2">
-                        {annualTco.length > 0 ? annualTco.map((year: any, i: number) => {
+                    <div className="flex-1 min-h-[240px] flex items-end justify-between px-4 gap-4 pb-2">
+                        {annualTco.length > 0 ? (() => {
                             const maxVal = Math.max(1, ...annualTco.map((y: any) => y.total_tco || 0));
-                            const totalVal = year.total_tco || 0;
-                            const heightPct = maxVal > 0 ? (totalVal / maxVal) * 100 : 0;
-                            const machinesVal = year.machines_tco || 0;
-                            const productsVal = year.products_tco || 0;
-                            const materialsVal = year.raw_materials_tco || 0;
-                            const totalParts = machinesVal + productsVal + materialsVal || 1;
-                            const machinesPct = (machinesVal / totalParts) * 100;
-                            const productsPct = (productsVal / totalParts) * 100;
-                            const materialsPct = (materialsVal / totalParts) * 100;
-                            return (
-                                <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                                    <div className="text-[10px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        {(totalVal / 1000000000).toFixed(1)} Mrd
+                            const barMaxHeight = 200;
+                            return annualTco.map((year: any, i: number) => {
+                                const totalVal = year.total_tco || 0;
+                                const barHeight = Math.max((totalVal / maxVal) * barMaxHeight, 16);
+                                const machinesVal = year.machines_tco || 0;
+                                const productsVal = year.products_tco || 0;
+                                const materialsVal = year.raw_materials_tco || 0;
+                                const totalParts = machinesVal + productsVal + materialsVal || 1;
+                                const machinesPct = (machinesVal / totalParts) * 100;
+                                const productsPct = (productsVal / totalParts) * 100;
+                                const materialsPct = (materialsVal / totalParts) * 100;
+                                return (
+                                    <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                                        <div className="text-[10px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {(totalVal / 1000000000).toFixed(1)} Mrd
+                                        </div>
+                                        <div className="w-full bg-slate-50 rounded-t-xl relative overflow-hidden" style={{ height: `${barHeight}px` }}>
+                                            <div className="absolute bottom-0 left-0 right-0" style={{ height: `${machinesPct}%`, backgroundColor: '#6366f1' }} />
+                                            <div className="absolute left-0 right-0" style={{ bottom: `${machinesPct}%`, height: `${productsPct}%`, backgroundColor: '#10b981' }} />
+                                            <div className="absolute left-0 right-0" style={{ bottom: `${machinesPct + productsPct}%`, height: `${materialsPct}%`, backgroundColor: '#f59e0b' }} />
+                                        </div>
+                                        <div className="text-xs font-bold text-slate-600">Année {year.year ?? i + 1}</div>
                                     </div>
-                                    <div className="w-full bg-slate-50 rounded-t-xl relative overflow-hidden" style={{ height: `${Math.max(heightPct, 12)}%` }}>
-                                        <div className="absolute bottom-0 left-0 right-0" style={{ height: `${machinesPct}%`, backgroundColor: '#6366f1' }} />
-                                        <div className="absolute left-0 right-0" style={{ bottom: `${machinesPct}%`, height: `${productsPct}%`, backgroundColor: '#10b981' }} />
-                                        <div className="absolute left-0 right-0" style={{ bottom: `${machinesPct + productsPct}%`, height: `${materialsPct}%`, backgroundColor: '#f59e0b' }} />
-                                    </div>
-                                    <div className="text-xs font-bold text-slate-600">Année {year.year}</div>
-                                </div>
-                            );
-                        }) : (
+                                );
+                            });
+                        })() : (
                             <div className="flex-1 flex items-center justify-center text-slate-400">Pas de données</div>
                         )}
                     </div>
@@ -582,14 +584,25 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
     const [activeTab, setActiveTab] = useState<string | null>(null);
     const [showOverlay, setShowOverlay] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
+    const pitchDeckDownloadRef = useRef<string | null>(null);
     const totalPages = pitchDeckData?.data?.slides?.length || 10; // Use real slide count if available
 
     // Get pitch deck file info
     const fallbackPdfUrl = "";
     const pitchDeckPdfUrl = pitchDeckData?.pdf_download_url || fallbackPdfUrl;
-    const pitchDeckFilename = pitchDeckData?.pdf_filename || pitchDeckData?.filename || 'pitch_deck.pdf';
-    const businessPlanFilename = businessPlanData?.filename || 'business_plan.pdf';
     const businessPlanDownloadUrl = businessPlanData?.download_url || fallbackPdfUrl;
+
+    useEffect(() => {
+        if (!pitchDeckPdfUrl || pitchDeckDownloadRef.current === pitchDeckPdfUrl) return;
+        pitchDeckDownloadRef.current = pitchDeckPdfUrl;
+        const link = document.createElement('a');
+        link.href = pitchDeckPdfUrl;
+        link.download = 'Pitch_Deck.pdf';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }, [pitchDeckPdfUrl]);
 
     const handleTabClick = (tabId: string) => {
         setActiveTab(tabId);
@@ -813,17 +826,6 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
                                 Business Plan XLSX
                             </a>
                         )}
-                        {pitchDeckPdfUrl && (
-                            <a
-                                href={pitchDeckPdfUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all"
-                            >
-                                <Download size={14} />
-                                Pitch Deck PDF
-                            </a>
-                        )}
                     </div>
                 </div>
                 <div className="flex gap-2">
@@ -888,26 +890,6 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
                     <span className="text-white text-sm font-medium bg-black/40 px-3 py-1.5 rounded-lg">
                         {currentPage} / {totalPages}
                     </span>
-                </div>
-
-                {/* Download Button */}
-                <div className="absolute bottom-4 right-6 z-20">
-                    {pitchDeckPdfUrl ? (
-                        <a
-                            href={pitchDeckPdfUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all"
-                        >
-                            <Download size={14} />
-                            Télécharger PDF
-                        </a>
-                    ) : (
-                        <button className="bg-slate-600 text-slate-300 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 cursor-not-allowed">
-                            <Loader2 size={14} className="animate-spin" />
-                            Génération...
-                        </button>
-                    )}
                 </div>
 
                 {/* PDF Preview or Placeholder */}
@@ -2205,10 +2187,11 @@ export default function FactoryCopilot() {
             setSubStep(0);
 
             setTcoLoading(true);
+            const module6Payload = { ...module1Data, ...module4Json };
             const module6Res = await fetch(`${API_BASE}/api/module6/tco-from-sourcing`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(module4Json)
+                body: JSON.stringify(module6Payload)
             });
             const module6Json = await module6Res.json();
             if (!module6Res.ok) throw new Error(module6Json?.error || 'Module 6 failed');
@@ -2282,18 +2265,19 @@ export default function FactoryCopilot() {
             window.open('/catalog_output.pdf', '_blank', 'noopener,noreferrer');
             return;
         }
-        if (moduleType === 'pitchdeck') {
-            const url = pitchDeckData?.pdf_download_url;
-            if (url) window.open(url, '_blank', 'noopener,noreferrer');
-        }
     };
 
     const handleDownloadAll = () => {
-        const urls = [businessPlanData?.download_url, pitchDeckData?.pdf_download_url, '/catalog_output.pdf'];
+        const urls = [businessPlanData?.download_url, '/catalog_output.pdf'];
         urls.forEach((url) => {
             if (url) window.open(url, '_blank', 'noopener,noreferrer');
         });
     };
+
+    const downloadableArtifacts = artifacts.filter((idx) => {
+        const type = MODULES[idx]?.type;
+        return type === 'businessplan' || type === 'catalogue';
+    });
 
     const selectedModuleItem = MODULES[selectedModule];
     const activeStagePrimary = MODULES[currentModule];
@@ -2452,17 +2436,17 @@ export default function FactoryCopilot() {
                 <aside className="w-80 bg-white border-l border-slate-200 flex flex-col z-20 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
                     <div className="h-24 p-8 border-b border-slate-100 flex items-center justify-between">
                         <h2 className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">Livrables</h2>
-                        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-[10px] font-bold">{artifacts.length} fichiers</span>
+                        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-[10px] font-bold">{downloadableArtifacts.length} fichiers</span>
                     </div>
                     <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
                         <AnimatePresence>
-                            {artifacts.length === 0 && (
+                            {downloadableArtifacts.length === 0 && (
                                 <div className="h-40 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-6 text-center">
                                     <Info size={24} className="mb-2 text-slate-300" />
                                     <p className="text-xs font-bold text-slate-400">En attente de génération...</p>
                                 </div>
                             )}
-                            {artifacts.slice().reverse().map((idx) => (
+                            {downloadableArtifacts.slice().reverse().map((idx) => (
                                 <motion.div key={idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                                     className={clsx("bg-white rounded-[20px] border p-4 transition-all group shadow-sm hover:shadow-md", selectedModule === idx ? "border-indigo-400 ring-4 ring-indigo-50" : "border-slate-200")}>
                                     <div className="flex justify-between items-start mb-3">
@@ -2475,13 +2459,7 @@ export default function FactoryCopilot() {
                                             </button>
                                             <button
                                                 onClick={() => handleArtifactDownload(idx)}
-                                                disabled={MODULES[idx].type !== 'businessplan' && MODULES[idx].type !== 'catalogue' && MODULES[idx].type !== 'pitchdeck'}
-                                                className={clsx(
-                                                    "w-8 h-8 flex items-center justify-center rounded-full transition-colors",
-                                                    (MODULES[idx].type !== 'businessplan' && MODULES[idx].type !== 'catalogue' && MODULES[idx].type !== 'pitchdeck')
-                                                        ? "text-slate-300 cursor-not-allowed"
-                                                        : "text-slate-400 hover:bg-slate-100 hover:text-indigo-600"
-                                                )}
+                                                className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
                                             >
                                                 <Download size={14} />
                                             </button>

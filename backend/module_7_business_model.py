@@ -350,6 +350,20 @@ Respond ONLY with the requested JSON, no explanatory text."""
         for year in range(years):
             year_cost = base_opex * ((1 + input_data.financial_params.inflation_rate) ** year)
             operating_costs.append(year_cost)
+
+        # Post-LLM clamps: ensure realistic revenue coverage of OpEx and non-negative growth
+        min_margin_year1 = 0.15
+        min_margin_year5 = 0.25
+        if revenues[0] <= 0:
+            revenues[0] = max(base_opex * 1.2, 1.0)
+        for i in range(1, years):
+            if revenues[i] <= 0:
+                revenues[i] = revenues[i - 1] * 1.02
+        required_rev_year1 = operating_costs[0] / max(1 - min_margin_year1, 0.05)
+        required_rev_year5 = operating_costs[-1] / max(1 - min_margin_year5, 0.05)
+        scale_factor = max(required_rev_year1 / max(revenues[0], 1.0), required_rev_year5 / max(revenues[-1], 1.0))
+        if scale_factor > 1.0:
+            revenues = [r * scale_factor for r in revenues]
         
         # Depreciation
         depreciation = self._calculate_depreciation(input_data, years, total_investment)
