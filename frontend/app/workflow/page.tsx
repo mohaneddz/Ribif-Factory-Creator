@@ -4,9 +4,9 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Grid, Float } from "@react-three/drei";
 import {
-    FileText, Layers, Video, Globe, Mic, FileJson, Check,
+    FileText, Layers, Video, Globe, Check,
     Upload, Loader2, Download, RefreshCw, Sparkles, Building2,
-    Info, Play, User, FileSearch, Eye, Smartphone, BrainCircuit, Calculator,
+    Info, Play, FileSearch, Eye, BrainCircuit, Calculator,
     Briefcase, X, FileSpreadsheet, Presentation, ChevronLeft, ChevronRight, BookOpen
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,13 +32,12 @@ const fontStyle = `
 
 const MODULES = [
     { id: 1, title: "Analyse Specs", icon: FileText, file: "Specs_V1.pdf", type: "specs", statusText: "Extraction des données..." },
-    { id: 2, title: "Plans Techniques", icon: Layers, file: "Layout_Usine.dwg", type: "plans", statusText: "Génération 2D/3D..." },
-    { id: 3, title: "Simulation Vidéo", icon: Video, file: "Visite_Virtuelle.mp4", type: "video", statusText: "Rendu temps réel..." },
-    { id: 4, title: "Sourcing Global", icon: Globe, file: "Liste_Sourcing.xlsx", type: "sourcing", statusText: "Recherche fournisseurs..." },
-    { id: 5, title: "Négociation IA", icon: Mic, file: "Transcript_Negociation.json", type: "negotiation", statusText: "Négociation active..." },
-    { id: 6, title: "Analyse TCO", icon: Calculator, file: "Rapport_TCO.json", type: "tco", statusText: "Calcul des coûts..." },
-    { id: 7, title: "Business Plan", icon: Briefcase, file: "Business_Plan.xlsx", type: "businessplan", statusText: "Génération du plan..." },
-    { id: 8, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." },
+    { id: 2, title: "Sourcing Global", icon: Globe, file: "Liste_Sourcing.xlsx", type: "sourcing", statusText: "Recherche fournisseurs..." },
+    { id: 3, title: "Analyse TCO", icon: Calculator, file: "Rapport_TCO.json", type: "tco", statusText: "Calcul des coûts..." },
+    { id: 4, title: "Business Plan", icon: Briefcase, file: "Business_Plan.xlsx", type: "businessplan", statusText: "Génération du plan..." },
+    { id: 5, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." },
+    { id: 6, title: "Plans Techniques", icon: Layers, file: "Layout_Usine.dwg", type: "plans", statusText: "Génération 2D/3D..." },
+    { id: 7, title: "Simulation Vidéo", icon: Video, file: "Visite_Virtuelle.mp4", type: "video", statusText: "Rendu temps réel..." },
 ];
 
 const MODULE_LOADING_META: Record<string, { kicker: string; description: string; bullets: string[]; accent: string; glow: string }> = {
@@ -69,13 +68,6 @@ const MODULE_LOADING_META: Record<string, { kicker: string; description: string;
         bullets: ["Recherche globale", "Matching besoins", "Classement qualité"],
         accent: "from-sky-600 via-blue-600 to-indigo-600",
         glow: "bg-blue-500",
-    },
-    negotiation: {
-        kicker: "Négociation automatisée",
-        description: "Simulation d'échanges pour optimiser les conditions d'achat.",
-        bullets: ["Scripts IA", "Arguments & concessions", "Synthèse des échanges"],
-        accent: "from-rose-600 via-pink-600 to-purple-600",
-        glow: "bg-purple-500",
     },
     tco: {
         kicker: "Analyse des coûts",
@@ -929,16 +921,6 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
 };
 
 
-const MOCK_EMAILS = [
-    { id: 1, from: "PolyTech Solutions", subject: "Devis: Extrudeuse 120mm", date: "10:42" },
-    { id: 2, from: "Shenzhen Resins", subject: "Catalog Q1 2025", date: "09:15" },
-];
-
-const MOCK_CHAT = [
-    { sender: "IA", text: "Bonjour, nous visons une réduction de 12% sur ce lot." },
-    { sender: "Supplier", text: "C'est difficile. Nous pouvons proposer 5% immédiat." },
-    { sender: "IA", text: "Si nous augmentons le volume de 20%, pouvez-vous atteindre 10% ?" },
-];
 
 // ==========================================
 // 2. SUB-COMPONENTS (CONNECTED TO REAL DATA)
@@ -1748,50 +1730,6 @@ const SourcingView = ({ progress, data, module4Data, loading }: { progress: numb
     );
 };
 
-const NegotiationView = () => {
-    const [tab, setTab] = useState<'email' | 'phone'>('email');
-    return (
-        <div className="h-full flex gap-6 p-6">
-            <div className="w-72 bg-white rounded-[24px] border border-slate-200 p-4 flex flex-col gap-4 shadow-sm">
-                <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
-                    <button onClick={() => setTab('email')} className={clsx("flex-1 py-2.5 rounded-lg text-xs font-bold transition-all", tab === 'email' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}>Email</button>
-                    <button onClick={() => setTab('phone')} className={clsx("flex-1 py-2.5 rounded-lg text-xs font-bold transition-all", tab === 'phone' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}>Appel</button>
-                </div>
-                {tab === 'email' ? MOCK_EMAILS.map(m => (
-                    <div key={m.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-white transition-all cursor-pointer group">
-                        <div className="flex justify-between mb-1">
-                            <span className="font-bold text-xs text-slate-800 group-hover:text-indigo-600">{m.from}</span>
-                            <span className="text-[10px] text-slate-400">{m.date}</span>
-                        </div>
-                        <div className="text-xs text-slate-500 font-medium truncate">{m.subject}</div>
-                    </div>
-                )) : (
-                    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-slate-50 rounded-2xl border border-slate-100 border-dashed">
-                        <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-3 animate-pulse">
-                            <Smartphone size={20} />
-                        </div>
-                        <div className="text-xs font-bold text-slate-600">Appel en cours...</div>
-                    </div>
-                )}
-            </div>
-
-            <div className="flex-1 bg-slate-50/50 rounded-[32px] border border-slate-200 p-6 flex flex-col">
-                <div className="flex-1 space-y-6 overflow-y-auto pr-2">
-                    {MOCK_CHAT.map((msg, i) => (
-                        <div key={i} className={clsx("flex gap-3", msg.sender === 'IA' ? "flex-row-reverse" : "")}>
-                            <div className={clsx("w-8 h-8 rounded-full flex items-center justify-center shrink-0 border shadow-sm", msg.sender === 'IA' ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-slate-600 border-slate-200")}>
-                                {msg.sender === 'IA' ? <Sparkles size={14} /> : <User size={14} />}
-                            </div>
-                            <div className={clsx("px-5 py-3 rounded-2xl max-w-[80%] text-sm font-medium leading-relaxed shadow-sm", msg.sender === 'IA' ? "bg-indigo-600 text-white rounded-tr-sm" : "bg-white text-slate-700 border border-slate-100 rounded-tl-sm")}>
-                                {msg.text}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-};
 
 // Page component for the flipbook
 const Page = React.forwardRef<HTMLDivElement, { pageNum: number; pdfDoc: any; scale: number }>(
@@ -2266,6 +2204,8 @@ export default function FactoryCopilot() {
     };
 
     const selectedModuleItem = MODULES[selectedModule];
+    const activeStagePrimary = MODULES[currentModule];
+    const overallProgress = Math.round(((currentModule * 4 + subStep) / (MODULES.length * 4)) * 100);
     const isSelectedProcessing = status === 'processing' && selectedModule === currentModule && !artifacts.includes(currentModule);
     const isSelectedDone = artifacts.includes(selectedModule) || status === 'finished' || selectedModule < currentModule;
     const selectedProgress = isSelectedProcessing ? (subStep / 4) * 100 : isSelectedDone ? 100 : 0;
@@ -2320,6 +2260,28 @@ export default function FactoryCopilot() {
                             );
                         })}
                     </div>
+                    {status === 'processing' && (
+                        <div className="p-6 border-t border-slate-100 bg-white">
+                            <motion.div initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-slate-900 text-white px-5 py-4 rounded-2xl flex items-center gap-4 shadow-lg shadow-slate-300/40">
+                                <div className="relative">
+                                    <div className="absolute inset-0 bg-indigo-500 rounded-full animate-ping opacity-75"></div>
+                                    <div className="relative w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center text-white border border-indigo-400">
+                                        <Sparkles size={14} />
+                                    </div>
+                                </div>
+                                <div className="flex-1">
+                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Progression globale</div>
+                                    <div className="text-sm font-bold text-white">{activeStagePrimary?.statusText || "Traitement en cours"}</div>
+                                    <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                        <div className="h-full bg-indigo-500" style={{ width: `${Math.max(overallProgress, 6)}%` }} />
+                                    </div>
+                                </div>
+                                <div className="text-base font-black text-indigo-300 font-mono">
+                                    {overallProgress}%
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
                 </aside>
 
                 {/* CENTER PANEL */}
@@ -2381,7 +2343,6 @@ export default function FactoryCopilot() {
                                                 {selectedModuleItem.type === 'plans' && <PlansView />}
                                                 {selectedModuleItem.type === 'video' && <VideoView progress={selectedProgress} />}
                                                 {selectedModuleItem.type === 'sourcing' && <SourcingView progress={selectedProgress} data={extractedData} module4Data={module4Data} loading={module4Loading} />}
-                                                {selectedModuleItem.type === 'negotiation' && <NegotiationView />}
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
                                                 {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView />}
@@ -2390,26 +2351,6 @@ export default function FactoryCopilot() {
                                     </motion.div>
                                 </AnimatePresence>
 
-                                {/* Floating Progress Pill */}
-                                {status === 'processing' && (
-                                    <div className="absolute top-8 left-1/2 -translate-x-1/2 z-30">
-                                        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-slate-900/90 backdrop-blur-md text-white pl-6 pr-8 py-3 rounded-full flex items-center gap-4 min-w-[320px] shadow-2xl shadow-slate-400/50">
-                                            <div className="relative">
-                                                <div className="absolute inset-0 bg-indigo-500 rounded-full animate-ping opacity-75"></div>
-                                                <div className="relative w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white border border-indigo-400">
-                                                    <Sparkles size={14} />
-                                                </div>
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Ribif Engine</div>
-                                                <div className="text-sm font-bold text-white">{MODULES[currentModule].statusText}</div>
-                                            </div>
-                                            <div className="text-lg font-black text-indigo-400 font-mono">
-                                                {Math.round(((currentModule * 4 + subStep) / (MODULES.length * 4)) * 100)}%
-                                            </div>
-                                        </motion.div>
-                                    </div>
-                                )}
                             </div>
                         )}
                     </div>

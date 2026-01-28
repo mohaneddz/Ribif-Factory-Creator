@@ -1,14 +1,39 @@
-flask
-flask-cors
+# Core Web Framework
+Flask
+Flask-CORS
+Werkzeug
+
+# Environment & Configuration
 python-dotenv
+
+# AI/LLM APIs
 openai
 google-generativeai
-pymupdf
-pydantic
+google-ai-generativelanguage
+
+# Document Processing
+PyMuPDF
+python-docx
+google-cloud-documentai
+
+# Data Processing & Validation
+Pydantic
 numpy
 numpy-financial
+pandas
+
+# HTTP & Web Scraping
 requests
-xlsxwriter
 beautifulsoup4
 trafilatura
-google-cloud-documentai
+lxml
+
+# Excel & Data Export
+XlsxWriter
+
+# Async & Concurrency
+aiohttp
+
+# Utilities
+certifi
+moviepy

@@ -8,7 +8,10 @@ Fallback for complex specifications when regex/table parsing fails.
 import json
 import logging
 from typing import Dict, Optional
-import google.generativeai as genai
+from pathlib import Path
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
@@ -19,20 +22,19 @@ class GeminiSpecExtractor:
     def __init__(self, api_key: Optional[str] = None):
         """Initialize Gemini extractor."""
         import os
-        
+
+        load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
+
         # Use provided API key or get from environment
         if not api_key:
-            api_key = os.getenv("GEMINI_API_KEY")
-        
-        if api_key:
-            # Explicitly configure with API key (overrides any default credentials)
-            genai.configure(api_key=api_key)
-            self.api_key = api_key
-        else:
-            self.api_key = None
-            logger.warning("No Gemini API key found")
-        
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
+            api_key = os.getenv("GOOGLE_API_KEY")
+
+        if not api_key:
+            raise ValueError("API Key not found! Make sure you created a .env file.")
+
+        self.api_key = api_key
+        self.client = genai.Client(api_key=api_key)
+        self.model_name = "gemini-2.5-flash"
         self.temperature = 0.1  # Low temperature for factual extraction
     
     async def extract_specs(self, text: str, manufacturer: Optional[str] = None, model: Optional[str] = None) -> Dict:
@@ -59,7 +61,15 @@ class GeminiSpecExtractor:
             
             logger.info("Calling Gemini for spec extraction")
             
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=self.temperature,
+                    top_p=0.95,
+                    top_k=64,
+                ),
+            )
             response_text = response.text
             
             # Parse Gemini's JSON response

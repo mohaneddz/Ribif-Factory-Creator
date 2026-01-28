@@ -3,6 +3,7 @@ import sys
 import json
 import base64
 from pathlib import Path
+from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -10,6 +11,8 @@ from module_1 import RIBIFExtractor
 
 # Import image generation from vertex_utils
 from vertex_utils import generate_image
+
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}) # Allow Next.js to call this
@@ -167,7 +170,7 @@ def process_module_1():
             enriched_machines.append(enriched_machine)
             print()
         
-        Build enriched machines without images for now
+        # Build enriched machines without images for now
         enriched_machines = []
         for machine_data in machines:
             enriched_machines.append({
@@ -334,7 +337,7 @@ def calculate_tco_from_sourcing():
     Output (JSON):
         TCO calculation result with machine_tco, product_tco, etc.
     """
-    from ribif_module_6 import RIBIFModule6TCO
+    from backend.module_6 import RIBIFModule6TCO
     
     try:
         print("\n" + "="*70)
@@ -450,7 +453,7 @@ def calculate_tco_from_sourcing():
         if raw_materials:
             print(f"\n📦 Processing {len(raw_materials)} raw materials...")
             raw_material_results = tco_calculator.estimate_raw_material_costs(raw_materials, use_llm=True)
-            from ribif_module_6 import RawMaterialTCO
+            from backend.module_6 import RawMaterialTCO
             for rm in raw_material_results:
                 raw_material_tcos.append(RawMaterialTCO(**rm))
         
@@ -663,7 +666,7 @@ def generate_video_from_images():
         os.makedirs(VIDEO_OUTPUT_DIR, exist_ok=True)
         
         # Get API key for authenticated downloads
-        video_api_key = os.getenv("VEO2_API_KEY", "")
+        video_api_key = os.getenv("GOOGLE_API_KEY", "")
         
         downloaded_paths = []
         for i, uri in enumerate(valid_videos, 1):
@@ -737,7 +740,7 @@ def generate_video_from_images():
         merged_path = os.path.join(VIDEO_OUTPUT_DIR, f"merged_factory_tour_{int(time.time())}.mp4")
         
         try:
-            from moviepy.editor import VideoFileClip, concatenate_videoclips
+            from moviepy import VideoFileClip, concatenate_videoclips
             
             clips = []
             for path in downloaded_paths:
@@ -810,7 +813,7 @@ def calculate_tco():
             return jsonify({"error": "Missing required field: machine_input"}), 400
         
         # Initialize TCO calculator and process
-        from ribif_module_6 import RIBIFModule6TCO
+        from backend.module_6 import RIBIFModule6TCO
         tco_calculator = RIBIFModule6TCO()
         result = tco_calculator.process_input(data)
         
@@ -831,7 +834,7 @@ def generate_business_plan():
             return jsonify({"error": "No JSON data provided"}), 400
         
         # Initialize business plan generator
-        from ribif_module_7_business_model import RIBIFModule7BusinessPlan, BusinessPlanInput
+        from backend.module_7_business_model import RIBIFModule7BusinessPlan, BusinessPlanInput
         
         # Create input from TCO output structure
         bp_input = BusinessPlanInput(
@@ -875,7 +878,7 @@ def generate_pitch_deck():
             return jsonify({"error": "No JSON data provided"}), 400
         
         # Initialize pitch deck generator
-        from ribif_module_7_pitch_deck import RIBIFModule8PitchDeck, PitchDeckInput
+        from backend.module_7_pitch_deck import RIBIFModule8PitchDeck, PitchDeckInput
         
         # Create input from TCO output structure (same as module 7)
         pd_input = PitchDeckInput(

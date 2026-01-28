@@ -669,7 +669,9 @@ def enrich_machine(machine: MachineInput) -> EnrichedMachine:
             # Combine raw specs into text
             specs_text = "\n".join([f"{k}: {v}" for k, v in best_specs.raw_specs.items()])
             
-            extractor = GeminiSpecExtractor(api_key=settings.GEMINI_API_KEY if settings else None)
+            extractor = GeminiSpecExtractor(
+                api_key=getattr(settings, "GOOGLE_API_KEY", None) if settings else None
+            )
             
             # Run async Gemini extraction
             try:

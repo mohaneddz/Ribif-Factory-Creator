@@ -312,7 +312,7 @@ async def search_all_providers(
         logger.error(f"Error running concurrent searches: {e}")
     
     # Optionally ask Gemini for additional supplier URLs (LLM-assisted discovery)
-    if HAS_GEMINI and settings.GEMINI_API_KEY and len(all_results) < max_results // 2:
+    if HAS_GEMINI and getattr(settings, "GOOGLE_API_KEY", None) and len(all_results) < max_results // 2:
         try:
             prompt = f"Provide up to {max_results} supplier website URLs (full http/https links) for: {query}. Respond with plain URLs only, separated by newlines."
             gemini_text = await generate_text(prompt, max_output_tokens=400)

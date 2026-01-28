@@ -24,7 +24,8 @@ from enum import Enum
 
 import numpy as np
 import numpy_financial as npf
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 try:
     import xlsxwriter
@@ -168,12 +169,12 @@ Generate personalized BMC adapted to Algerian context.
 Respond ONLY with the requested JSON, no explanatory text."""
 
     def __init__(self, api_key: str = None):
-        load_dotenv()
-        self.api_key = api_key or os.getenv("GOOGLE_API_KEY", "AIzaSyCRNYfcKmFS7AAY2HfkIV2ZQWIQVJ9teo4")
+        load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
+        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
             raise ValueError("❌ Error: GOOGLE_API_KEY not found.")
         
-        genai.configure(api_key=self.api_key)
+        self.client = genai.Client(api_key=self.api_key)
         self.model_name = "gemini-2.5-flash"
         self._detected_language = "en"
         print(f"✅ Gemini initialized for Business Plan Module: {self.model_name}")
@@ -193,12 +194,16 @@ Respond ONLY with the requested JSON, no explanatory text."""
     def call_gemini(self, prompt: str) -> Dict:
         """Call Gemini API and extract JSON from response."""
         try:
-            model = genai.GenerativeModel(
-                model_name=self.model_name,
-                generation_config={"temperature": 0.7},
-                system_instruction=self.SYSTEM_PROMPT
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=self.SYSTEM_PROMPT,
+                    temperature=0.7,
+                    top_p=0.95,
+                    top_k=64,
+                ),
             )
-            response = model.generate_content(prompt)
             if hasattr(response, "text") and response.text:
                 content = response.text.strip()
                 
@@ -229,6 +234,11 @@ Respond ONLY with the requested JSON, no explanatory text."""
         """Generate a comprehensive Business Plan Excel file."""
         if xlsxwriter is None:
             raise ImportError("xlsxwriter is required. Install with: pip install xlsxwriter")
+
+        if not input_data.project_name or not input_data.company_name:
+            raise ValueError("Missing required project or company name for business plan generation.")
+        if input_data.total_tco <= 0 or input_data.average_annual_tco <= 0:
+            raise ValueError("Missing or invalid TCO inputs; cannot generate business plan without real TCO output.")
         
         # Detect language from input
         stage1 = input_data.stage_1_informations_generales or {}
@@ -249,6 +259,13 @@ Respond ONLY with the requested JSON, no explanatory text."""
         capex_data = self._estimate_capex_with_llm(input_data)
         opex_data = self._estimate_opex_with_llm(input_data)
         pricing_data = self._estimate_pricing_with_llm(input_data)
+
+        if not capex_data or "total_capex" not in capex_data:
+            raise ValueError("CapEx estimate missing required 'total_capex'.")
+        if not opex_data or "total_annual_opex" not in opex_data:
+            raise ValueError("OpEx estimate missing required 'total_annual_opex'.")
+        if not pricing_data or ("revenue_projections_5y" not in pricing_data and "total_annual_revenue_year1" not in pricing_data):
+            raise ValueError("Pricing estimate missing required revenue projections.")
         
         # Calculate financial data using LLM estimates
         financial_data = self._calculate_financials_with_estimates(input_data, capex_data, opex_data, pricing_data)
@@ -305,17 +322,20 @@ Respond ONLY with the requested JSON, no explanatory text."""
         years = 5
         
         # Total investment from LLM CapEx estimate
-        total_investment = float(capex_data.get("total_capex", 70000000) or 70000000)
+        if "total_capex" not in capex_data or capex_data.get("total_capex") is None:
+            raise ValueError("CapEx estimate missing 'total_capex'.")
+        total_investment = float(capex_data.get("total_capex"))
         
         # Revenues from LLM Pricing estimate
         revenues = pricing_data.get("revenue_projections_5y", [])
         if not revenues or len(revenues) < years:
-            base_rev = float(pricing_data.get("total_annual_revenue_year1", 50000000) or 50000000)
-            revenues = [base_rev * (1.08 ** year) for year in range(years)]
+            raise ValueError("Pricing estimate missing 5-year revenue projections.")
         revenues = [float(r) for r in revenues[:years]]
         
         # Operating costs from LLM OpEx estimate
-        base_opex = float(opex_data.get("total_annual_opex", 45000000) or 45000000)
+        if "total_annual_opex" not in opex_data or opex_data.get("total_annual_opex") is None:
+            raise ValueError("OpEx estimate missing 'total_annual_opex'.")
+        base_opex = float(opex_data.get("total_annual_opex"))
         operating_costs = []
         for year in range(years):
             year_cost = base_opex * ((1 + input_data.financial_params.inflation_rate) ** year)
@@ -384,7 +404,10 @@ Respond ONLY with the requested JSON, no explanatory text."""
                 avg_life = inv.depreciation_years
         
         # Add from machines TCO as depreciable
-        total_depreciable += input_data.total_machines_tco * 0.9 if input_data.total_machines_tco else total_investment * 0.8
+        if input_data.total_machines_tco and input_data.total_machines_tco > 0:
+            total_depreciable += input_data.total_machines_tco * 0.9
+        else:
+            raise ValueError("Missing total_machines_tco; cannot compute depreciation without real machine TCO.")
         
         if total_depreciable == 0:
             return [0.0] * years

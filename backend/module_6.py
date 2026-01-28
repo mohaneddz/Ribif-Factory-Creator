@@ -19,7 +19,8 @@ from typing import Dict, List, Any, Optional
 from datetime import date
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 
 # ============================================
@@ -62,6 +63,7 @@ class TCOCalculationInput(BaseModel):
     machine_input: MachineInput
     suppliers: List[SupplierInfo] = []
     ribif_metadata: Optional[Dict[str, Any]] = None
+    estimated_revenue: Optional[float] = None
     stage_1_informations_generales: Optional[Dict[str, Any]] = None
     stage_2_matieres_premieres: Optional[Dict[str, Any]] = None
     stage_3_produits_fabriques: Optional[Dict[str, Any]] = None
@@ -198,12 +200,12 @@ Respond ONLY with valid JSON containing estimates in DZD."""
         """
         Initialize the RIBIF Module 6 TCO Calculator with Gemini API.
         """
-        load_dotenv()
-        self.api_key = api_key or os.getenv("GOOGLE_API_KEY", "AIzaSyCRNYfcKmFS7AAY2HfkIV2ZQWIQVJ9teo4")
+        load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
+        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
             raise ValueError("❌ Error: GOOGLE_API_KEY not found.")
 
-        genai.configure(api_key=self.api_key)
+        self.client = genai.Client(api_key=self.api_key)
         self.model_name = "gemini-2.5-flash"
         self._detected_language = "en"  # Default to English
         print(f"✅ Gemini initialized for TCO Module: {self.model_name}")
@@ -229,14 +231,16 @@ Respond ONLY with valid JSON containing estimates in DZD."""
         Call Gemini API and extract JSON from response.
         """
         try:
-            model = genai.GenerativeModel(
-                model_name=self.model_name,
-                generation_config={
-                    "temperature": 0.3
-                },
-                system_instruction=self.SYSTEM_PROMPT
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=self.SYSTEM_PROMPT,
+                    temperature=0.3,
+                    top_p=0.95,
+                    top_k=64,
+                ),
             )
-            response = model.generate_content(prompt)
             if hasattr(response, "text") and response.text:
                 content = response.text.strip()
                 
@@ -312,105 +316,37 @@ Respond ONLY with valid JSON containing estimates in DZD."""
         
         return {"price": price_dzd}
 
-    def _fallback_machine_estimate(self, machine: Dict) -> Dict:
-        """Fallback estimation when LLM fails"""
-        specs = machine.get('original_specs', {})
-        # Ensure specs is a dict
-        if hasattr(specs, 'model_dump'):
-            specs = specs.model_dump()
-        elif not isinstance(specs, dict):
-            specs = {}
-        capacite = str(specs.get('capacite', '') or '')
-        defaults = self._get_defaults_by_capacity(capacite, str(machine.get('manufacturer', '') or ''))
-        price = defaults["price"]
-        
-        return {
-            "estimated_purchase_price": price,
-            "implementation_cost": price * 0.15,
-            "annual_operations_cost": price * 0.06,
-            "annual_maintenance_cost": price * 0.04,
-            "annual_downtime_cost": price * 0.02,
-            "resale_value": price * 0.10,
-            "disposal_cost": 0,
-            "lifetime_years": 10,
-            "confidence": "low",
-            "notes": self._get_note("fallback_machine")
-        }
-
     def _validate_machine_estimate(self, result: Dict, machine: Dict) -> Dict:
-        """Validate and fill in missing values in the estimate"""
-        specs = machine.get('original_specs', {})
-        # Ensure specs is a dict
-        if hasattr(specs, 'model_dump'):
-            specs = specs.model_dump()
-        elif not isinstance(specs, dict):
-            specs = {}
-        capacite = str(specs.get('capacite', '') or '')
-        defaults = self._get_defaults_by_capacity(capacite, str(machine.get('manufacturer', '') or ''))
-        
-        validated = {
-            "estimated_purchase_price": result.get("estimated_purchase_price") or defaults["price"],
-            "implementation_cost": result.get("implementation_cost") or defaults["price"] * 0.15,
-            "annual_operations_cost": result.get("annual_operations_cost") or defaults["price"] * 0.06,
-            "annual_maintenance_cost": result.get("annual_maintenance_cost") or defaults["price"] * 0.04,
-            "annual_downtime_cost": result.get("annual_downtime_cost") or defaults["price"] * 0.02,
-            "resale_value": result.get("resale_value") or defaults["price"] * 0.10,
-            "disposal_cost": result.get("disposal_cost", 0),
-            "lifetime_years": result.get("lifetime_years") or 10,
-            "confidence": result.get("confidence", "medium"),
-            "notes": result.get("notes", self._get_note("validated_machine"))
-        }
-        
-        return validated
+        """Validate required values in the estimate and fail if missing."""
+        required_keys = [
+            "estimated_purchase_price",
+            "implementation_cost",
+            "annual_operations_cost",
+            "annual_maintenance_cost",
+            "annual_downtime_cost",
+            "resale_value",
+            "disposal_cost",
+            "lifetime_years",
+            "confidence",
+            "notes",
+        ]
+        missing = [k for k in required_keys if k not in result or result.get(k) is None]
+        if missing:
+            raise ValueError(
+                f"Missing required machine estimate fields {missing} for {machine.get('name', 'Unknown')}"
+            )
 
-    def _fallback_product_estimate(self, machine_tco: Dict) -> Dict:
-        """Fallback estimation for product TCO"""
-        machine_annual = float(machine_tco.get('annual_tco', 10000000) or 10000000)
-        
         return {
-            "landing_cost": machine_annual * 0.40,
-            "holding_cost": machine_annual * 0.05,
-            "quality_cost": machine_annual * 0.03,
-            "administrative_cost": machine_annual * 0.08
-        }
-
-    def _fallback_material_estimate(self, material: Dict) -> Dict:
-        """Fallback estimation for raw material prices (in DZD per tonne)"""
-        nom = material.get("nom_materiau", "").lower()
-        
-        MATERIAL_PRICES = {
-            "polyuréthane": 350000,
-            "pu": 350000,
-            "polyurée": 400000,
-            "résine": 300000,
-            "époxy": 450000,
-            "pvc": 180000,
-            "abs": 280000,
-            "pc": 400000,
-            "spc": 220000,
-            "eps": 200000,
-            "asa": 350000,
-            "isocyanate": 500000,
-            "polyol": 280000,
-            "solvant": 150000,
-            "additif": 400000,
-            "verre": 250000,
-            "utg": 800000,
-        }
-        
-        price = 250000
-        for key, val in MATERIAL_PRICES.items():
-            if key in nom:
-                price = val
-                break
-        
-        return {
-            "unit_price": price,
-            "transport_pct": 0.15,
-            "storage_pct": 0.03,
-            "wastage_pct": 0.02,
-            "confidence": "low",
-            "notes": self._get_note("fallback_material")
+            "estimated_purchase_price": result.get("estimated_purchase_price"),
+            "implementation_cost": result.get("implementation_cost"),
+            "annual_operations_cost": result.get("annual_operations_cost"),
+            "annual_maintenance_cost": result.get("annual_maintenance_cost"),
+            "annual_downtime_cost": result.get("annual_downtime_cost"),
+            "resale_value": result.get("resale_value"),
+            "disposal_cost": result.get("disposal_cost"),
+            "lifetime_years": result.get("lifetime_years"),
+            "confidence": result.get("confidence"),
+            "notes": result.get("notes"),
         }
 
     def _get_note(self, note_type: str) -> str:
@@ -445,7 +381,7 @@ Respond ONLY with valid JSON containing estimates in DZD."""
         Estimate complete TCO for a machine based on RIBIF data and supplier info.
         """
         if not use_llm:
-            return self._fallback_machine_estimate(machine)
+            raise ValueError("LLM estimation disabled; cannot produce machine TCO without explicit inputs.")
         
         no_supplier_text = "No suppliers identified" if self._detected_language == "en" else "Aucun fournisseur identifié"
         supplier_summary = "\n".join([
@@ -513,11 +449,9 @@ Respond in JSON:
             if result:
                 print(f"✅ LLM estimation SUCCESS for machine: {machine.get('name', 'Unknown')}")
                 return self._validate_machine_estimate(result, machine)
-            print(f"⚠️ Using FALLBACK estimation for machine: {machine.get('name', 'Unknown')} (empty LLM response)")
-            return self._fallback_machine_estimate(machine)
+            raise ValueError(f"Empty LLM response for machine: {machine.get('name', 'Unknown')}")
         except Exception as e:
-            print(f"⚠️ Using FALLBACK estimation for machine: {machine.get('name', 'Unknown')} (error: {e})")
-            return self._fallback_machine_estimate(machine)
+            raise ValueError(f"LLM estimation failed for machine {machine.get('name', 'Unknown')}: {e}")
 
     def estimate_product_costs(
         self, 
@@ -525,9 +459,9 @@ Respond in JSON:
         machine_tco: Dict[str, Any]
     ) -> Dict[str, float]:
         """
-        Estimate product TCO components using fast fallback calculation.
+        Estimate product TCO components.
         """
-        return self._fallback_product_estimate(machine_tco)
+        raise ValueError("Product TCO estimation requires explicit inputs; fallback estimation is disabled.")
 
     def estimate_raw_material_costs(
         self, 
@@ -545,8 +479,7 @@ Respond in JSON:
         if use_llm:
             estimates = self._estimate_materials_batch(materials)
         else:
-            print(f"⚠️ Using FALLBACK for all {len(materials)} materials (LLM disabled)")
-            estimates = {}
+            raise ValueError("LLM estimation disabled; cannot estimate raw materials without explicit inputs.")
         
         results = []
         for material in materials:
@@ -557,13 +490,16 @@ Respond in JSON:
             unite = quantite_info.get("unite", "tonnes")
             
             # Get estimate for this material (fallback if not in batch result)
-            estimate = estimates.get(nom, self._fallback_material_estimate(material))
+            if nom not in estimates:
+                raise ValueError(f"Missing LLM estimate for material: {nom}")
+            estimate = estimates.get(nom)
             
-            unit_price = float(estimate.get("unit_price", 0) or 0)
+            estimate = self._validate_material_estimate(estimate, material)
+            unit_price = float(estimate.get("unit_price"))
             annual_cost = quantite * unit_price
-            transport_pct = float(estimate.get("transport_pct", 0.15) or 0.15)
-            storage_pct = float(estimate.get("storage_pct", 0.03) or 0.03)
-            wastage_pct = float(estimate.get("wastage_pct", 0.02) or 0.02)
+            transport_pct = float(estimate.get("transport_pct"))
+            storage_pct = float(estimate.get("storage_pct"))
+            wastage_pct = float(estimate.get("wastage_pct"))
             
             transport_cost = annual_cost * transport_pct
             storage_cost = annual_cost * storage_pct
@@ -583,7 +519,7 @@ Respond in JSON:
                 "storage_cost": round(storage_cost, 2),
                 "wastage_cost": round(wastage_cost, 2),
                 "total_tco": round(total_tco, 2),
-                "estimation_confidence": estimate.get("confidence", "medium"),
+                "estimation_confidence": estimate.get("confidence"),
                 "estimation_notes": estimate.get("notes", "")
             })
         
@@ -632,22 +568,23 @@ Respond in JSON with EXACT material names as keys:
             if result and isinstance(result, dict):
                 print(f"✅ BATCH LLM estimation SUCCESS for {len(result)} materials")
                 return result
-            print(f"⚠️ Using FALLBACK for all materials (empty batch response)")
-            return {}
+            raise ValueError("Empty batch LLM response for materials")
         except Exception as e:
-            print(f"⚠️ Using FALLBACK for all materials (error: {e})")
-            return {}
+            raise ValueError(f"Batch material estimation failed: {e}")
 
     def _validate_material_estimate(self, result: Dict, material: Dict) -> Dict:
-        """Validate and fill in missing values for material estimate"""
-        fallback = self._fallback_material_estimate(material)
-        
+        """Validate material estimate and fail if missing."""
+        required_keys = ["unit_price", "transport_pct", "storage_pct", "wastage_pct"]
+        missing = [k for k in required_keys if k not in result or result.get(k) is None]
+        if missing:
+            raise ValueError(f"Missing material estimate fields {missing} for {material.get('nom_materiau', 'Unknown')}")
+
         return {
-            "unit_price": result.get("unit_price") or fallback["unit_price"],
-            "transport_pct": result.get("transport_pct") or fallback["transport_pct"],
-            "storage_pct": result.get("storage_pct") or fallback["storage_pct"],
-            "wastage_pct": result.get("wastage_pct") or fallback["wastage_pct"],
-            "confidence": result.get("confidence", "medium"),
+            "unit_price": result.get("unit_price"),
+            "transport_pct": result.get("transport_pct"),
+            "storage_pct": result.get("storage_pct"),
+            "wastage_pct": result.get("wastage_pct"),
+            "confidence": result.get("confidence"),
             "notes": result.get("notes", self._get_note("validated_material"))
         }
 
@@ -663,16 +600,16 @@ Respond in JSON with EXACT material names as keys:
         estimates = self.estimate_machine_tco(machine_input, suppliers, use_llm=use_llm)
         
         # Convert all values to float to handle LLM returning strings
-        purchase_price = float(estimates.get("estimated_purchase_price", 0) or 0)
-        implementation_cost = float(estimates.get("implementation_cost", 0) or 0)
-        lifetime_years = int(estimates.get("lifetime_years", 10) or 10)
+        purchase_price = float(estimates["estimated_purchase_price"])
+        implementation_cost = float(estimates["implementation_cost"])
+        lifetime_years = int(estimates["lifetime_years"])
         
-        annual_operations = float(estimates.get("annual_operations_cost", 0) or 0)
-        annual_maintenance = float(estimates.get("annual_maintenance_cost", 0) or 0)
-        annual_downtime = float(estimates.get("annual_downtime_cost", 0) or 0)
+        annual_operations = float(estimates["annual_operations_cost"])
+        annual_maintenance = float(estimates["annual_maintenance_cost"])
+        annual_downtime = float(estimates["annual_downtime_cost"])
         
-        resale_value = float(estimates.get("resale_value", 0) or 0)
-        disposal_cost = float(estimates.get("disposal_cost", 0) or 0)
+        resale_value = float(estimates["resale_value"])
+        disposal_cost = float(estimates["disposal_cost"])
         
         initial_cost = purchase_price + implementation_cost
         total_operations = annual_operations * lifetime_years
@@ -706,7 +643,7 @@ Respond in JSON with EXACT material names as keys:
             lifetime_years=lifetime_years,
             cost_breakdown=cost_breakdown,
             estimated_purchase_price=round(purchase_price, 2),
-            estimation_confidence=estimates.get("confidence", "medium"),
+            estimation_confidence=estimates.get("confidence"),
             estimation_notes=estimates.get("notes", "")
         )
 
@@ -881,6 +818,9 @@ Respond in JSON with EXACT material names as keys:
         products = self._get_products_from_ribif(input_data)
         product_tcos = []
         
+        if not products:
+            raise ValueError("No products found in input; cannot compute product TCO or revenue metrics.")
+
         for product in products[:5]:
             product_tco = self.calculate_product_tco(product, machine_tco)
             product_tcos.append(product_tco)
@@ -902,10 +842,16 @@ Respond in JSON with EXACT material names as keys:
         annual_tco = self.calculate_annual_tco(machine_tcos, product_tcos, raw_material_tco_list, years=5)
         
         total_tco = total_machines_tco + (total_products_tco * 5) + (total_raw_materials_tco * 5)
-        average_annual_tco = total_tco / 5 if total_tco > 0 else 0
+        average_annual_tco = total_tco / 5
         
-        estimated_revenue = len(products) * 50000000 if products else 100000000
-        tco_per_unit_revenue = total_tco / estimated_revenue if estimated_revenue > 0 else 0
+        estimated_revenue = None
+        if input_data.ribif_metadata and isinstance(input_data.ribif_metadata, dict):
+            estimated_revenue = input_data.ribif_metadata.get("estimated_revenue")
+        if not estimated_revenue:
+            estimated_revenue = input_data.estimated_revenue
+        if not estimated_revenue or estimated_revenue <= 0:
+            raise ValueError("Missing estimated_revenue; cannot compute tco_per_unit_revenue without real revenue input.")
+        tco_per_unit_revenue = total_tco / float(estimated_revenue)
         
         output_stages = self._build_output_stages(input_data)
         
@@ -945,7 +891,11 @@ Respond in JSON with EXACT material names as keys:
         except Exception as e:
             return {"error": f"Invalid input format: {e}"}
         
-        result = self.calculate_tco(tco_input)
+        try:
+            result = self.calculate_tco(tco_input)
+        except Exception as e:
+            return {"error": f"TCO calculation failed: {e}"}
+
         result_dict = result.model_dump()
         
         output_path = Path(output_dir)

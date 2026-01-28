@@ -8,11 +8,13 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
-gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-image_client = genai.Client(api_key=os.getenv("IMAGE_API_KEY"))
-video_client = genai.Client(api_key=os.getenv("VIDEO_API_KEY"))
+api_key = os.getenv("GOOGLE_API_KEY")
+if not api_key:
+    raise ValueError("API Key not found! Make sure you created a .env file.")
+
+client = genai.Client(api_key=api_key)
 
 def generate_message(
     prompt: str,
@@ -75,7 +77,7 @@ def generate_message(
         top_k=64,
     )
 
-    response = gemini_client.models.generate_content(
+    response = client.models.generate_content(
         model=model_id,
         contents=contents,
         config=gen_config,
@@ -119,7 +121,7 @@ def generate_image(
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            response = image_client.models.generate_content(
+            response = client.models.generate_content(
                 model=model_id,
                 contents=contents,
                 config=types.GenerateContentConfig(
@@ -179,7 +181,7 @@ def generate_video(
             img_bytes = base64.b64decode(image) if isinstance(image, str) else image
             contents.append(types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg"))
 
-    operation = video_client.models.generate_videos(
+    operation = client.models.generate_videos(
         model=model_id,
         prompt=prompt,
         config=types.GenerateVideosConfig(
@@ -192,7 +194,7 @@ def generate_video(
     import time
     while not operation.done:
         time.sleep(5)
-        operation = video_client.operations.get(operation)
+        operation = client.operations.get(operation)
 
     return operation.result.generated_videos[0].video.uri
 

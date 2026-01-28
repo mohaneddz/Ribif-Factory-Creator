@@ -1,9 +1,9 @@
 """
 RIBIF Module 8: Pitch Deck Generator
-Generates investor pitch decks using Presenton API.
+Generates investor pitch decks using Presenton API (v3).
 Uses same input structure as Module 7 (Business Plan).
 
-Output: PPTX presentation file via Presenton (Docker port 5001)
+Output: PDF presentation file via Presenton cloud API.
 """
 
 import os
@@ -51,12 +51,12 @@ class PitchDeckInput(BaseModel):
 
 class PitchDeckOutput(BaseModel):
     """Output from pitch deck generation"""
-    # PPTX file
+    # PDF file (primary)
     filename: str
     filepath: str
-    format: str = "pptx"
+    format: str = "pdf"
     size_bytes: int = 0
-    # PDF file
+    # PDF file (duplicate for compatibility)
     pdf_filename: str = ""
     pdf_filepath: str = ""
     pdf_size_bytes: int = 0
@@ -69,6 +69,7 @@ class PitchDeckOutput(BaseModel):
     download_url: str = ""
     pdf_download_url: str = ""
     n_slides: int = 10
+    credits_consumed: int = 0
 
 
 # ============================================
@@ -90,7 +91,8 @@ class RIBIFModule8PitchDeck:
     
     def __init__(self):
         load_dotenv()
-        self.presenton_url = os.getenv("PRESENTON_URL", "http://localhost:5001")
+        self.presenton_url = os.getenv("PRESENTON_API_BASE_URL", "https://api.presenton.ai")
+        self.presenton_api_key = os.getenv("PRESENTON_API_KEY", "").strip()
         self._detected_language = "en"
         print(f"✅ Presenton API configured at: {self.presenton_url}")
 
@@ -137,6 +139,11 @@ class RIBIFModule8PitchDeck:
     def build_pitch_content(self, input_data: PitchDeckInput) -> str:
         """Build 10-slide pitch narrative from input data."""
         is_french = self._detected_language == "fr"
+
+        if not input_data.project_name or not input_data.company_name:
+            raise ValueError("Missing required project or company name for pitch deck content.")
+        if input_data.total_tco <= 0 or input_data.average_annual_tco <= 0:
+            raise ValueError("Missing or invalid TCO inputs; cannot build pitch content without real data.")
         
         # Extract data from stages
         stage_1 = input_data.stage_1_informations_generales or {}
@@ -147,8 +154,8 @@ class RIBIFModule8PitchDeck:
         stage_6 = input_data.stage_6_informations_complementaires or {}
         
         # Core info
-        company = input_data.company_name or info_gen.get("nom_entreprise", "Notre Entreprise" if is_french else "Our Company")
-        project = input_data.project_name or info_gen.get("nom_projet", "Projet" if is_french else "Project")
+        company = input_data.company_name
+        project = input_data.project_name
         sector = info_gen.get("secteur_activite", "industrie" if is_french else "manufacturing")
         description = info_gen.get("description_projet", "")
         objectives = info_gen.get("objectifs_strategiques", [])
@@ -289,6 +296,12 @@ class RIBIFModule8PitchDeck:
         base_url: str = "http://localhost:5000"
     ) -> PitchDeckOutput:
         """Generate pitch deck using Presenton API."""
+        if not self.presenton_api_key:
+            raise ValueError("Missing PRESENTON_API_KEY in environment.")
+        if not input_data.project_name or not input_data.company_name:
+            raise ValueError("Missing required project or company name for pitch deck generation.")
+        if input_data.total_tco <= 0 or input_data.average_annual_tco <= 0:
+            raise ValueError("Missing or invalid TCO inputs; cannot generate pitch deck without real data.")
         # Detect language
         data_dict = input_data.model_dump()
         language = self.detect_language(data_dict)
@@ -304,49 +317,34 @@ class RIBIFModule8PitchDeck:
         # Generate filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_name = "".join(c if c.isalnum() else "_" for c in input_data.project_name)
-        filename = f"PitchDeck_{safe_name}_{timestamp}.pptx"
+        filename = f"PitchDeck_{safe_name}_{timestamp}.pdf"
         filepath = os.path.join(output_dir, filename)
         
-        # Build Presenton API request
-        if is_french:
-            instructions = (
-                "Créer une présentation pitch investisseur de 10 slides. "
-                "Slide 1: Titre. Slide 2: Le Problème. Slide 3: La Solution. "
-                "Slide 4: Taille du marché. Slide 5: Le Produit. Slide 6: Modèle économique. "
-                "Slide 7: Traction. Slide 8: Stratégie commerciale. Slide 9: Concurrence. "
-                "Slide 10: Conclusion. Pas de graphiques. Utiliser des points."
-            )
-        else:
-            instructions = (
-                "Create a 10-slide investor pitch presentation. "
-                "Slide 1: Title. Slide 2: The Problem. Slide 3: The Solution. "
-                "Slide 4: Market Size. Slide 5: The Product. Slide 6: Business Model. "
-                "Slide 7: Traction. Slide 8: Go-to-Market. Slide 9: Competition. "
-                "Slide 10: Closing. No charts. Use bullet points."
-            )
-        
+        # Build Presenton API request (v3)
         payload = {
             "content": pitch_content,
-            "n_slides": 10,
-            "language": language,
-            "files": [],
-            "tone": "professional",
-            "verbosity": "concise",
-            "instructions": instructions,
+            "tone": "default",
+            "verbosity": "standard",
+            "image_type": "stock",
+            "export_as": "pdf",
+            "markdown_emphasis": False,
             "include_table_of_contents": False,
-            "include_title_slide": True,
-            "web_search": False,
-            "template": "general",
-            "export_as": "pptx"
+            "include_title_slide": False,
+            "allow_access_to_user_info": False
         }
         
-        generate_endpoint = f"{self.presenton_url}/api/v1/ppt/presentation/generate"
+        generate_endpoint = f"{self.presenton_url}/api/v3/presentation/generate"
         
         try:
             print(f"📤 Calling Presenton API: {generate_endpoint}")
             response = requests.post(
                 generate_endpoint,
                 json=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Authorization": f"Bearer {self.presenton_api_key}"
+                },
                 timeout=180
             )
             
@@ -359,80 +357,35 @@ class RIBIFModule8PitchDeck:
             presentation_id = result.get("presentation_id", "")
             presenton_path = result.get("path", "")
             edit_path = result.get("edit_path", "")
+            credits_consumed = int(result.get("credits_consumed", 0) or 0)
             
             # Download the file
             if presenton_path:
-                file_url = f"{self.presenton_url}{presenton_path}"
+                file_url = presenton_path if presenton_path.startswith("http") else f"{self.presenton_url}{presenton_path}"
                 print(f"📥 Downloading from: {file_url}")
                 
-                download_response = requests.get(file_url, timeout=60)
+                download_response = requests.get(
+                    file_url,
+                    headers={
+                        "Accept": "application/pdf",
+                        "Authorization": f"Bearer {self.presenton_api_key}"
+                    },
+                    timeout=60
+                )
                 
                 if download_response.status_code == 200:
                     with open(filepath, "wb") as f:
                         f.write(download_response.content)
                     print(f"✅ Saved to: {filepath}")
-                else:
-                    # Try export endpoint as fallback
-                    export_endpoint = f"{self.presenton_url}/api/v1/ppt/presentation/export"
-                    export_response = requests.post(
-                        export_endpoint,
-                        json={"id": presentation_id, "export_as": "pptx"},
-                        timeout=60
-                    )
-                    
-                    if export_response.status_code == 200:
-                        export_result = export_response.json()
-                        new_path = export_result.get("path", "")
-                        if new_path:
-                            file_url = f"{self.presenton_url}{new_path}"
-                            final_response = requests.get(file_url, timeout=60)
-                            if final_response.status_code == 200:
-                                with open(filepath, "wb") as f:
-                                    f.write(final_response.content)
             
-            # Get PPTX file stats
+            # Get PDF file stats
             size_bytes = 0
             if os.path.exists(filepath):
                 size_bytes = os.stat(filepath).st_size
             
-            # ==========================================
-            # EXPORT PDF (in addition to PPTX)
-            # ==========================================
-            pdf_filename = filename.replace(".pptx", ".pdf")
-            pdf_filepath = os.path.join(output_dir, pdf_filename)
-            pdf_size_bytes = 0
-            
-            if presentation_id:
-                try:
-                    print(f"📤 Exporting PDF for presentation: {presentation_id}")
-                    export_endpoint = f"{self.presenton_url}/api/v1/ppt/presentation/export"
-                    pdf_export_response = requests.post(
-                        export_endpoint,
-                        json={"id": presentation_id, "export_as": "pdf"},
-                        timeout=60
-                    )
-                    
-                    if pdf_export_response.status_code == 200:
-                        pdf_export_result = pdf_export_response.json()
-                        pdf_path = pdf_export_result.get("path", "")
-                        
-                        if pdf_path:
-                            pdf_file_url = f"{self.presenton_url}{pdf_path}"
-                            print(f"📥 Downloading PDF from: {pdf_file_url}")
-                            
-                            pdf_download_response = requests.get(pdf_file_url, timeout=60)
-                            
-                            if pdf_download_response.status_code == 200:
-                                with open(pdf_filepath, "wb") as f:
-                                    f.write(pdf_download_response.content)
-                                pdf_size_bytes = os.stat(pdf_filepath).st_size
-                                print(f"✅ PDF saved to: {pdf_filepath}")
-                            else:
-                                print(f"⚠️ Failed to download PDF: {pdf_download_response.status_code}")
-                    else:
-                        print(f"⚠️ PDF export failed: {pdf_export_response.status_code}")
-                except Exception as pdf_error:
-                    print(f"⚠️ PDF export error (non-fatal): {pdf_error}")
+            pdf_filename = filename
+            pdf_filepath = filepath
+            pdf_size_bytes = size_bytes
             
             return PitchDeckOutput(
                 filename=filename,
@@ -445,16 +398,16 @@ class RIBIFModule8PitchDeck:
                 project_name=input_data.project_name,
                 company_name=input_data.company_name,
                 presentation_id=presentation_id,
-                edit_url=f"{self.presenton_url}{edit_path}" if edit_path else "",
+                edit_url=edit_path if edit_path.startswith("http") else f"{self.presenton_url}{edit_path}" if edit_path else "",
                 download_url=f"{base_url}/download/{filename}",
                 pdf_download_url=f"{base_url}/download/{pdf_filename}" if pdf_size_bytes > 0 else "",
-                n_slides=10
+                n_slides=10,
+                credits_consumed=credits_consumed
             )
             
         except requests.exceptions.ConnectionError:
             raise ConnectionError(
-                f"Cannot connect to Presenton API at {self.presenton_url}. "
-                "Make sure the Docker container is running."
+                f"Cannot connect to Presenton API at {self.presenton_url}."
             )
         except requests.exceptions.Timeout:
             raise TimeoutError(
