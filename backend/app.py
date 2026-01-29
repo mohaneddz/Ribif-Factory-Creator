@@ -10,6 +10,7 @@ from routes.module_5 import bp_module5
 from routes.module6 import bp_module6
 from routes.module7 import bp_module7
 from routes.module9 import bp_module9
+from routes.email_service import bp_email_service
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -23,6 +24,7 @@ app.register_blueprint(bp_module5)
 app.register_blueprint(bp_module6)
 app.register_blueprint(bp_module7)
 app.register_blueprint(bp_module9)
+app.register_blueprint(bp_email_service)
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000, use_reloader=False)

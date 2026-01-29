@@ -19,8 +19,10 @@ import clsx from "clsx";
 
 import { BusinessPlanView } from "@/sections/BusinessPlanView";
 import { CatalogueTechniqueView } from "@/sections/CatalogueTechniqueView";
+import { CallsNegotiationView } from "@/sections/CallsNegotiationView";
+import { EmailCenterView } from "@/sections/EmailCenterView";
 import { ModuleLoadingView } from "@/sections/ModuleLoadingView";
-import { PlansView } from "@/sections/PlansView";
+import { Layout2DView, Model3DView } from "@/sections/PlansView";
 import { SpecsView } from "@/sections/SpecsView";
 import { SourcingView } from "@/sections/SourcingView";
 import { TcoView } from "@/sections/TcoView";
@@ -50,6 +52,10 @@ export default function FactoryCopilot() {
     const [businessPlanLoading, setBusinessPlanLoading] = useState(false);
     const [catalogData, setCatalogData] = useState<any>(null);
     const [catalogLoading, setCatalogLoading] = useState(false);
+    const [layoutData, setLayoutData] = useState<any>(null);
+    const [layoutLoading, setLayoutLoading] = useState(false);
+    const [videoData, setVideoData] = useState<any>(null);
+    const [videoLoading, setVideoLoading] = useState(false);
     const [projectId, setProjectId] = useState<string | null>(
         routeProjectId && routeProjectId !== "new" ? routeProjectId : null
     );
@@ -69,6 +75,15 @@ export default function FactoryCopilot() {
             return () => clearTimeout(timer);
         }
     }, [status, currentModule, subStep, artifacts]);
+
+    const getModuleIndex = (type: string) => MODULES.findIndex((m) => m.type === type);
+
+    const resolveDownloadUrl = (value?: string | null) => {
+        if (!value) return null;
+        if (value.startsWith("http://") || value.startsWith("https://")) return value;
+        const filename = value.split(/[/\\]/).pop();
+        return filename ? `${API_BASE}/download/${filename}` : null;
+    };
 
     // ----------------------------------------------------
     // REAL FILE UPLOAD HANDLER
@@ -95,8 +110,22 @@ export default function FactoryCopilot() {
         setBusinessPlanData(null);
         setPitchDeckData(null);
         setCatalogData(null);
+        setLayoutData(null);
+        setVideoData(null);
 
         try {
+            const markArtifact = (idx: number) => {
+                setArtifacts(prev => [...new Set([...prev, idx])]);
+            };
+            const runPlaceholderStep = async (idx: number) => {
+                if (idx < 0) return;
+                setCurrentModule(idx);
+                setSelectedModule(idx);
+                setSubStep(0);
+                await new Promise((resolve) => setTimeout(resolve, 800));
+                markArtifact(idx);
+            };
+
             const { data: authUser } = await supabase.auth.getUser();
             const userId = authUser?.user?.id || null;
 
@@ -121,7 +150,6 @@ export default function FactoryCopilot() {
 
             const module1Data = module1Json?.data || module1Json;
             setExtractedData(module1Data);
-            setArtifacts(prev => [...new Set([...prev, 0])]);
 
             const newProjectId =
                 module1Data?.project_id ||
@@ -139,13 +167,31 @@ export default function FactoryCopilot() {
                 ...(newProjectId ? { "x-project-id": newProjectId } : {})
             };
 
+            const idxSpecs = getModuleIndex("specs");
+            const idxSourcing = getModuleIndex("sourcing");
+            const idxEmail = getModuleIndex("email");
+            const idxCalls = getModuleIndex("calls");
+            const idxTco = getModuleIndex("tco");
+            const idxBusinessPlan = getModuleIndex("businessplan");
+            const idxCatalogue = getModuleIndex("catalogue");
+            const idxLayout2d = getModuleIndex("layout2d");
+            const idxModel3d = getModuleIndex("model3d");
+            const idxVideo = getModuleIndex("video");
+
+            if (idxSpecs >= 0) {
+                markArtifact(idxSpecs);
+            }
+
             setStatus('processing');
-            setCurrentModule(1);
-            setSelectedModule(1);
-            setSubStep(0);
 
             let module4Json: any = null;
-            if (activeSettings.enableSourcing) {
+            if (idxSourcing >= 0) {
+                setCurrentModule(idxSourcing);
+                setSelectedModule(idxSourcing);
+                setSubStep(0);
+            }
+
+            if (activeSettings.enableSourcing && idxSourcing >= 0) {
                 setModule4Loading(true);
                 const module4Res = await fetch(`${API_BASE}/api/module4/enrich`, {
                     method: 'POST',
@@ -160,18 +206,22 @@ export default function FactoryCopilot() {
                 if (!module4Res.ok) throw new Error(module4Json?.error || 'Module 4 failed');
                 setModule4Data(module4Json);
                 setModule4Loading(false);
-                setArtifacts(prev => [...new Set([...prev, 1])]);
+                markArtifact(idxSourcing);
+                await runPlaceholderStep(idxEmail);
+                await runPlaceholderStep(idxCalls);
             } else {
                 setModule4Loading(false);
                 setModule4Data(null);
             }
 
-            setCurrentModule(2);
-            setSelectedModule(2);
-            setSubStep(0);
-
             let module6Json: any = null;
-            if (activeSettings.enableTco && module4Json) {
+            if (idxTco >= 0) {
+                setCurrentModule(idxTco);
+                setSelectedModule(idxTco);
+                setSubStep(0);
+            }
+
+            if (activeSettings.enableTco && module4Json && idxTco >= 0) {
                 setTcoLoading(true);
                 const module6Payload = { ...module1Data, ...module4Json, project_id: newProjectId };
                 const module6Res = await fetch(`${API_BASE}/api/module6/tco-from-sourcing`, {
@@ -183,17 +233,19 @@ export default function FactoryCopilot() {
                 if (!module6Res.ok) throw new Error(module6Json?.error || 'Module 6 failed');
                 setTcoData(module6Json);
                 setTcoLoading(false);
-                setArtifacts(prev => [...new Set([...prev, 2])]);
+                markArtifact(idxTco);
             } else {
                 setTcoLoading(false);
                 setTcoData(null);
             }
 
-            setCurrentModule(3);
-            setSelectedModule(3);
-            setSubStep(0);
+            if (idxBusinessPlan >= 0) {
+                setCurrentModule(idxBusinessPlan);
+                setSelectedModule(idxBusinessPlan);
+                setSubStep(0);
+            }
 
-            if (module6Json && (activeSettings.enableBusinessPlan || activeSettings.enablePitchDeck)) {
+            if (module6Json && (activeSettings.enableBusinessPlan || activeSettings.enablePitchDeck) && idxBusinessPlan >= 0) {
                 setBusinessPlanLoading(true);
 
                 if (activeSettings.enableBusinessPlan) {
@@ -219,18 +271,20 @@ export default function FactoryCopilot() {
                 }
 
                 setBusinessPlanLoading(false);
-                setArtifacts(prev => [...new Set([...prev, 3])]);
+                markArtifact(idxBusinessPlan);
             } else {
                 setBusinessPlanLoading(false);
                 setBusinessPlanData(null);
                 setPitchDeckData(null);
             }
 
-            setCurrentModule(4);
-            setSelectedModule(4);
-            setSubStep(0);
+            if (idxCatalogue >= 0) {
+                setCurrentModule(idxCatalogue);
+                setSelectedModule(idxCatalogue);
+                setSubStep(0);
+            }
 
-            if (activeSettings.enableCatalog) {
+            if (activeSettings.enableCatalog && idxCatalogue >= 0) {
                 setCatalogLoading(true);
                 const module9Res = await fetch(`${API_BASE}/api/module9/catalog`, {
                     method: 'POST',
@@ -247,10 +301,60 @@ export default function FactoryCopilot() {
                 if (!module9Res.ok) throw new Error(module9Json?.error || 'Module 9 failed');
                 setCatalogData(module9Json);
                 setCatalogLoading(false);
-                setArtifacts(prev => [...new Set([...prev, 4])]);
+                markArtifact(idxCatalogue);
             } else {
                 setCatalogLoading(false);
                 setCatalogData(null);
+            }
+
+            let module2Json: any = null;
+            if (idxLayout2d >= 0) {
+                setLayoutLoading(true);
+                setCurrentModule(idxLayout2d);
+                setSelectedModule(idxLayout2d);
+                setSubStep(0);
+                const module2Res = await fetch(`${API_BASE}/api/module2/layout`, {
+                    method: 'POST',
+                    headers: jsonHeaders,
+                    body: JSON.stringify({
+                        ...module1Data,
+                        project_id: newProjectId,
+                        pipeline_settings: activeSettings,
+                    })
+                });
+                module2Json = await module2Res.json();
+                if (!module2Res.ok) throw new Error(module2Json?.error || 'Module 2 failed');
+                setLayoutData(module2Json);
+                setLayoutLoading(false);
+                markArtifact(idxLayout2d);
+                await runPlaceholderStep(idxModel3d);
+            } else {
+                setLayoutLoading(false);
+                setLayoutData(null);
+            }
+
+            if (idxVideo >= 0 && module2Json) {
+                setVideoLoading(true);
+                setCurrentModule(idxVideo);
+                setSelectedModule(idxVideo);
+                setSubStep(0);
+                const module3Res = await fetch(`${API_BASE}/api/module3/video`, {
+                    method: 'POST',
+                    headers: jsonHeaders,
+                    body: JSON.stringify({
+                        ...module2Json,
+                        project_id: newProjectId,
+                        pipeline_settings: activeSettings,
+                    })
+                });
+                const module3Json = await module3Res.json();
+                if (!module3Res.ok) throw new Error(module3Json?.error || 'Module 3 failed');
+                setVideoData(module3Json);
+                setVideoLoading(false);
+                markArtifact(idxVideo);
+            } else {
+                setVideoLoading(false);
+                setVideoData(null);
             }
 
             setStatus('finished');
@@ -260,6 +364,8 @@ export default function FactoryCopilot() {
             setTcoLoading(false);
             setBusinessPlanLoading(false);
             setCatalogLoading(false);
+            setLayoutLoading(false);
+            setVideoLoading(false);
             setStatus('idle');
         }
     };
@@ -315,6 +421,17 @@ export default function FactoryCopilot() {
         return type === 'businessplan' || type === 'catalogue';
     });
 
+    const layoutImageUrl = layoutLoading ? null : resolveDownloadUrl(
+        layoutData?.layout_realistic_clean_url ||
+        layoutData?.layout_realistic_url ||
+        layoutData?.layout_2d_url ||
+        layoutData?.layout_realistic_clean ||
+        layoutData?.layout_realistic ||
+        layoutData?.layout_2d
+    );
+
+    const videoUrl = videoLoading ? null : resolveDownloadUrl(videoData?.video_url);
+
     const selectedModuleItem = MODULES[selectedModule];
     const activeStagePrimary = MODULES[currentModule];
     const completedPhases = Math.max(artifacts.length, status === 'finished' ? MODULES.length : 0);
@@ -322,6 +439,7 @@ export default function FactoryCopilot() {
     const isSelectedProcessing = status === 'processing' && selectedModule === currentModule && !artifacts.includes(currentModule);
     const isSelectedDone = artifacts.includes(selectedModule) || status === 'finished' || selectedModule < currentModule;
     const selectedProgress = isSelectedProcessing ? (subStep / 4) * 100 : isSelectedDone ? 100 : 0;
+    const displayArtifacts = status === 'finished' ? MODULES.map((_, idx) => idx) : artifacts;
 
     return (
         <>
@@ -346,7 +464,7 @@ export default function FactoryCopilot() {
                             {status === 'finished' && <RefreshCw size={12} className="cursor-pointer hover:text-indigo-600 transition-colors" onClick={regenerateAll} />}
                         </div>
                         {MODULES.map((m, idx) => {
-                            const isDone = artifacts.includes(idx);
+                            const isDone = displayArtifacts.includes(idx);
                             const isActive = selectedModule === idx;
                             const isAvailable = isDone || status === 'finished' || idx === currentModule;
                             return (
@@ -453,9 +571,12 @@ export default function FactoryCopilot() {
                                         ) : (
                                             <>
                                                 {selectedModuleItem.type === 'specs' && <SpecsView data={extractedData} />}
-                                                {selectedModuleItem.type === 'plans' && <PlansView />}
-                                                {selectedModuleItem.type === 'video' && <VideoView progress={selectedProgress} />}
+                                                {selectedModuleItem.type === 'layout2d' && <Layout2DView imageUrl={layoutImageUrl} />}
+                                                {selectedModuleItem.type === 'model3d' && <Model3DView />}
+                                                {selectedModuleItem.type === 'video' && <VideoView progress={selectedProgress} videoUrl={videoUrl} />}
                                                 {selectedModuleItem.type === 'sourcing' && <SourcingView progress={selectedProgress} data={extractedData} module4Data={module4Data} loading={module4Loading} />}
+                                                {selectedModuleItem.type === 'email' && <EmailCenterView />}
+                                                {selectedModuleItem.type === 'calls' && <CallsNegotiationView />}
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
                                                 {selectedModuleItem.type === 'catalogue' && (

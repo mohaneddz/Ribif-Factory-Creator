@@ -9,7 +9,10 @@ from google import genai
 from google.genai import types
 from google.genai.errors import ClientError, ServerError
 
-from log_utils import warn
+try:
+    from .log_utils import warn
+except ImportError:  # Fallback for running as a script.
+    from log_utils import warn
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 

@@ -17,28 +17,52 @@ from PIL import Image, ImageOps, ImageChops
 import ezdxf
 from ezdxf import units
 
-from config import (
-    CELL_MM,
-    DXF_BLACK,
-    DXF_BLUE,
-    WALL_THICK_MM,
-    WALL_HATCH_STEP,
-    PILLAR_SIZE_MM,
-    DOOR_WIDTH_MM,
-    DOOR_DEPTH_MM,
-    PIPE_GAP_MM,
-    PIPE_LINE_WIDTH_MM,
-    TEXT_H_MM,
-    LEGEND_TEXT_H_MM,
-    GRID_MM,
-    AISLE_MM,
-    BELT_HALF_WIDTH_MM,
-    BELT_COLOR_MAIN,
-    BELT_COLOR_EDGE,
-    EMBED_IMAGES_IN_CAD,
-    PNG_MACHINE_SCALE,
-)
-from log_utils import info, warn
+try:
+    from .config import (
+        CELL_MM,
+        DXF_BLACK,
+        DXF_BLUE,
+        WALL_THICK_MM,
+        WALL_HATCH_STEP,
+        PILLAR_SIZE_MM,
+        DOOR_WIDTH_MM,
+        DOOR_DEPTH_MM,
+        PIPE_GAP_MM,
+        PIPE_LINE_WIDTH_MM,
+        TEXT_H_MM,
+        LEGEND_TEXT_H_MM,
+        GRID_MM,
+        AISLE_MM,
+        BELT_HALF_WIDTH_MM,
+        BELT_COLOR_MAIN,
+        BELT_COLOR_EDGE,
+        EMBED_IMAGES_IN_CAD,
+        PNG_MACHINE_SCALE,
+    )
+    from .log_utils import info, warn
+except ImportError:  # Fallback for running as a script.
+    from config import (
+        CELL_MM,
+        DXF_BLACK,
+        DXF_BLUE,
+        WALL_THICK_MM,
+        WALL_HATCH_STEP,
+        PILLAR_SIZE_MM,
+        DOOR_WIDTH_MM,
+        DOOR_DEPTH_MM,
+        PIPE_GAP_MM,
+        PIPE_LINE_WIDTH_MM,
+        TEXT_H_MM,
+        LEGEND_TEXT_H_MM,
+        GRID_MM,
+        AISLE_MM,
+        BELT_HALF_WIDTH_MM,
+        BELT_COLOR_MAIN,
+        BELT_COLOR_EDGE,
+        EMBED_IMAGES_IN_CAD,
+        PNG_MACHINE_SCALE,
+    )
+    from log_utils import info, warn
 
 Flow = Tuple[str, str]
 Node = Tuple[int, int]
@@ -128,10 +152,24 @@ class FactoryRenderer:
         if not visual_rects:
             visual_rects = [self._rect_bounds(m["x"], m["y"], m["w"], m["h"]) for m in all_machines]
 
-        minx, miny, maxx, maxy = self._compute_bounds_rects(visual_rects)
+        path_points: List[Tuple[float, float]] = []
+        for (src, dst), path in paths.items():
+            pts = [self._node_to_mm(n) for n in path]
+            if src in centers and dst in centers:
+                pts = [centers[src]] + pts + [centers[dst]] if pts else [centers[src], centers[dst]]
+            path_points.extend(pts)
 
-        pad_w = (maxx - minx) * 0.05
-        pad_h = (maxy - miny) * 0.05
+        minx, miny, maxx, maxy = self._compute_bounds_rects(visual_rects)
+        if path_points:
+            pxs = [p[0] for p in path_points]
+            pys = [p[1] for p in path_points]
+            minx = min(minx, min(pxs))
+            miny = min(miny, min(pys))
+            maxx = max(maxx, max(pxs))
+            maxy = max(maxy, max(pys))
+
+        pad_w = max(1.0, (maxx - minx) * 0.05)
+        pad_h = max(1.0, (maxy - miny) * 0.05)
         minx -= pad_w
         maxx += pad_w
         miny -= pad_h
@@ -139,20 +177,18 @@ class FactoryRenderer:
 
         current_w = maxx - minx
         current_h = maxy - miny
-        target_aspect = 1.0
 
-        if current_w / current_h > target_aspect:
-            target_h = current_w / target_aspect
-            diff = target_h - current_h
-            miny -= diff / 2
-            maxy += diff / 2
-        else:
-            target_w = current_h * target_aspect
-            diff = target_w - current_w
-            minx -= diff / 2
-            maxx += diff / 2
+        max_px = 2400.0
+        min_px = 900.0
+        max_dim = max(current_w, current_h)
+        scale = max_px / max_dim if max_dim > 0 else 1.0
+        if current_w * scale < min_px and current_h * scale < min_px:
+            scale = min_px / max_dim if max_dim > 0 else 1.0
 
-        fig = plt.figure(figsize=(16, 9), dpi=100)
+        dpi = 100
+        fig_w = max(6.0, (current_w * scale) / dpi)
+        fig_h = max(6.0, (current_h * scale) / dpi)
+        fig = plt.figure(figsize=(fig_w, fig_h), dpi=dpi)
         ax = fig.add_subplot(111)
         ax.set_facecolor("#00FF00")
         fig.patch.set_facecolor("#00FF00")
@@ -172,10 +208,9 @@ class FactoryRenderer:
         ax.set_ylim(miny, maxy)
         ax.set_aspect("equal", adjustable="box")
         ax.axis("off")
-        plt.tight_layout(pad=0)
 
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-        fig.savefig(output_path, bbox_inches="tight", pad_inches=0)
+        fig.savefig(output_path)
         plt.close(fig)
         info(f"PNG saved: {output_path}")
 

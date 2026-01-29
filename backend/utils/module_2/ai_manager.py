@@ -9,6 +9,7 @@ import io
 import json
 import os
 import threading
+import mimetypes
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -17,17 +18,30 @@ from PIL import Image
 
 from dotenv import load_dotenv
 
-import vertex_utils as vtx
-from log_utils import info, warn
-
-from config import (
-    ASSETS_DIR,
-    LOCAL_IMAGES_DIR,
-    CACHE_FILE,
-    REPLICATE_API_TOKEN,
-    REPLICATE_MODEL,
-    BASE_IMAGE_URL,
-)
+try:
+    from . import vertex_utils as vtx
+    from .log_utils import info, warn
+    from .config import (
+        ASSETS_DIR,
+        LOCAL_IMAGES_DIR,
+        CACHE_FILE,
+        REPLICATE_API_TOKEN,
+        REPLICATE_MODEL,
+        BASE_IMAGE_URL,
+        BASE_DIR,
+    )
+except ImportError:  # Fallback for running as a script.
+    import vertex_utils as vtx
+    from log_utils import info, warn
+    from config import (
+        ASSETS_DIR,
+        LOCAL_IMAGES_DIR,
+        CACHE_FILE,
+        REPLICATE_API_TOKEN,
+        REPLICATE_MODEL,
+        BASE_IMAGE_URL,
+        BASE_DIR,
+    )
 
 load_dotenv()
 
@@ -51,6 +65,54 @@ def _hash(text: str) -> str:
 
 def _ensure_dirs() -> None:
     os.makedirs(ASSETS_DIR, exist_ok=True)
+    os.makedirs(LOCAL_IMAGES_DIR, exist_ok=True)
+
+
+def _local_image_path(url: str, content_type: Optional[str] = None) -> str:
+    ext = None
+    if content_type:
+        ext = mimetypes.guess_extension(content_type.split(";")[0].strip())
+    if not ext:
+        ext = os.path.splitext(url.split("?", 1)[0])[1]
+    if not ext:
+        ext = ".jpg"
+    filename = f"img_{_hash(url)}{ext}"
+    return os.path.join(LOCAL_IMAGES_DIR, filename)
+
+
+def _download_url_original(url: str) -> Optional[str]:
+    if not url:
+        return None
+
+    _ensure_dirs()
+    cache = _load_cache()
+    cached_path = cache.get("originals", {}).get(url)
+    if cached_path and os.path.exists(cached_path):
+        info(f"Cache hit (original): {url} -> {cached_path}")
+        return cached_path
+
+    for attempt in range(3):
+        try:
+            headers = {"User-Agent": "Mozilla/5.0", "Accept": "image/*,*/*;q=0.8"}
+            r = requests.get(url, headers=headers, timeout=30)
+            r.raise_for_status()
+            content_type = r.headers.get("Content-Type", "")
+            if content_type and "image" not in content_type:
+                warn(f"URL did not return an image: {url} ({content_type})")
+                return None
+            local_path = _local_image_path(url, content_type)
+            with open(local_path, "wb") as f:
+                f.write(r.content)
+
+            def _update(c):
+                c.setdefault("originals", {})[url] = local_path
+            _update_cache(_update)
+            return local_path
+        except Exception as exc:
+            if attempt == 2:
+                warn(f"Image download failed: {url} => {exc}")
+                return None
+            continue
 
 
 def _nobg_cache_path(key: str) -> str:
@@ -216,16 +278,18 @@ def download_image(url: str) -> Optional[str]:
         return target_path
 
     try:
-        headers = {"User-Agent": "Mozilla/5.0", "Accept": "image/*,*/*;q=0.8"}
-        r = requests.get(url, headers=headers, timeout=20)
-        r.raise_for_status()
-        cleaned = remove_background(r.content)
+        local_path = _download_url_original(url)
+        if not local_path or not os.path.exists(local_path):
+            return None
+        with open(local_path, "rb") as f:
+            cleaned = remove_background(f.read())
         with open(target_path, "wb") as f:
             f.write(cleaned)
 
         def _update(c):
             c.setdefault("downloads", {})[url] = target_path
             c.setdefault("backgrounds", {})[url] = target_path
+            c.setdefault("originals", {})[url] = local_path
         _update_cache(_update)
         return target_path
     except Exception as exc:
@@ -349,6 +413,11 @@ def process_machine_images(machines: List[Dict[str, Any]], workers: Optional[int
 
     def _process(m: Dict[str, Any]) -> Tuple[str, Optional[str], Optional[str]]:
         src = str(m.get("image", ""))
+        if src.startswith("http://") or src.startswith("https://"):
+            local_path = _download_url_original(src)
+            if local_path:
+                m["image"] = os.path.relpath(local_path, BASE_DIR)
+                src = m["image"]
         nobg = resolve_image_source(src)
         m["image_path"] = nobg
         m["image_nobg_path"] = nobg
@@ -365,6 +434,33 @@ def process_machine_images(machines: List[Dict[str, Any]], workers: Optional[int
                 fut.result()
             except Exception as exc:
                 warn(f"Image processing failed: {exc}")
+
+
+def prefetch_machine_images(machines: List[Dict[str, Any]], workers: Optional[int] = None) -> None:
+    """Download originals only and set machine image paths to local relative files."""
+    if not machines:
+        return
+
+    def _process(m: Dict[str, Any]) -> Optional[str]:
+        src = str(m.get("image", ""))
+        if src.startswith("http://") or src.startswith("https://"):
+            local_path = _download_url_original(src)
+            if local_path:
+                m["image"] = os.path.relpath(local_path, BASE_DIR)
+                return local_path
+        return None
+
+    if not workers or workers <= 0:
+        workers = _auto_workers(len(machines))
+    info(f"Image prefetch workers: {workers}")
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futures = [ex.submit(_process, m) for m in machines]
+        for fut in as_completed(futures):
+            try:
+                fut.result()
+            except Exception as exc:
+                warn(f"Image prefetch failed: {exc}")
 
 
 def generate_message(

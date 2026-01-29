@@ -1,6 +1,9 @@
 import base64
 import os
 from pathlib import Path
+from typing import Any, List, Optional
+
+import requests
 from flask import Blueprint, jsonify, request
 
 from config import OUTPUT_DIRS, SKIP_MODULE_3
@@ -11,15 +14,100 @@ from utils.app_helpers import (
     load_template_payload,
     upload_and_register_file,
 )
-from vertex_utils import generate_video
+
+try:
+    from vertex_utils import generate_video
+except Exception:
+    from utils.module_2.vertex_utils import generate_video
 
 bp_module3 = Blueprint("module3", __name__)
+
+
+def _load_image_input(value: Any) -> Optional[bytes]:
+    if value is None:
+        return None
+    if isinstance(value, Path):
+        value = str(value)
+    if isinstance(value, bytes):
+        return value
+    if isinstance(value, str):
+        data = value.strip()
+        if data.startswith("data:image"):
+            try:
+                _, b64 = data.split(",", 1)
+                return base64.b64decode(b64)
+            except Exception:
+                return None
+        if data.startswith("http://") or data.startswith("https://"):
+            try:
+                resp = requests.get(data, timeout=30)
+                resp.raise_for_status()
+                return resp.content
+            except Exception:
+                return None
+        if os.path.exists(data):
+            try:
+                with open(data, "rb") as f:
+                    return f.read()
+            except Exception:
+                return None
+        try:
+            return base64.b64decode(data)
+        except Exception:
+            return None
+    return None
+
+
+def _collect_module2_images(payload: Optional[dict]) -> List[bytes]:
+    candidates: List[Any] = []
+    if isinstance(payload, dict):
+        for key in (
+            "layout_realistic",
+            "layout_realistic_clean",
+            "layout_2d",
+            "layout_realistic_url",
+            "layout_realistic_clean_url",
+            "layout_2d_url",
+        ):
+            if payload.get(key):
+                candidates.append(payload.get(key))
+        inner = payload.get("data") if isinstance(payload.get("data"), dict) else None
+        if inner:
+            for key in (
+                "layout_realistic",
+                "layout_realistic_clean",
+                "layout_2d",
+                "layout_realistic_url",
+                "layout_realistic_clean_url",
+                "layout_2d_url",
+            ):
+                if inner.get(key):
+                    candidates.append(inner.get(key))
+    if not candidates:
+        candidates = [
+            OUTPUT_DIRS["module2"] / "realistic_layout.png",
+            OUTPUT_DIRS["module2"] / "realistic_clean.png",
+            OUTPUT_DIRS["module2"] / "layout_square.png",
+        ]
+    images: List[bytes] = []
+    for src in candidates:
+        img = _load_image_input(src)
+        if img:
+            images.append(img)
+    return images
+
+
+def _ensure_three(images: List[bytes]) -> List[bytes]:
+    if not images:
+        return images
+    while len(images) < 3:
+        images.append(images[-1])
+    return images[:3]
 
 
 @bp_module3.route("/api/module3/video", methods=["POST"])
 def generate_video_from_images():
     import time
-    import requests
 
     try:
         if SKIP_MODULE_3:
@@ -30,38 +118,51 @@ def generate_video_from_images():
             return jsonify(payload)
 
         project_id = get_request_project_id(include_form=True, include_json=True)
-        images_data = []
         default_prompts = [
             "Cinematic slow pan across industrial manufacturing equipment, smooth camera movement, professional lighting, 4K quality",
             "Dramatic walkthrough of factory production line, machines operating, cinematic motion blur, professional industrial video",
             "Aerial-style view of manufacturing facility interior, sweeping camera movement, dramatic lighting, high production value",
         ]
 
+        prompts = default_prompts[:]
+        images_bytes: List[bytes] = []
+        payload = None
+
         if "image1" in request.files:
+            prompts = []
             for i, key in enumerate(["image1", "image2", "image3"]):
                 if key in request.files:
                     file = request.files[key]
                     if file.filename:
-                        img_bytes = file.read()
-                        prompt = request.form.get(f"prompt{i+1}", default_prompts[i])
-                        images_data.append((img_bytes, prompt))
+                        images_bytes.append(file.read())
+                        prompts.append(request.form.get(f"prompt{i+1}", default_prompts[i]))
+            if not prompts:
+                prompts = default_prompts[:]
         elif request.is_json:
-            data = request.get_json()
-            images = data.get("images", [])
-            prompts = data.get("prompts", default_prompts)
-            for i, img_input in enumerate(images[:3]):
-                prompt = prompts[i] if i < len(prompts) else default_prompts[i]
-                try:
-                    img_bytes = base64.b64decode(img_input) if isinstance(img_input, str) else img_input
-                except Exception:
-                    continue
-                images_data.append((img_bytes, prompt))
+            payload = request.get_json()
+            images = payload.get("images", []) if isinstance(payload, dict) else []
+            prompts = payload.get("prompts", default_prompts) if isinstance(payload, dict) else default_prompts
+            if not isinstance(prompts, list):
+                prompts = default_prompts
+            for img_input in images:
+                img_bytes = _load_image_input(img_input)
+                if img_bytes:
+                    images_bytes.append(img_bytes)
 
-        if len(images_data) < 3:
-            return jsonify({"error": f"Need 3 images, got {len(images_data)}", "status": "error"}), 400
+        if len(images_bytes) < 3:
+            images_bytes.extend(_collect_module2_images(payload))
+
+        images_bytes = _ensure_three(images_bytes)
+        if len(images_bytes) < 3:
+            return jsonify({"error": f"Need 3 images, got {len(images_bytes)}", "status": "error"}), 400
+
+        while len(prompts) < 3:
+            prompts.append(default_prompts[len(prompts)])
+
+        images_data = [(images_bytes[i], prompts[i]) for i in range(3)]
 
         video_uris = []
-        for i, (img_bytes, prompt) in enumerate(images_data, 1):
+        for img_bytes, prompt in images_data:
             try:
                 video_uri = generate_video(
                     prompt=prompt,

@@ -7,38 +7,71 @@ import argparse
 import json
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from typing import Any, Dict, List, Tuple
 
 import requests
 
-from config import (
-    OUTPUT_DIR,
-    OUTPUT_DXF,
-    OUTPUT_PNG,
-    REALISTIC_PNG,
-    REALISTIC_CLEAN_PNG,
-    FINAL_GLB_PATH,
-    PUBLIC_MODELS_DIR,
-    TOP_VIEW_REALISTIC_BELTS,
-    MACHINE_PIPELINE_PROMPT,
-    format_machine_list,
-)
-from ai_manager import (
-    load_data,
-    load_pipeline,
-    normalize_flows,
-    should_regenerate_links,
-    expand_flows_to_instances,
-    process_machine_images,
-    generate_message,
-    generate_image,
-    remove_background,
-    generate_3d_model,
-)
-from layout_engine import generate_layout
-from renderer import FactoryRenderer
-from log_utils import section, info, warn, error, success, kv
+try:
+    from .config import (
+        BASE_DIR,
+        OUTPUT_DIR,
+        OUTPUT_DXF,
+        OUTPUT_PNG,
+        REALISTIC_PNG,
+        REALISTIC_CLEAN_PNG,
+        FINAL_GLB_PATH,
+        PUBLIC_MODELS_DIR,
+        TOP_VIEW_REALISTIC_BELTS,
+        MACHINE_PIPELINE_PROMPT,
+        format_machine_list,
+    )
+    from .ai_manager import (
+        load_data,
+        load_pipeline,
+        normalize_flows,
+        should_regenerate_links,
+        expand_flows_to_instances,
+        prefetch_machine_images,
+        process_machine_images,
+        generate_message,
+        generate_image,
+        remove_background,
+        generate_3d_model,
+    )
+    from .layout_engine import generate_layout
+    from .renderer import FactoryRenderer
+    from .log_utils import section, info, warn, error, success, kv
+except ImportError:  # Fallback for running as a script.
+    from config import (
+        BASE_DIR,
+        OUTPUT_DIR,
+        OUTPUT_DXF,
+        OUTPUT_PNG,
+        REALISTIC_PNG,
+        REALISTIC_CLEAN_PNG,
+        FINAL_GLB_PATH,
+        PUBLIC_MODELS_DIR,
+        TOP_VIEW_REALISTIC_BELTS,
+        MACHINE_PIPELINE_PROMPT,
+        format_machine_list,
+    )
+    from ai_manager import (
+        load_data,
+        load_pipeline,
+        normalize_flows,
+        should_regenerate_links,
+        expand_flows_to_instances,
+        prefetch_machine_images,
+        process_machine_images,
+        generate_message,
+        generate_image,
+        remove_background,
+        generate_3d_model,
+    )
+    from layout_engine import generate_layout
+    from renderer import FactoryRenderer
+    from log_utils import section, info, warn, error, success, kv
 
 
 class PipelineAbort(RuntimeError):
@@ -99,6 +132,43 @@ def _build_flows(machines: List[Dict[str, Any]], links_path: str, force_regen: b
     return [(expanded[i], expanded[i + 1]) for i in range(len(expanded) - 1)]
 
 
+def _persist_local_images(data_path: str, machines: List[Dict[str, Any]]) -> None:
+    try:
+        with open(data_path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+    except Exception:
+        return
+
+    if isinstance(raw, dict) and "machines" in raw:
+        items = raw.get("machines") or []
+    elif isinstance(raw, list):
+        items = raw
+    else:
+        return
+
+    changed = False
+    for i, m in enumerate(machines):
+        if i >= len(items):
+            break
+        img = m.get("image")
+        if not isinstance(img, str) or not img:
+            continue
+        if img.startswith("http://") or img.startswith("https://"):
+            continue
+        if os.path.isabs(img):
+            img = os.path.relpath(img, BASE_DIR)
+        if items[i].get("image") != img:
+            items[i]["image"] = img
+            changed = True
+
+    if changed:
+        try:
+            with open(data_path, "w", encoding="utf-8") as f:
+                json.dump(raw, f, indent=2)
+        except Exception:
+            pass
+
+
 def _ask_stop_step() -> int:
     while True:
         section("Interactive Mode")
@@ -138,15 +208,15 @@ class Timer:
         section("Timing Summary")
         total = 0.0
         for name, duration in self.steps:
-            info(f"{name:<30}: {duration:.2f}s")
+            print(f"{name:<30}: {duration:.2f}s")
             total += duration
-        info("-" * 30)
-        info(f"{'TOTAL':<30}: {total:.2f}s")
+        print("-" * 30)
+        print(f"{'TOTAL':<30}: {total:.2f}s")
         wall = time.time() - self.start_total
         if wall > 0.01:
-            info(f"{'WALL':<30}: {wall:.2f}s")
+            print(f"{'WALL':<30}: {wall:.2f}s")
         if total > wall + 0.05:
-            info("Note: some steps ran in parallel; TOTAL may exceed WALL.")
+            print("Note: some steps ran in parallel; TOTAL may exceed WALL.")
 
 
 def _run_step(timer: Timer, title: str, fn):
@@ -168,6 +238,7 @@ def run_pipeline(
     links_path: str,
     seed: int,
     force_links: bool = False,
+    skip_images: bool = False,
     stop_at: int | None = None,
 ) -> None:
     _ensure_dirs()
@@ -179,25 +250,52 @@ def run_pipeline(
 
         # 2+3) Parallel: download/clean images and generate flows
         section("Parallel: images + flows")
-        img_start = time.time()
+        img_start = None
         flows_start = time.time()
-        executor = ThreadPoolExecutor(max_workers=2)
-        img_future = executor.submit(process_machine_images, machines, None)
-        flows_future = executor.submit(_build_flows, machines, links_path, force_links)
+        executor = None
+        img_future = None
+
+        if stop_at is not None and stop_at <= 3:
+            img_start = time.time()
+            executor = ThreadPoolExecutor(max_workers=2)
+            img_future = executor.submit(prefetch_machine_images, machines, None)
+            flows_future = executor.submit(_build_flows, machines, links_path, force_links)
+        elif skip_images:
+            info("Skipping machine image processing.")
+            flows = _build_flows(machines, links_path, force_links)
+            timer.log_custom("Generate flows", time.time() - flows_start)
+        else:
+            img_start = time.time()
+            executor = ThreadPoolExecutor(max_workers=2)
+            img_future = executor.submit(process_machine_images, machines, None)
+            flows_future = executor.submit(_build_flows, machines, links_path, force_links)
 
         try:
-            try:
-                flows = flows_future.result()
-                timer.log_custom("Generate flows", time.time() - flows_start)
-            except Exception as exc:
-                error("Generate flows failed")
-                kv("error_type", type(exc).__name__)
-                kv("message", str(exc))
-                raise PipelineAbort(str(exc)) from exc
+            if stop_at is None or stop_at > 3:
+                if not skip_images:
+                    try:
+                        flows = flows_future.result()
+                        timer.log_custom("Generate flows", time.time() - flows_start)
+                    except Exception as exc:
+                        error("Generate flows failed")
+                        kv("error_type", type(exc).__name__)
+                        kv("message", str(exc))
+                        raise PipelineAbort(str(exc)) from exc
+            else:
+                try:
+                    flows = flows_future.result()
+                    timer.log_custom("Generate flows", time.time() - flows_start)
+                except Exception as exc:
+                    error("Generate flows failed")
+                    kv("error_type", type(exc).__name__)
+                    kv("message", str(exc))
+                    raise PipelineAbort(str(exc)) from exc
 
             if stop_at == 1:
-                img_future.result()
-                timer.log_custom("Download + clean images", time.time() - img_start)
+                if img_future is not None:
+                    img_future.result()
+                    timer.log_custom("Download images", time.time() - (img_start or time.time()))
+                    _persist_local_images(data_path, machines)
                 info("Stopped after step 1")
                 timer.print_summary()
                 return
@@ -207,8 +305,10 @@ def run_pipeline(
             layout_data, paths = _run_step(timer, "Generate layout + routes", lambda: generate_layout(machines, flows, seed=seed))
 
             if stop_at == 2:
-                img_future.result()
-                timer.log_custom("Download + clean images", time.time() - img_start)
+                if img_future is not None:
+                    img_future.result()
+                    timer.log_custom("Download images", time.time() - (img_start or time.time()))
+                    _persist_local_images(data_path, machines)
                 info("Stopped after step 2")
                 timer.print_summary()
                 return
@@ -217,8 +317,17 @@ def run_pipeline(
             renderer = FactoryRenderer()
             _run_step(timer, "Render DXF", lambda: renderer.render_dxf(layout_data, paths, OUTPUT_DXF))
 
-            img_future.result()
-            timer.log_custom("Download + clean images", time.time() - img_start)
+            if img_future is not None:
+                if stop_at is not None and stop_at <= 3:
+                    try:
+                        img_future.result(timeout=30)
+                    except FutureTimeout:
+                        warn("Image prefetch still running; rendering PNG without waiting.")
+                else:
+                    img_future.result()
+                if img_future.done():
+                    timer.log_custom("Download images", time.time() - (img_start or time.time()))
+                    _persist_local_images(data_path, machines)
 
             for placed in layout_data.get("placed", []):
                 machine = placed.get("machine", {})
@@ -227,7 +336,8 @@ def run_pipeline(
                         machine.get("image_nobg_path") or machine.get("image_path") or machine.get("image")
                     )
         finally:
-            executor.shutdown(wait=True)
+            if executor is not None:
+                executor.shutdown(wait=True)
 
         # 6) Render base PNG
         _run_step(timer, "Render base PNG", lambda: renderer.render_png(layout_data, paths, images_map=None, output_path=OUTPUT_PNG))

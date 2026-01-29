@@ -1,10 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Grid, Float } from "@react-three/drei";
 import {
-    FileText, Layers, Video, Globe, Check,
+    Box, FileText, Layers, Mail, Phone, Video, Globe, Check,
     Upload, Loader2, Download, RefreshCw, Sparkles, Building2,
     Info, Play, FileSearch, Eye, BrainCircuit, Calculator,
     Briefcase, X, FileSpreadsheet, ChevronLeft, ChevronRight, BookOpen
@@ -13,6 +11,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import HTMLFlipBook from "react-pageflip";
+import { CallsNegotiationView } from "@/sections/CallsNegotiationView";
+import { EmailCenterView } from "@/sections/EmailCenterView";
+import { Layout2DView, Model3DView } from "@/sections/PlansView";
 
 // ==========================================
 // 0. STYLES (Outfit Font)
@@ -40,9 +41,14 @@ const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 const MODULES = [
     { id: 1, title: "Analyse Specs", icon: FileText, file: "Specs_V1.pdf", type: "specs", statusText: "Extraction des données..." },
     { id: 2, title: "Sourcing Global", icon: Globe, file: "Liste_Sourcing.xlsx", type: "sourcing", statusText: "Recherche fournisseurs..." },
-    { id: 3, title: "Analyse TCO", icon: Calculator, file: "Rapport_TCO.json", type: "tco", statusText: "Calcul des coûts..." },
-    { id: 4, title: "Business Plan", icon: Briefcase, file: "Business_Plan.xlsx", type: "businessplan", statusText: "Génération du plan..." },
-    { id: 5, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." }
+    { id: 3, title: "Email Center", icon: Mail, file: "Email_Negotiations.md", type: "email", statusText: "Préparation des emails..." },
+    { id: 4, title: "Phone Calls Negotiations", icon: Phone, file: "Call_Transcripts.wav", type: "calls", statusText: "Simulation d'appels..." },
+    { id: 5, title: "Analyse TCO", icon: Calculator, file: "Rapport_TCO.json", type: "tco", statusText: "Calcul des coûts..." },
+    { id: 6, title: "Business Plan", icon: Briefcase, file: "Business_Plan.xlsx", type: "businessplan", statusText: "Génération du plan..." },
+    { id: 7, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." },
+    { id: 8, title: "2D Layout Design", icon: Layers, file: "Layout_2D.dwg", type: "layout2d", statusText: "Génération du layout 2D..." },
+    { id: 9, title: "3D Model Generation", icon: Box, file: "Model_3D.ifc", type: "model3d", statusText: "Modélisation 3D..." },
+    { id: 10, title: "Video Model Presentation", icon: Video, file: "Presentation_HD.mp4", type: "video", statusText: "Rendu vidéo HD..." }
 ];
 
 const MODULE_LOADING_META: Record<string, { kicker: string; description: string; bullets: string[]; accent: string; glow: string }> = {
@@ -53,12 +59,19 @@ const MODULE_LOADING_META: Record<string, { kicker: string; description: string;
         accent: "from-indigo-600 via-violet-600 to-fuchsia-600",
         glow: "bg-fuchsia-500",
     },
-    plans: {
-        kicker: "Planification industrielle",
-        description: "Génération du layout usine, zones de production et flux logistiques.",
-        bullets: ["Zonage intelligent", "Gabarits machines", "Flux & sécurité"],
+    layout2d: {
+        kicker: "Plan 2D",
+        description: "Conception des plans DWG et organisation des zones industrielles.",
+        bullets: ["Zonage intelligent", "Flux & sécurité", "Implantation machines"],
         accent: "from-emerald-600 via-teal-600 to-cyan-600",
         glow: "bg-cyan-500",
+    },
+    model3d: {
+        kicker: "Modèle 3D",
+        description: "Génération IFC 3D avec volumes, contraintes et enveloppes.",
+        bullets: ["BIM industriel", "Volumes & gabarits", "Export IFC"],
+        accent: "from-slate-700 via-slate-800 to-indigo-800",
+        glow: "bg-indigo-400",
     },
     video: {
         kicker: "Rendu immersif",
@@ -66,6 +79,20 @@ const MODULE_LOADING_META: Record<string, { kicker: string; description: string;
         bullets: ["Scènes 3D", "Caméras & parcours", "Export vidéo"],
         accent: "from-amber-500 via-orange-500 to-rose-500",
         glow: "bg-rose-500",
+    },
+    email: {
+        kicker: "Négociation email",
+        description: "Brouillons IA, contre-offres et suivi des conditions fournisseurs.",
+        bullets: ["Brouillons IA", "Incoterms", "Résumé d'accord"],
+        accent: "from-sky-600 via-blue-600 to-indigo-600",
+        glow: "bg-blue-500",
+    },
+    calls: {
+        kicker: "Négociation vocale",
+        description: "Appels fournisseurs avec transcription et synthèse d'offres.",
+        bullets: ["Voice agent", "Transcription live", "Best offer"],
+        accent: "from-emerald-600 via-green-600 to-lime-600",
+        glow: "bg-lime-400",
     },
     sourcing: {
         kicker: "Sourcing mondial",
@@ -1413,110 +1440,61 @@ const SpecsView = ({ data }: any) => {
     );
 };
 
-const PlansView = () => (
-    <div className="h-full flex flex-col gap-4 p-4">
-        {/* Top Section - 2D Plan */}
-        <div className="h-1/2 relative bg-white rounded-4xl overflow-hidden border border-slate-200">
-            <div className="absolute top-6 left-6 bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold z-10 shadow-lg shadow-indigo-200">
-                VUE 2D (PLAN D'IMPLANTATION)
+const VideoView = ({ progress, videoUrl }: { progress: number; videoUrl?: string | null }) => {
+    const hasVideo = Boolean(videoUrl);
+
+    const renderContent = () => {
+        if (hasVideo) {
+            return (
+                <video
+                    className="h-full w-full object-cover"
+                    src={videoUrl as string}
+                    controls
+                    playsInline
+                />
+            );
+        }
+
+        return (
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 border border-indigo-100 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                    {progress < 100 ? <Loader2 className="animate-spin" size={32} /> : <Play className="ml-1" size={32} />}
+                </div>
+                <div className="text-center">
+                    <div className="text-sm font-bold text-slate-700">Simulation Extérieure 3D</div>
+                    <div className="text-xs text-slate-400">Rendu architectural du bâtiment</div>
+                </div>
             </div>
-            <div className="absolute top-6 right-6 flex gap-2 z-10">
-                <button className="bg-white/90 backdrop-blur text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
-                    Étage RDC
-                </button>
-                <button className="bg-slate-100 text-slate-400 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
-                    Étage 1
-                </button>
+        );
+    };
+
+    const renderSecondaryContent = () => {
+        if (hasVideo) {
+            return (
+                <video
+                    className="h-full w-full object-cover"
+                    src={videoUrl as string}
+                    controls
+                    playsInline
+                />
+            );
+        }
+
+        return (
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center text-slate-400 border border-slate-200 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all">
+                    {progress < 100 ? <Loader2 className="animate-spin" size={32} /> : <Play className="ml-1" size={32} />}
+                </div>
+                <div className="text-center">
+                    <div className="text-sm font-bold text-slate-700">Visite Virtuelle Usine</div>
+                    <div className="text-xs text-slate-400">Parcours interactif des installations</div>
+                </div>
             </div>
-            <div className="h-full w-full flex items-center justify-center bg-slate-50">
-                {/* 2D Floor Plan Grid SVG */}
-                <svg viewBox="0 0 400 300" className="w-full h-full max-w-3xl p-10">
-                    {/* Background Grid */}
-                    <defs>
-                        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" strokeWidth="0.5" />
-                        </pattern>
-                    </defs>
-                    <rect width="400" height="300" fill="url(#grid)" />
+        );
+    };
 
-                    {/* Main Factory Building */}
-                    <rect x="40" y="40" width="200" height="150" fill="#e0e7ff" stroke="#4f46e5" strokeWidth="2" rx="4" />
-                    <text x="140" y="120" textAnchor="middle" className="text-[10px] font-bold fill-indigo-700">ZONE PRODUCTION</text>
-
-                    {/* Warehouse */}
-                    <rect x="260" y="40" width="100" height="80" fill="#dcfce7" stroke="#22c55e" strokeWidth="2" rx="4" />
-                    <text x="310" y="85" textAnchor="middle" className="text-[8px] font-bold fill-emerald-700">STOCKAGE</text>
-
-                    {/* Office Area */}
-                    <rect x="260" y="130" width="100" height="60" fill="#fef3c7" stroke="#f59e0b" strokeWidth="2" rx="4" />
-                    <text x="310" y="165" textAnchor="middle" className="text-[8px] font-bold fill-amber-700">BUREAUX</text>
-
-                    {/* Machines Representation */}
-                    <rect x="60" y="60" width="30" height="40" fill="#818cf8" stroke="#4f46e5" strokeWidth="1" rx="2" />
-                    <rect x="100" y="60" width="30" height="40" fill="#818cf8" stroke="#4f46e5" strokeWidth="1" rx="2" />
-                    <rect x="140" y="60" width="30" height="40" fill="#818cf8" stroke="#4f46e5" strokeWidth="1" rx="2" />
-                    <rect x="180" y="60" width="30" height="40" fill="#818cf8" stroke="#4f46e5" strokeWidth="1" rx="2" />
-
-                    <rect x="60" y="130" width="30" height="40" fill="#818cf8" stroke="#4f46e5" strokeWidth="1" rx="2" />
-                    <rect x="100" y="130" width="30" height="40" fill="#818cf8" stroke="#4f46e5" strokeWidth="1" rx="2" />
-                    <rect x="140" y="130" width="30" height="40" fill="#818cf8" stroke="#4f46e5" strokeWidth="1" rx="2" />
-                    <rect x="180" y="130" width="30" height="40" fill="#818cf8" stroke="#4f46e5" strokeWidth="1" rx="2" />
-
-                    {/* Flow Arrows */}
-                    <path d="M 95 80 L 95 80" stroke="#4f46e5" strokeWidth="1" markerEnd="url(#arrow)" />
-
-                    {/* Legend */}
-                    <rect x="40" y="220" width="12" height="12" fill="#818cf8" stroke="#4f46e5" strokeWidth="1" rx="2" />
-                    <text x="58" y="230" className="text-[8px] fill-slate-600">Machines</text>
-
-                    <rect x="120" y="220" width="12" height="12" fill="#e0e7ff" stroke="#4f46e5" strokeWidth="1" rx="2" />
-                    <text x="138" y="230" className="text-[8px] fill-slate-600">Production</text>
-
-                    <rect x="200" y="220" width="12" height="12" fill="#dcfce7" stroke="#22c55e" strokeWidth="1" rx="2" />
-                    <text x="218" y="230" className="text-[8px] fill-slate-600">Stockage</text>
-
-                    <rect x="280" y="220" width="12" height="12" fill="#fef3c7" stroke="#f59e0b" strokeWidth="1" rx="2" />
-                    <text x="298" y="230" className="text-[8px] fill-slate-600">Bureaux</text>
-                </svg>
-            </div>
-            {/* Scale indicator */}
-            <div className="absolute bottom-6 right-6 flex items-center gap-2 bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] text-slate-500 font-medium">
-                <div className="w-12 h-0.5 bg-slate-400"></div>
-                <span>10m</span>
-            </div>
-        </div>
-
-        {/* Bottom Section - 3D Plan */}
-        <div className="h-1/2 relative bg-slate-100 rounded-4xl overflow-hidden border border-slate-200">
-            <div className="absolute top-6 left-6 bg-white/90 backdrop-blur text-slate-800 px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200 shadow-sm">
-                VUE 3D ISOMÉTRIQUE (IFC)
-            </div>
-            <div className="absolute top-6 right-6 flex gap-2 z-10">
-                <button className="bg-white/90 backdrop-blur text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
-                    Rotation
-                </button>
-                <button className="bg-white/90 backdrop-blur text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
-                    Reset
-                </button>
-            </div>
-            <Canvas camera={{ position: [6, 6, 6] }}>
-                <ambientLight intensity={0.6} />
-                <pointLight position={[10, 10, 10]} />
-                <Grid args={[20, 20]} cellColor="#cbd5e1" sectionColor="#94a3b8" />
-                <Float speed={2} rotationIntensity={0.5}>
-                    <mesh>
-                        <boxGeometry args={[3, 1.5, 3]} />
-                        <meshStandardMaterial color="#4f46e5" roughness={0.2} metalness={0.1} />
-                    </mesh>
-                </Float>
-                <OrbitControls autoRotate enableZoom={false} />
-            </Canvas>
-        </div>
-    </div>
-);
-
-const VideoView = ({ progress }: { progress: number }) => (
-    <div className="h-full p-4 flex flex-col gap-4">
+    return (
+        <div className="h-full p-4 flex flex-col gap-4">
         {/* Top Section - Exterior View */}
         <div className="h-1/2 bg-white rounded-4xl relative overflow-hidden flex items-center justify-center group cursor-pointer border border-slate-200 hover:border-indigo-300 transition-all">
             <div className="absolute top-6 left-6 bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200">
@@ -1530,16 +1508,7 @@ const VideoView = ({ progress }: { progress: number }) => (
                     Façade Sud
                 </button>
             </div>
-            {/* Placeholder Content */}
-            <div className="flex flex-col items-center gap-4">
-                <div className="w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 border border-indigo-100 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                    {progress < 100 ? <Loader2 className="animate-spin" size={32} /> : <Play className="ml-1" size={32} />}
-                </div>
-                <div className="text-center">
-                    <div className="text-sm font-bold text-slate-700">Simulation Extérieure 3D</div>
-                    <div className="text-xs text-slate-400">Rendu architectural du bâtiment</div>
-                </div>
-            </div>
+            {renderContent()}
         </div>
 
         {/* Bottom Section - Interior View */}
@@ -1555,19 +1524,11 @@ const VideoView = ({ progress }: { progress: number }) => (
                     Stockage
                 </button>
             </div>
-            {/* Placeholder Content */}
-            <div className="flex flex-col items-center gap-4">
-                <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center text-slate-400 border border-slate-200 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all">
-                    {progress < 100 ? <Loader2 className="animate-spin" size={32} /> : <Play className="ml-1" size={32} />}
-                </div>
-                <div className="text-center">
-                    <div className="text-sm font-bold text-slate-700">Visite Virtuelle Usine</div>
-                    <div className="text-xs text-slate-400">Parcours interactif des installations</div>
-                </div>
-            </div>
+            {renderSecondaryContent()}
         </div>
     </div>
-);
+    );
+};
 
 
 const SourcingView = ({ progress, data, module4Data, loading }: { progress: number, data: any, module4Data: any, loading: boolean }) => {
@@ -2147,6 +2108,10 @@ export default function FactoryCopilot() {
     const [businessPlanLoading, setBusinessPlanLoading] = useState(false);
     const [catalogData, setCatalogData] = useState<any>(null);
     const [catalogLoading, setCatalogLoading] = useState(false);
+    const [layoutData, setLayoutData] = useState<any>(null);
+    const [layoutLoading, setLayoutLoading] = useState(false);
+    const [videoData, setVideoData] = useState<any>(null);
+    const [videoLoading, setVideoLoading] = useState(false);
 
     // Animate loading progress while a module is running
     useEffect(() => {
@@ -2157,6 +2122,15 @@ export default function FactoryCopilot() {
             return () => clearTimeout(timer);
         }
     }, [status, currentModule, subStep, artifacts]);
+
+    const getModuleIndex = (type: string) => MODULES.findIndex((m) => m.type === type);
+
+    const resolveDownloadUrl = (value?: string | null) => {
+        if (!value) return null;
+        if (value.startsWith("http://") || value.startsWith("https://")) return value;
+        const filename = value.split(/[/\\]/).pop();
+        return filename ? `${API_BASE}/download/${filename}` : null;
+    };
 
     // ----------------------------------------------------
     // REAL FILE UPLOAD HANDLER
@@ -2176,8 +2150,22 @@ export default function FactoryCopilot() {
         setBusinessPlanData(null);
         setPitchDeckData(null);
         setCatalogData(null);
+        setLayoutData(null);
+        setVideoData(null);
 
         try {
+            const markArtifact = (idx: number) => {
+                setArtifacts(prev => [...new Set([...prev, idx])]);
+            };
+            const runPlaceholderStep = async (idx: number) => {
+                if (idx < 0) return;
+                setCurrentModule(idx);
+                setSelectedModule(idx);
+                setSubStep(0);
+                await new Promise((resolve) => setTimeout(resolve, 800));
+                markArtifact(idx);
+            };
+
             const formData = new FormData();
             formData.append('file', file);
 
@@ -2190,84 +2178,177 @@ export default function FactoryCopilot() {
 
             const module1Data = module1Json?.data || module1Json;
             setExtractedData(module1Data);
-            setArtifacts(prev => [...new Set([...prev, 0])]);
+
+            const jsonHeaders: HeadersInit = { 'Content-Type': 'application/json' };
+            const idxSpecs = getModuleIndex("specs");
+            const idxSourcing = getModuleIndex("sourcing");
+            const idxEmail = getModuleIndex("email");
+            const idxCalls = getModuleIndex("calls");
+            const idxTco = getModuleIndex("tco");
+            const idxBusinessPlan = getModuleIndex("businessplan");
+            const idxCatalogue = getModuleIndex("catalogue");
+            const idxLayout2d = getModuleIndex("layout2d");
+            const idxModel3d = getModuleIndex("model3d");
+            const idxVideo = getModuleIndex("video");
+
+            if (idxSpecs >= 0) {
+                markArtifact(idxSpecs);
+            }
 
             setStatus('processing');
-            setCurrentModule(1);
-            setSelectedModule(1);
-            setSubStep(0);
 
-            setModule4Loading(true);
-            const module4Res = await fetch(`${API_BASE}/api/module4/enrich`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(module1Data)
-            });
-            const module4Json = await module4Res.json();
-            if (!module4Res.ok) throw new Error(module4Json?.error || 'Module 4 failed');
-            setModule4Data(module4Json);
-            setModule4Loading(false);
-            setArtifacts(prev => [...new Set([...prev, 1])]);
-            setCurrentModule(2);
-            setSelectedModule(2);
-            setSubStep(0);
+            let module4Json: any = null;
+            if (idxSourcing >= 0) {
+                setCurrentModule(idxSourcing);
+                setSelectedModule(idxSourcing);
+                setSubStep(0);
+            }
 
-            setTcoLoading(true);
-            const module6Payload = { ...module1Data, ...module4Json };
-            const module6Res = await fetch(`${API_BASE}/api/module6/tco-from-sourcing`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(module6Payload)
-            });
-            const module6Json = await module6Res.json();
-            if (!module6Res.ok) throw new Error(module6Json?.error || 'Module 6 failed');
-            setTcoData(module6Json);
-            setTcoLoading(false);
-            setArtifacts(prev => [...new Set([...prev, 2])]);
-            setCurrentModule(3);
-            setSelectedModule(3);
-            setSubStep(0);
+            if (idxSourcing >= 0) {
+                setModule4Loading(true);
+                const module4Res = await fetch(`${API_BASE}/api/module4/enrich`, {
+                    method: 'POST',
+                    headers: jsonHeaders,
+                    body: JSON.stringify(module1Data)
+                });
+                module4Json = await module4Res.json();
+                if (!module4Res.ok) throw new Error(module4Json?.error || 'Module 4 failed');
+                setModule4Data(module4Json);
+                setModule4Loading(false);
+                markArtifact(idxSourcing);
+                await runPlaceholderStep(idxEmail);
+                await runPlaceholderStep(idxCalls);
+            } else {
+                setModule4Loading(false);
+                setModule4Data(null);
+            }
 
-            setBusinessPlanLoading(true);
-            const businessPlanRes = await fetch(`${API_BASE}/api/module7/business-plan`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(module6Json)
-            });
-            const businessPlanJson = await businessPlanRes.json();
-            if (!businessPlanRes.ok) throw new Error(businessPlanJson?.error || 'Business Plan failed');
-            setBusinessPlanData(businessPlanJson);
+            let module6Json: any = null;
+            if (idxTco >= 0) {
+                setCurrentModule(idxTco);
+                setSelectedModule(idxTco);
+                setSubStep(0);
+            }
 
-            const pitchDeckRes = await fetch(`${API_BASE}/api/module7/pitch-deck`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(module6Json)
-            });
-            const pitchDeckJson = await pitchDeckRes.json();
-            if (!pitchDeckRes.ok) throw new Error(pitchDeckJson?.error || 'Pitch Deck failed');
-            setPitchDeckData(pitchDeckJson);
-            setBusinessPlanLoading(false);
-            setArtifacts(prev => [...new Set([...prev, 3])]);
+            if (idxTco >= 0 && module4Json) {
+                setTcoLoading(true);
+                const module6Payload = { ...module1Data, ...module4Json };
+                const module6Res = await fetch(`${API_BASE}/api/module6/tco-from-sourcing`, {
+                    method: 'POST',
+                    headers: jsonHeaders,
+                    body: JSON.stringify(module6Payload)
+                });
+                module6Json = await module6Res.json();
+                if (!module6Res.ok) throw new Error(module6Json?.error || 'Module 6 failed');
+                setTcoData(module6Json);
+                setTcoLoading(false);
+                markArtifact(idxTco);
+            } else {
+                setTcoLoading(false);
+                setTcoData(null);
+            }
 
-            setCurrentModule(4);
-            setSelectedModule(4);
-            setSubStep(0);
+            if (idxBusinessPlan >= 0) {
+                setCurrentModule(idxBusinessPlan);
+                setSelectedModule(idxBusinessPlan);
+                setSubStep(0);
+            }
 
-            setCatalogLoading(true);
-            const module9Res = await fetch(`${API_BASE}/api/module9/catalog`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    module1_data: module1Data,
-                    module4_data: module4Json,
-                    output_format: 'pdf'
-                })
-            });
-            const module9Json = await module9Res.json();
-            if (!module9Res.ok) throw new Error(module9Json?.error || 'Module 9 failed');
-            setCatalogData(module9Json);
-            setCatalogLoading(false);
-            setArtifacts(prev => [...new Set([...prev, 4])]);
+            if (module6Json && idxBusinessPlan >= 0) {
+                setBusinessPlanLoading(true);
+                const businessPlanRes = await fetch(`${API_BASE}/api/module7/business-plan`, {
+                    method: 'POST',
+                    headers: jsonHeaders,
+                    body: JSON.stringify(module6Json)
+                });
+                const businessPlanJson = await businessPlanRes.json();
+                if (!businessPlanRes.ok) throw new Error(businessPlanJson?.error || 'Business Plan failed');
+                setBusinessPlanData(businessPlanJson);
+
+                const pitchDeckRes = await fetch(`${API_BASE}/api/module7/pitch-deck`, {
+                    method: 'POST',
+                    headers: jsonHeaders,
+                    body: JSON.stringify(module6Json)
+                });
+                const pitchDeckJson = await pitchDeckRes.json();
+                if (!pitchDeckRes.ok) throw new Error(pitchDeckJson?.error || 'Pitch Deck failed');
+                setPitchDeckData(pitchDeckJson);
+                setBusinessPlanLoading(false);
+                markArtifact(idxBusinessPlan);
+            } else {
+                setBusinessPlanLoading(false);
+                setBusinessPlanData(null);
+                setPitchDeckData(null);
+            }
+
+            if (idxCatalogue >= 0) {
+                setCurrentModule(idxCatalogue);
+                setSelectedModule(idxCatalogue);
+                setSubStep(0);
+            }
+
+            if (idxCatalogue >= 0) {
+                setCatalogLoading(true);
+                const module9Res = await fetch(`${API_BASE}/api/module9/catalog`, {
+                    method: 'POST',
+                    headers: jsonHeaders,
+                    body: JSON.stringify({
+                        module1_data: module1Data,
+                        module4_data: module4Json,
+                        output_format: 'pdf'
+                    })
+                });
+                const module9Json = await module9Res.json();
+                if (!module9Res.ok) throw new Error(module9Json?.error || 'Module 9 failed');
+                setCatalogData(module9Json);
+                setCatalogLoading(false);
+                markArtifact(idxCatalogue);
+            } else {
+                setCatalogLoading(false);
+                setCatalogData(null);
+            }
+
+            let module2Json: any = null;
+            if (idxLayout2d >= 0) {
+                setLayoutLoading(true);
+                setCurrentModule(idxLayout2d);
+                setSelectedModule(idxLayout2d);
+                setSubStep(0);
+                const module2Res = await fetch(`${API_BASE}/api/module2/layout`, {
+                    method: 'POST',
+                    headers: jsonHeaders,
+                    body: JSON.stringify(module1Data)
+                });
+                module2Json = await module2Res.json();
+                if (!module2Res.ok) throw new Error(module2Json?.error || 'Module 2 failed');
+                setLayoutData(module2Json);
+                setLayoutLoading(false);
+                markArtifact(idxLayout2d);
+                await runPlaceholderStep(idxModel3d);
+            } else {
+                setLayoutLoading(false);
+                setLayoutData(null);
+            }
+
+            if (idxVideo >= 0 && module2Json) {
+                setVideoLoading(true);
+                setCurrentModule(idxVideo);
+                setSelectedModule(idxVideo);
+                setSubStep(0);
+                const module3Res = await fetch(`${API_BASE}/api/module3/video`, {
+                    method: 'POST',
+                    headers: jsonHeaders,
+                    body: JSON.stringify(module2Json)
+                });
+                const module3Json = await module3Res.json();
+                if (!module3Res.ok) throw new Error(module3Json?.error || 'Module 3 failed');
+                setVideoData(module3Json);
+                setVideoLoading(false);
+                markArtifact(idxVideo);
+            } else {
+                setVideoLoading(false);
+                setVideoData(null);
+            }
 
             setStatus('finished');
         } catch (error) {
@@ -2276,6 +2357,8 @@ export default function FactoryCopilot() {
             setTcoLoading(false);
             setBusinessPlanLoading(false);
             setCatalogLoading(false);
+            setLayoutLoading(false);
+            setVideoLoading(false);
             setStatus('idle');
         }
     };
@@ -2327,6 +2410,17 @@ export default function FactoryCopilot() {
         const type = MODULES[idx]?.type;
         return type === 'businessplan' || type === 'catalogue';
     });
+
+    const layoutImageUrl = layoutLoading ? null : resolveDownloadUrl(
+        layoutData?.layout_realistic_clean_url ||
+        layoutData?.layout_realistic_url ||
+        layoutData?.layout_2d_url ||
+        layoutData?.layout_realistic_clean ||
+        layoutData?.layout_realistic ||
+        layoutData?.layout_2d
+    );
+
+    const videoUrl = videoLoading ? null : resolveDownloadUrl(videoData?.video_url);
 
     const selectedModuleItem = MODULES[selectedModule];
     const activeStagePrimary = MODULES[currentModule];
@@ -2466,9 +2560,12 @@ export default function FactoryCopilot() {
                                         ) : (
                                             <>
                                                 {selectedModuleItem.type === 'specs' && <SpecsView data={extractedData} />}
-                                                {selectedModuleItem.type === 'plans' && <PlansView />}
-                                                {selectedModuleItem.type === 'video' && <VideoView progress={selectedProgress} />}
+                                                {selectedModuleItem.type === 'layout2d' && <Layout2DView imageUrl={layoutImageUrl} />}
+                                                {selectedModuleItem.type === 'model3d' && <Model3DView />}
+                                                {selectedModuleItem.type === 'video' && <VideoView progress={selectedProgress} videoUrl={videoUrl} />}
                                                 {selectedModuleItem.type === 'sourcing' && <SourcingView progress={selectedProgress} data={extractedData} module4Data={module4Data} loading={module4Loading} />}
+                                                {selectedModuleItem.type === 'email' && <EmailCenterView />}
+                                                {selectedModuleItem.type === 'calls' && <CallsNegotiationView />}
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
                                                 {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url} />}

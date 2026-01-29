@@ -1,24 +1,35 @@
 "use client";
 import { Canvas } from "@react-three/fiber";
-import { Float, Grid, OrbitControls } from "@react-three/drei";
+import Scene1 from "@/components/three/scenes/Scene1";
+import { useSceneSettings, useSceneThreeLogic } from "@/hooks/useSceneLogic";
 
-export const PlansView = () => (
-    <div className="h-full flex flex-col gap-4 p-4">
-        {/* Top Section - 2D Plan */}
-        <div className="h-1/2 relative bg-white rounded-4xl overflow-hidden border border-slate-200">
-            <div className="absolute top-6 left-6 bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold z-10 shadow-lg shadow-indigo-200">
-                VUE 2D (PLAN D'IMPLANTATION)
-            </div>
-            <div className="absolute top-6 right-6 flex gap-2 z-10">
-                <button className="bg-white/90 backdrop-blur text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
-                    Étage RDC
-                </button>
-                <button className="bg-slate-100 text-slate-400 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
-                    Étage 1
-                </button>
-            </div>
-            <div className="h-full w-full flex items-center justify-center bg-slate-50">
-                {/* 2D Floor Plan Grid SVG */}
+const Layout2DPanel = ({
+    heightClass = "h-1/2",
+    imageUrl,
+}: {
+    heightClass?: string;
+    imageUrl?: string | null;
+}) => (
+    <div className={`${heightClass} relative bg-white rounded-4xl overflow-hidden border border-slate-200`}>
+        <div className="absolute top-6 left-6 bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold z-10 shadow-lg shadow-indigo-200">
+            VUE 2D (PLAN D'IMPLANTATION)
+        </div>
+        <div className="absolute top-6 right-6 flex gap-2 z-10">
+            <button className="bg-white/90 backdrop-blur text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
+                Étage RDC
+            </button>
+            <button className="bg-slate-100 text-slate-400 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
+                Étage 1
+            </button>
+        </div>
+        <div className="h-full w-full flex items-center justify-center bg-slate-50">
+            {imageUrl ? (
+                <img
+                    src={imageUrl}
+                    alt="Plan 2D"
+                    className="w-full h-full object-contain p-10"
+                />
+            ) : (
                 <svg viewBox="0 0 400 300" className="w-full h-full max-w-3xl p-10">
                     {/* Background Grid */}
                     <defs>
@@ -67,39 +78,59 @@ export const PlansView = () => (
                     <rect x="280" y="220" width="12" height="12" fill="#fef3c7" stroke="#f59e0b" strokeWidth="1" rx="2" />
                     <text x="298" y="230" className="text-[8px] fill-slate-600">Bureaux</text>
                 </svg>
-            </div>
-            {/* Scale indicator */}
-            <div className="absolute bottom-6 right-6 flex items-center gap-2 bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] text-slate-500 font-medium">
-                <div className="w-12 h-0.5 bg-slate-400"></div>
-                <span>10m</span>
-            </div>
+            )}
         </div>
+        {/* Scale indicator */}
+        <div className="absolute bottom-6 right-6 flex items-center gap-2 bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] text-slate-500 font-medium">
+            <div className="w-12 h-0.5 bg-slate-400"></div>
+            <span>10m</span>
+        </div>
+    </div>
+);
 
-        {/* Bottom Section - 3D Plan */}
-        <div className="h-1/2 relative bg-slate-100 rounded-4xl overflow-hidden border border-slate-200">
-            <div className="absolute top-6 left-6 bg-white/90 backdrop-blur text-slate-800 px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200 shadow-sm">
-                VUE 3D ISOMÉTRIQUE (IFC)
-            </div>
-            <div className="absolute top-6 right-6 flex gap-2 z-10">
-                <button className="bg-white/90 backdrop-blur text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
-                    Rotation
-                </button>
-                <button className="bg-white/90 backdrop-blur text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
-                    Reset
-                </button>
-            </div>
-            <Canvas camera={{ position: [6, 6, 6] }}>
-                <ambientLight intensity={0.6} />
-                <pointLight position={[10, 10, 10]} />
-                <Grid args={[20, 20]} cellColor="#cbd5e1" sectionColor="#94a3b8" />
-                <Float speed={2} rotationIntensity={0.5}>
-                    <mesh>
-                        <boxGeometry args={[3, 1.5, 3]} />
-                        <meshStandardMaterial color="#4f46e5" roughness={0.2} metalness={0.1} />
-                    </mesh>
-                </Float>
-                <OrbitControls autoRotate enableZoom={false} />
+const Scene1Preview = () => {
+    const settings = useSceneSettings();
+    const threeLogic = useSceneThreeLogic();
+    const logic = { ...settings, ...threeLogic, activeCam: 0 };
+    return <Scene1 logic={logic} />;
+};
+
+const Model3DPanel = ({ heightClass = "h-1/2" }: { heightClass?: string }) => (
+    <div className={`${heightClass} relative bg-slate-100 rounded-4xl overflow-hidden border border-slate-200`}>
+        <div className="absolute top-6 left-6 bg-white/90 backdrop-blur text-slate-800 px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200 shadow-sm">
+            VUE 3D ISOMÉTRIQUE (IFC)
+        </div>
+        <div className="absolute top-6 right-6 flex gap-2 z-10">
+            <button className="bg-white/90 backdrop-blur text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
+                Rotation
+            </button>
+            <button className="bg-white/90 backdrop-blur text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
+                Reset
+            </button>
+        </div>
+        <div className="h-full w-full">
+            <Canvas shadows camera={{ position: [0.7, 1.78, -3], fov: 45 }}>
+                <Scene1Preview />
             </Canvas>
         </div>
+    </div>
+);
+
+export const PlansView = ({ imageUrl }: { imageUrl?: string | null }) => (
+    <div className="h-full flex flex-col gap-4 p-4">
+        <Layout2DPanel imageUrl={imageUrl} />
+        <Model3DPanel />
+    </div>
+);
+
+export const Layout2DView = ({ imageUrl }: { imageUrl?: string | null }) => (
+    <div className="h-full p-4">
+        <Layout2DPanel heightClass="h-full" imageUrl={imageUrl} />
+    </div>
+);
+
+export const Model3DView = () => (
+    <div className="h-full p-4">
+        <Model3DPanel heightClass="h-full" />
     </div>
 );

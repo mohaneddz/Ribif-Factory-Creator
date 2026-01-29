@@ -15,6 +15,7 @@ DOWNLOAD_FOLDERS = [
     OUTPUT_DIRS["module7"],
     OUTPUT_DIRS["module8"],
     OUTPUT_DIRS["module9"],
+    OUTPUT_DIRS["email"],
     OUTPUT_DIRS["catalogs"],
     OUTPUT_DIRS["videos"],
 ]

@@ -6,30 +6,26 @@ from __future__ import annotations
 
 from typing import Any
 
-from utils.logger import get_logger
-
-logger = get_logger(__name__)
-
 
 def section(title: str) -> None:
-    logger.info("SECTION %s", title)
+    print(f"\n== {title} ==")
 
 
 def info(msg: str) -> None:
-    logger.info("%s", msg)
+    print(f"[INFO] {msg}")
 
 
 def success(msg: str) -> None:
-    logger.info("DONE %s", msg)
+    print(f"[OK] {msg}")
 
 
 def warn(msg: str) -> None:
-    logger.warning("%s", msg)
+    print(f"[WARN] {msg}")
 
 
 def error(msg: str) -> None:
-    logger.error("%s", msg)
+    print(f"[ERROR] {msg}")
 
 
 def kv(label: str, value: Any) -> None:
-    logger.info("%s: %s", label, value)
+    print(f"  - {label}: {value}")
