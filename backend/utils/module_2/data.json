@@ -1,0 +1,99 @@
+{
+  "product": {
+    "name": "PET Bottled Water (0.5L)",
+    "output_unit": "bottles",
+    "target_output_per_hour": 12000
+  },
+  "machines": [
+    {
+      "name": "Blow Molder (PET Bottle)",
+      "model": "BM-12000-2C",
+      "count": 1,
+      "use": "Blows PET preforms into 0.5L bottles",
+      "image": "https://5.imimg.com/data5/SELLER/Default/2024/1/378148848/EV/QH/IY/373765/automatic-pet-bottle-blow-moulding-machine-mscsb-59-500x500.jpg",
+      "width": 6.2,
+      "height": 2.6
+    },
+    {
+      "name": "Air Conveyor",
+      "model": "AC-040",
+      "count": 1,
+      "use": "Transfers empty bottles from blow molder to rinser/filler",
+      "image": "https://bevco.net/cdn/shop/products/Bevco-AirConveyor-withoutLogo1000x1000_grande_2x.jpg?v=1586376588",
+      "width": 8.0,
+      "height": 2.2
+    },
+    {
+      "name": "Rinser-Filler-Capper (Triblock)",
+      "model": "RFC-12000",
+      "count": 1,
+      "use": "Rinses bottles, fills with water, and caps",
+      "image": "https://www.idrotecnica.it/wp-content/uploads/2022/07/triblocco-tappatrice-riempitrice-sciacquatrice.jpg",
+      "width": 5.8,
+      "height": 2.5
+    },
+    {
+      "name": "Cap Elevator & Sorter",
+      "model": "CES-200",
+      "count": 1,
+      "use": "Orients and feeds caps to capper",
+      "image": "https://5.imimg.com/data5/LX/BF/IX/SELLER-3450650/cap-elevator-sorter.jpg",
+      "width": 2.4,
+      "height": 2.6
+    },
+    {
+      "name": "Inkjet Date Coder",
+      "model": "IJC-300",
+      "count": 1,
+      "use": "Prints batch/expiry on bottles or caps",
+      "image": "https://image.made-in-china.com/202f0j00MNOayGctfszC/Leadjet-Industry-V280-Cij-Time-Date-Inkjet-Printer-Batch-Number-Coder-for-Food-and-Beverage-Factory.webp",
+      "width": 1.1,
+      "height": 1.6
+    },
+    {
+      "name": "Labeler (OPP Roll-Fed)",
+      "model": "LAB-12K-OPP",
+      "count": 1,
+      "use": "Applies wrap-around OPP labels",
+      "image": "https://image.made-in-china.com/2f0j00dOnhwabSwcgz/Low-Capacity-Hot-Melt-Glue-Labeler-OPP-Roll-Fed-Labeling-Machine.webp",
+      "width": 3.4,
+      "height": 2.1
+    },
+    {
+      "name": "Bottle Inspection Camera",
+      "model": "VISC-2D-12000",
+      "count": 1,
+      "use": "Checks fill level, cap presence, and label position",
+      "image": "https://image.made-in-china.com/202f0j00rVSMLljJSHqK/Empty-Glass-Bottle-Inspection-Camera-Vision-Machine.webp",
+      "width": 1.6,
+      "height": 1.9
+    },
+    {
+      "name": "Pack Conveyor",
+      "model": "PC-600",
+      "count": 1,
+      "use": "Conveys bottles to bundling and cartoning area",
+      "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRPWDc-m7OfpVFYEvIksU76KR2n06PkEO_5qA&s",
+      "width": 6.0,
+      "height": 1.2
+    },
+    {
+      "name": "Shrink Wrapper (6-Pack)",
+      "model": "SW-6PK-30",
+      "count": 3,
+      "use": "Bundles 6 bottles with shrink film",
+      "image": "https://sinopack-qa.com/wp-content/uploads/2025/02/10.-Shrink-Wrapping-Machine.png",
+      "width": 4.6,
+      "height": 1.8
+    },
+    {
+      "name": "Case Packer (Cartoner)",
+      "model": "CP-12K",
+      "count": 2,
+      "use": "Loads shrink bundles into cartons/cases",
+      "image": "https://tarpak.pl/wp-content/uploads/2024/11/2FPK-400H18.png",
+      "width": 3.9,
+      "height": 2.2
+    }
+  ]
+}
