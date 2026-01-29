@@ -8,6 +8,9 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 api_key = os.getenv("GOOGLE_API_KEY")
@@ -142,14 +145,18 @@ def generate_image(
             
         except ServerError as e:
             if attempt < max_retries - 1:
-                print(f"⚠️  Image generation server error (500), retrying in 5s... (Attempt {attempt+1}/{max_retries})")
+                logger.warning(
+                    "Image generation server error (500), retrying in 5s... (Attempt %s/%s)",
+                    attempt + 1,
+                    max_retries,
+                )
                 time.sleep(5)
                 continue
             else:
-                print(f"❌ Image generation failed after {max_retries} attempts.")
+                logger.error("Image generation failed after %s attempts.", max_retries)
                 raise e
         except Exception as e:
-            print(f"❌ Image generation failed with error: {e}")
+            logger.error("Image generation failed with error: %s", e)
             raise e
     return []
 

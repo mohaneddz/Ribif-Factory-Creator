@@ -5,7 +5,7 @@ import { Float, Grid, OrbitControls } from "@react-three/drei";
 export const PlansView = () => (
     <div className="h-full flex flex-col gap-4 p-4">
         {/* Top Section - 2D Plan */}
-        <div className="h-1/2 relative bg-white rounded-[32px] overflow-hidden border border-slate-200">
+        <div className="h-1/2 relative bg-white rounded-4xl overflow-hidden border border-slate-200">
             <div className="absolute top-6 left-6 bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold z-10 shadow-lg shadow-indigo-200">
                 VUE 2D (PLAN D'IMPLANTATION)
             </div>
@@ -76,7 +76,7 @@ export const PlansView = () => (
         </div>
 
         {/* Bottom Section - 3D Plan */}
-        <div className="h-1/2 relative bg-slate-100 rounded-[32px] overflow-hidden border border-slate-200">
+        <div className="h-1/2 relative bg-slate-100 rounded-4xl overflow-hidden border border-slate-200">
             <div className="absolute top-6 left-6 bg-white/90 backdrop-blur text-slate-800 px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200 shadow-sm">
                 VUE 3D ISOMÉTRIQUE (IFC)
             </div>

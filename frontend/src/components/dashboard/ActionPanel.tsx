@@ -39,7 +39,7 @@ export const ActionPanel = ({ onCreateProject, onOpenSettings }: ActionPanelProp
 
           <button
             onClick={onCreateProject}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-[32px] mb-4 transition-all group active:scale-[0.98] duration-100 shadow-xl shadow-indigo-200"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-4xl mb-4 transition-all group active:scale-[0.98] duration-100 shadow-xl shadow-indigo-200"
           >
             <div className="border-2 border-white/20 rounded-3xl py-8 flex flex-col items-center bg-indigo-600 group-hover:bg-indigo-700 transition-colors">
               <div className="bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mb-4 text-white">

@@ -1,0 +1,23 @@
+{
+  "company_name": "Template Company",
+  "project_name": "Template Project",
+  "calculation_date": "2026-01-01",
+  "total_tco": 0,
+  "average_annual_tco": 0,
+  "tco_per_unit_revenue": 0,
+  "machine_tco": [],
+  "total_machines_tco": 0,
+  "product_tco": [],
+  "total_products_tco": 0,
+  "raw_materials_tco": [],
+  "total_raw_materials_tco": 0,
+  "annual_tco": [],
+  "stage_1_informations_generales": {},
+  "stage_2_matieres_premieres": {},
+  "stage_3_produits_fabriques": {},
+  "stage_4_machines_equipements": {},
+  "stage_5_processus_production": {},
+  "stage_6_informations_complementaires": {},
+  "sourcing_metadata": {},
+  "project_id": null
+}

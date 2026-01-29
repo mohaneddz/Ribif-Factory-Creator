@@ -16,7 +16,7 @@ export const ModuleLoadingView = ({ module, progress }: { module: any; progress:
 
     return (
         <div className="h-full w-full flex items-center justify-center p-10 bg-slate-50">
-            <div className="w-full max-w-3xl bg-white border border-slate-200 rounded-[32px] overflow-hidden shadow-xl shadow-slate-200/50">
+            <div className="w-full max-w-3xl bg-white border border-slate-200 rounded-4xl overflow-hidden shadow-xl shadow-slate-200/50">
                 <div className={clsx("p-10 text-white relative overflow-hidden bg-gradient-to-br", meta.accent)}>
                     <div className={clsx("absolute -top-20 -right-20 w-48 h-48 rounded-full blur-[80px] opacity-40", meta.glow)} />
                     <div className="relative z-10 flex items-start gap-5">

@@ -27,6 +27,9 @@ import numpy_financial as npf
 from google import genai
 from google.genai import types
 
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 try:
     import xlsxwriter
 except ImportError:
@@ -182,7 +185,7 @@ Respond ONLY with the requested JSON, no explanatory text."""
         self.client = genai.Client(api_key=self.api_key)
         self.model_name = "gemini-2.5-flash"
         self._detected_language = "en"
-        print(f"✅ Gemini initialized for Business Plan Module: {self.model_name}")
+        logger.info("Gemini initialized for Business Plan Module: %s", self.model_name)
 
     def detect_language(self, text: str) -> str:
         """Detect if the input text is French or English"""
@@ -227,7 +230,7 @@ Respond ONLY with the requested JSON, no explanatory text."""
                     return json.loads(content[json_start:json_end])
             return {}
         except Exception as e:
-            print(f"❌ Gemini API Error: {e}")
+            logger.error("Gemini API Error: %s", e)
             return {}
 
     def generate_business_plan(
@@ -485,10 +488,10 @@ Respond in JSON:
         try:
             result = self.call_gemini(prompt)
             if result:
-                print(f"✅ LLM CapEx estimation SUCCESS")
+                logger.info("LLM CapEx estimation SUCCESS")
                 return result
         except Exception as e:
-            print(f"⚠️ CapEx estimation error: {e}")
+            logger.warning("CapEx estimation error: %s", e)
         
         # Fallback
         return {
@@ -538,10 +541,10 @@ Respond in JSON:
         try:
             result = self.call_gemini(prompt)
             if result:
-                print(f"✅ LLM OpEx estimation SUCCESS")
+                logger.info("LLM OpEx estimation SUCCESS")
                 return result
         except Exception as e:
-            print(f"⚠️ OpEx estimation error: {e}")
+            logger.warning("OpEx estimation error: %s", e)
         
         # Fallback
         return {
@@ -609,10 +612,10 @@ Respond in JSON:
         try:
             result = self.call_gemini(prompt)
             if result:
-                print(f"✅ LLM Pricing estimation SUCCESS")
+                logger.info("LLM Pricing estimation SUCCESS")
                 return result
         except Exception as e:
-            print(f"⚠️ Pricing estimation error: {e}")
+            logger.warning("Pricing estimation error: %s", e)
         
         # Fallback
         return {
@@ -673,7 +676,7 @@ IMPORTANT for Algerian context:
         try:
             result = self.call_gemini(prompt)
             if result:
-                print(f"✅ BATCH LLM BMC generation SUCCESS")
+                logger.info("BATCH LLM BMC generation SUCCESS")
                 # Format as bullet points
                 formatted = {}
                 for key, items in result.items():
@@ -683,7 +686,7 @@ IMPORTANT for Algerian context:
                         formatted[key] = str(items)
                 return formatted
         except Exception as e:
-            print(f"⚠️ BMC generation error: {e}")
+            logger.warning("BMC generation error: %s", e)
         
         # Fallback content
         return self._get_default_bmc_content(input_data, financial_data)

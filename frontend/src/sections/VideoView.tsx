@@ -3,7 +3,7 @@ import { Loader2, Play } from "lucide-react";
 export const VideoView = ({ progress }: { progress: number }) => (
     <div className="h-full p-4 flex flex-col gap-4">
         {/* Top Section - Exterior View */}
-        <div className="h-1/2 bg-white rounded-[32px] relative overflow-hidden flex items-center justify-center group cursor-pointer border border-slate-200 hover:border-indigo-300 transition-all">
+        <div className="h-1/2 bg-white rounded-4xl relative overflow-hidden flex items-center justify-center group cursor-pointer border border-slate-200 hover:border-indigo-300 transition-all">
             <div className="absolute top-6 left-6 bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200">
                 VUE EXTÉRIEURE
             </div>
@@ -28,7 +28,7 @@ export const VideoView = ({ progress }: { progress: number }) => (
         </div>
 
         {/* Bottom Section - Interior View */}
-        <div className="h-1/2 bg-slate-50 rounded-[32px] relative overflow-hidden flex items-center justify-center group cursor-pointer border border-slate-200 hover:border-indigo-300 transition-all">
+        <div className="h-1/2 bg-slate-50 rounded-4xl relative overflow-hidden flex items-center justify-center group cursor-pointer border border-slate-200 hover:border-indigo-300 transition-all">
             <div className="absolute top-6 left-6 bg-white text-slate-700 px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200">
                 VUE INTÉRIEURE
             </div>

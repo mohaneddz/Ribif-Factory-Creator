@@ -19,7 +19,7 @@ export const ProjectCard = ({ project, index, onOpenTwin, onOpenProject }: Proje
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className="bg-[var(--surface-1)] rounded-[32px] p-8 border border-[var(--border-1)] hover:border-indigo-300 hover:shadow-lg hover:shadow-slate-200/50 transition-all duration-300"
+      className="bg-[var(--surface-1)] rounded-4xl p-8 border border-[var(--border-1)] hover:border-indigo-300 hover:shadow-lg hover:shadow-slate-200/50 transition-all duration-300"
     >
       <div className="flex justify-between items-start mb-8">
         <div className="flex items-center gap-5">

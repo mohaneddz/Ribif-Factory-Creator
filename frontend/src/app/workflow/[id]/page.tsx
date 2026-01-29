@@ -357,7 +357,7 @@ export default function FactoryCopilot() {
                                     className={clsx(
                                         "w-full flex items-center gap-4 p-4 rounded-[16px] transition-all text-left relative overflow-hidden group",
                                         isActive ? "bg-indigo-50 border border-indigo-100" : "hover:bg-slate-50 border border-transparent",
-                                        !isAvailable && "opacity-50 cursor-not-allowed"
+                                        isAvailable ? "cursor-pointer" : "cursor-not-allowed opacity-50"
                                     )}
                                 >
                                     {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600" />}
@@ -421,7 +421,7 @@ export default function FactoryCopilot() {
                     <div className="flex-1 p-6 relative overflow-y-auto">
                         {status === 'idle' ? (
                             <div className="h-full flex items-center justify-center p-10">
-                                <label className="w-full max-w-4xl aspect-[16/9] bg-white border-2 border-dashed border-slate-300 rounded-[32px] flex flex-col items-center justify-center gap-8 cursor-pointer hover:border-indigo-500 hover:bg-indigo-50/30 transition-all group relative overflow-hidden">
+                                <label className="w-full max-w-4xl aspect-[16/9] bg-white border-2 border-dashed border-slate-300 rounded-4xl flex flex-col items-center justify-center gap-8 cursor-pointer hover:border-indigo-500 hover:bg-indigo-50/30 transition-all group relative overflow-hidden">
                                     <input type="file" className="hidden" accept=".pdf" onChange={handleStart} />
 
                                     <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
@@ -445,7 +445,7 @@ export default function FactoryCopilot() {
                                 <p className="text-slate-500">Cela peut prendre quelques secondes.</p>
                             </div>
                         ) : (
-                            <div className="h-full w-full bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-auto relative">
+                            <div className="h-full w-full bg-white rounded-4xl border border-slate-200 shadow-sm overflow-auto relative">
                                 <AnimatePresence mode="wait">
                                     <motion.div key={selectedModule} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full w-full">
                                         {isSelectedProcessing ? (

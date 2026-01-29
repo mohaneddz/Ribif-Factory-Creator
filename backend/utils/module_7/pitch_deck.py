@@ -14,6 +14,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 # ============================================
 # PYDANTIC MODELS (same as Module 7)
@@ -94,7 +97,7 @@ class RIBIFModule8PitchDeck:
         self.presenton_url = os.getenv("PRESENTON_API_BASE_URL", "https://api.presenton.ai")
         self.presenton_api_key = os.getenv("PRESENTON_API_KEY", "").strip()
         self._detected_language = "en"
-        print(f"✅ Presenton API configured at: {self.presenton_url}")
+        logger.info("Presenton API configured at: %s", self.presenton_url)
 
     def detect_language(self, data: Dict[str, Any]) -> str:
         """Detect input language (French/English)."""
@@ -309,7 +312,7 @@ class RIBIFModule8PitchDeck:
         
         # Build pitch content
         pitch_content = self.build_pitch_content(input_data)
-        print(f"📝 Built pitch content ({len(pitch_content)} chars), Language: {language}")
+        logger.info("Built pitch content (%s chars), Language: %s", len(pitch_content), language)
         
         # Ensure output directory exists
         os.makedirs(output_dir, exist_ok=True)
@@ -341,7 +344,7 @@ class RIBIFModule8PitchDeck:
         generate_endpoint = f"{self.presenton_url}/api/v3/presentation/generate"
         
         try:
-            print(f"📤 Calling Presenton API: {generate_endpoint}")
+            logger.info("Calling Presenton API: %s", generate_endpoint)
             response = requests.post(
                 generate_endpoint,
                 json=payload,
@@ -357,7 +360,7 @@ class RIBIFModule8PitchDeck:
                 raise Exception(f"Presenton API error ({response.status_code}): {response.text}")
             
             result = response.json()
-            print(f"✅ Presenton response: {result}")
+            logger.info("Presenton response: %s", result)
             
             presentation_id = result.get("presentation_id", "")
             presenton_path = result.get("path", "")
@@ -367,7 +370,7 @@ class RIBIFModule8PitchDeck:
             # Download the file
             if presenton_path:
                 file_url = presenton_path if presenton_path.startswith("http") else f"{self.presenton_url}{presenton_path}"
-                print(f"📥 Downloading from: {file_url}")
+                logger.info("Downloading from: %s", file_url)
                 
                 download_response = requests.get(
                     file_url,
@@ -381,7 +384,7 @@ class RIBIFModule8PitchDeck:
                 if download_response.status_code == 200:
                     with open(filepath, "wb") as f:
                         f.write(download_response.content)
-                    print(f"✅ Saved to: {filepath}")
+                    logger.info("Saved to: %s", filepath)
             
             # Get PDF file stats
             size_bytes = 0

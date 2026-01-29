@@ -138,15 +138,15 @@ class Timer:
         section("Timing Summary")
         total = 0.0
         for name, duration in self.steps:
-            print(f"{name:<30}: {duration:.2f}s")
+            info(f"{name:<30}: {duration:.2f}s")
             total += duration
-        print("-" * 30)
-        print(f"{'TOTAL':<30}: {total:.2f}s")
+        info("-" * 30)
+        info(f"{'TOTAL':<30}: {total:.2f}s")
         wall = time.time() - self.start_total
         if wall > 0.01:
-            print(f"{'WALL':<30}: {wall:.2f}s")
+            info(f"{'WALL':<30}: {wall:.2f}s")
         if total > wall + 0.05:
-            print("Note: some steps ran in parallel; TOTAL may exceed WALL.")
+            info("Note: some steps ran in parallel; TOTAL may exceed WALL.")
 
 
 def _run_step(timer: Timer, title: str, fn):

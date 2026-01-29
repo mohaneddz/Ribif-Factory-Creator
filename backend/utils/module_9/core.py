@@ -579,7 +579,7 @@ class RIBIFModule9Catalog:
 
     def generate_pdf_catalog(self, module1_data: Dict, module4_data: Dict = None,
                              output_path: str = "data/catalogs/industrial_catalog.pdf") -> str:
-        template_path = str(Path(__file__).resolve().parents[2] / "9" / "main.tex")
+        template_path = str(Path(__file__).resolve().parent / "main.tex")
         generated = self._generate_pdf_from_template(
             module1_data=module1_data,
             module4_data=module4_data,

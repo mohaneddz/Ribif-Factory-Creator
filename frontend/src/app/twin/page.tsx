@@ -572,7 +572,7 @@ export default function TwinDashboard() {
                                     ))}
                                 </div>
 
-                                <div className="flex-1 relative rounded-[32px] overflow-hidden shadow-xl border border-slate-200 bg-white">
+                                <div className="flex-1 relative rounded-4xl overflow-hidden shadow-xl border border-slate-200 bg-white">
                                     <Canvas shadows camera={{ position: [15, 12, 15], fov: 45 }}>
                                         <ComplexFactoryScene machineStates={machines} />
                                     </Canvas>
@@ -590,7 +590,7 @@ export default function TwinDashboard() {
                         <div className="h-full flex flex-col">
                             <Header title="Parc Machines" subtitle="État détaillé des équipements connectés" />
                             <div className="px-8 pb-8">
-                                <div className="bg-white rounded-[32px] shadow-sm border border-slate-200 overflow-hidden">
+                                <div className="bg-white rounded-4xl shadow-sm border border-slate-200 overflow-hidden">
                                     <table className="w-full text-sm text-left">
                                         <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-xs">
                                             <tr>
@@ -651,7 +651,7 @@ export default function TwinDashboard() {
                         <div className="h-full flex flex-col">
                             <Header title="Maintenance Prédictive" subtitle="Analyse IA des points de défaillance" />
                             <div className="px-8 pb-8 h-[calc(100vh-140px)] grid grid-cols-12 gap-8">
-                                <div className="col-span-8 bg-white p-8 rounded-[32px] shadow-sm border border-slate-200 flex flex-col">
+                                <div className="col-span-8 bg-white p-8 rounded-4xl shadow-sm border border-slate-200 flex flex-col">
                                     <h3 className="text-lg font-bold text-slate-800 mb-2">Matrice de Risque</h3>
                                     <p className="text-sm text-slate-500 mb-6 font-medium">Corrélation Vibration / Température / Santé Machine</p>
                                     <div className="flex-1 min-h-0">
@@ -686,7 +686,7 @@ export default function TwinDashboard() {
                                         </ResponsiveContainer>
                                     </div>
                                 </div>
-                                <div className="col-span-4 bg-white p-8 rounded-[32px] shadow-sm border border-slate-200 flex flex-col">
+                                <div className="col-span-4 bg-white p-8 rounded-4xl shadow-sm border border-slate-200 flex flex-col">
                                     <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
                                         <AlertTriangle size={20} className="text-amber-500" /> Alertes Critiques
                                     </h3>
@@ -723,7 +723,7 @@ export default function TwinDashboard() {
                             <Header title="Sécurité & Environnement" subtitle="Monitoring ATEX et qualité de l'air" />
                             <div className="px-8 pb-8 space-y-8">
                                 <div className="grid grid-cols-3 gap-8">
-                                    <div className="bg-amber-50 border border-amber-100 p-8 rounded-[32px] flex flex-col justify-between">
+                                    <div className="bg-amber-50 border border-amber-100 p-8 rounded-4xl flex flex-col justify-between">
                                         <div className="flex items-start justify-between">
                                             <div>
                                                 <h3 className="font-black text-amber-900 text-xl">Zones ATEX</h3>
@@ -736,7 +736,7 @@ export default function TwinDashboard() {
                                             <div className="px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-200/50">Ventilation 100%</div>
                                         </div>
                                     </div>
-                                    <div className="col-span-2 bg-white border border-slate-200 p-8 rounded-[32px] shadow-sm">
+                                    <div className="col-span-2 bg-white border border-slate-200 p-8 rounded-4xl shadow-sm">
                                         <h3 className="font-bold text-slate-800 mb-6 text-lg">Qualité de l'Air (PPM Temps Réel)</h3>
                                         <div className="h-40">
                                             <ResponsiveContainer width="100%" height="100%">
@@ -759,7 +759,7 @@ export default function TwinDashboard() {
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-[32px] shadow-sm border border-slate-200 overflow-hidden">
+                                <div className="bg-white rounded-4xl shadow-sm border border-slate-200 overflow-hidden">
                                     <table className="w-full text-sm">
                                         <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-xs">
                                             <tr>

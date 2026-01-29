@@ -3,8 +3,14 @@ import os
 from pathlib import Path
 from flask import Blueprint, jsonify, request
 
-from config import OUTPUT_DIRS
-from utils.app_helpers import get_request_project_id
+from config import OUTPUT_DIRS, SKIP_MODULE_3
+from supabase_utils import get_supabase, insert_video
+from utils.app_helpers import (
+    get_request_project_id,
+    get_request_user_id,
+    load_template_payload,
+    upload_and_register_file,
+)
 from vertex_utils import generate_video
 
 bp_module3 = Blueprint("module3", __name__)
@@ -16,6 +22,13 @@ def generate_video_from_images():
     import requests
 
     try:
+        if SKIP_MODULE_3:
+            payload = load_template_payload("module3") or {}
+            project_id = get_request_project_id(include_form=True, include_json=True)
+            if isinstance(payload, dict) and project_id:
+                payload["project_id"] = payload.get("project_id") or project_id
+            return jsonify(payload)
+
         project_id = get_request_project_id(include_form=True, include_json=True)
         images_data = []
         default_prompts = [
@@ -136,6 +149,25 @@ def generate_video_from_images():
         }
         if project_id:
             result["project_id"] = project_id
+
+        client = get_supabase()
+        owner_id = get_request_user_id()
+        if client and project_id:
+            try:
+                merged_file_id = None
+                merged_path_obj = Path(result.get("video_url", ""))
+                if merged_path_obj.exists():
+                    merged_file_id, _ = upload_and_register_file(
+                        client=client,
+                        project_id=project_id,
+                        owner_id=owner_id,
+                        local_path=str(merged_path_obj),
+                        category="videos",
+                        label=merged_path_obj.name,
+                    )
+                insert_video(client, project_id, merged_file_id, result)
+            except Exception:
+                pass
 
         return jsonify(result)
     except Exception as e:

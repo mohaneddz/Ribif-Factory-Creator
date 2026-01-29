@@ -1416,7 +1416,7 @@ const SpecsView = ({ data }: any) => {
 const PlansView = () => (
     <div className="h-full flex flex-col gap-4 p-4">
         {/* Top Section - 2D Plan */}
-        <div className="h-1/2 relative bg-white rounded-[32px] overflow-hidden border border-slate-200">
+        <div className="h-1/2 relative bg-white rounded-4xl overflow-hidden border border-slate-200">
             <div className="absolute top-6 left-6 bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold z-10 shadow-lg shadow-indigo-200">
                 VUE 2D (PLAN D'IMPLANTATION)
             </div>
@@ -1487,7 +1487,7 @@ const PlansView = () => (
         </div>
 
         {/* Bottom Section - 3D Plan */}
-        <div className="h-1/2 relative bg-slate-100 rounded-[32px] overflow-hidden border border-slate-200">
+        <div className="h-1/2 relative bg-slate-100 rounded-4xl overflow-hidden border border-slate-200">
             <div className="absolute top-6 left-6 bg-white/90 backdrop-blur text-slate-800 px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200 shadow-sm">
                 VUE 3D ISOMÉTRIQUE (IFC)
             </div>
@@ -1518,7 +1518,7 @@ const PlansView = () => (
 const VideoView = ({ progress }: { progress: number }) => (
     <div className="h-full p-4 flex flex-col gap-4">
         {/* Top Section - Exterior View */}
-        <div className="h-1/2 bg-white rounded-[32px] relative overflow-hidden flex items-center justify-center group cursor-pointer border border-slate-200 hover:border-indigo-300 transition-all">
+        <div className="h-1/2 bg-white rounded-4xl relative overflow-hidden flex items-center justify-center group cursor-pointer border border-slate-200 hover:border-indigo-300 transition-all">
             <div className="absolute top-6 left-6 bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200">
                 VUE EXTÉRIEURE
             </div>
@@ -1543,7 +1543,7 @@ const VideoView = ({ progress }: { progress: number }) => (
         </div>
 
         {/* Bottom Section - Interior View */}
-        <div className="h-1/2 bg-slate-50 rounded-[32px] relative overflow-hidden flex items-center justify-center group cursor-pointer border border-slate-200 hover:border-indigo-300 transition-all">
+        <div className="h-1/2 bg-slate-50 rounded-4xl relative overflow-hidden flex items-center justify-center group cursor-pointer border border-slate-200 hover:border-indigo-300 transition-all">
             <div className="absolute top-6 left-6 bg-white text-slate-700 px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200">
                 VUE INTÉRIEURE
             </div>
@@ -2089,7 +2089,7 @@ const ModuleLoadingView = ({ module, progress }: { module: any; progress: number
 
     return (
         <div className="h-full w-full flex items-center justify-center p-10 bg-slate-50">
-            <div className="w-full max-w-3xl bg-white border border-slate-200 rounded-[32px] overflow-hidden shadow-xl shadow-slate-200/50">
+            <div className="w-full max-w-3xl bg-white border border-slate-200 rounded-4xl overflow-hidden shadow-xl shadow-slate-200/50">
                 <div className={clsx("p-10 text-white relative overflow-hidden bg-gradient-to-br", meta.accent)}>
                     <div className={clsx("absolute -top-20 -right-20 w-48 h-48 rounded-full blur-[80px] opacity-40", meta.glow)} />
                     <div className="relative z-10 flex items-start gap-5">
@@ -2434,7 +2434,7 @@ export default function FactoryCopilot() {
                     <div className="flex-1 p-6 relative overflow-y-auto">
                         {status === 'idle' ? (
                             <div className="h-full flex items-center justify-center p-10">
-                                <label className="w-full max-w-4xl aspect-[16/9] bg-white border-2 border-dashed border-slate-300 rounded-[32px] flex flex-col items-center justify-center gap-8 cursor-pointer hover:border-indigo-500 hover:bg-indigo-50/30 transition-all group relative overflow-hidden">
+                                <label className="w-full max-w-4xl aspect-[16/9] bg-white border-2 border-dashed border-slate-300 rounded-4xl flex flex-col items-center justify-center gap-8 cursor-pointer hover:border-indigo-500 hover:bg-indigo-50/30 transition-all group relative overflow-hidden">
                                     <input type="file" className="hidden" accept=".pdf" onChange={handleStart} />
 
                                     <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
@@ -2458,7 +2458,7 @@ export default function FactoryCopilot() {
                                 <p className="text-slate-500">Cela peut prendre quelques secondes.</p>
                             </div>
                         ) : (
-                            <div className="h-full w-full bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-auto relative">
+                            <div className="h-full w-full bg-white rounded-4xl border border-slate-200 shadow-sm overflow-auto relative">
                                 <AnimatePresence mode="wait">
                                     <motion.div key={selectedModule} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full w-full">
                                         {isSelectedProcessing ? (

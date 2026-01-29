@@ -1,0 +1,18 @@
+{
+  "ribif_metadata": {
+    "enrichment_method": "template",
+    "project_id": null,
+    "module1_id": null
+  },
+  "machines_enriched": [
+    {
+      "machine_input": {
+        "nom_machine": "Template Machine",
+        "type": "industrial machine",
+        "fabricant_recommande": ""
+      },
+      "suppliers": []
+    }
+  ],
+  "project_id": null
+}

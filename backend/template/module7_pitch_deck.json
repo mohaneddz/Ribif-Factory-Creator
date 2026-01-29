@@ -1,0 +1,15 @@
+{
+  "message": "Template",
+  "filepath": "data/module_7/template_pitch_deck.pptx",
+  "filename": "template_pitch_deck.pptx",
+  "download_url": "",
+  "pdf_filepath": "data/module_7/template_pitch_deck.pdf",
+  "pdf_filename": "template_pitch_deck.pdf",
+  "pdf_download_url": "",
+  "file_id": null,
+  "data": {
+    "project_name": "Template Project",
+    "company_name": "Template Company"
+  },
+  "project_id": null
+}

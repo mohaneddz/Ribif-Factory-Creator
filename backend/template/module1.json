@@ -1,0 +1,49 @@
+{
+  "message": "Template",
+  "data": {
+    "ribif_metadata": {
+      "extraction_method": "template",
+      "project_id": null,
+      "source_file_path": "",
+      "pipeline_settings": {}
+    },
+    "stage_1_informations_generales": {
+      "informations_generales": {
+        "nom_projet": "Template Project",
+        "nom_entreprise": "Template Company",
+        "description_projet": "",
+        "localisation": {"pays": "", "ville": ""}
+      }
+    },
+    "stage_4_machines_equipements": {
+      "machines_production": [
+        {
+          "nom_machine": "Template Machine",
+          "type": "industrial machine",
+          "fabricant_recommande": "",
+          "quantite_necessaire": 1,
+          "use": "",
+          "specifications": {},
+          "performance": {}
+        }
+      ]
+    },
+    "enriched_machines": [
+      {
+        "nom_machine": "Template Machine",
+        "type": "industrial machine",
+        "fabricant_recommande": "",
+        "quantite_necessaire": 1,
+        "use": "",
+        "specifications": {},
+        "performance": {},
+        "image_url": null,
+        "image_status": "template",
+        "image_local_path": null,
+        "image_download_url": null,
+        "source": "template"
+      }
+    ],
+    "project_id": null
+  }
+}

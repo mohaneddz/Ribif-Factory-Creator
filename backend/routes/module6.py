@@ -2,9 +2,16 @@ import json
 from datetime import date
 from flask import Blueprint, jsonify, request
 
-from config import OUTPUT_DIRS, write_json
+from config import OUTPUT_DIRS, SKIP_MODULE_6, write_json
+from supabase_utils import get_supabase, insert_tco_run
 from utils.module_6.core import RIBIFModule6TCO, ProductTCO, RawMaterialTCO
-from utils.app_helpers import get_request_project_id
+from utils.app_helpers import (
+    get_request_project_id,
+    get_request_user_id,
+    insert_tco_details,
+    load_template_payload,
+    upload_and_register_file,
+)
 
 bp_module6 = Blueprint("module6", __name__)
 
@@ -12,6 +19,13 @@ bp_module6 = Blueprint("module6", __name__)
 @bp_module6.route("/api/module6/tco-from-sourcing", methods=["POST"])
 def calculate_tco_from_sourcing():
     try:
+        if SKIP_MODULE_6:
+            payload = load_template_payload("module6") or {}
+            project_id = get_request_project_id(include_json=True)
+            if isinstance(payload, dict) and project_id:
+                payload["project_id"] = payload.get("project_id") or project_id
+            return jsonify(payload)
+
         project_id = get_request_project_id(include_json=True)
         module4_id = None
 
@@ -175,6 +189,32 @@ def calculate_tco_from_sourcing():
 
         output_file = OUTPUT_DIRS["module6"] / "module_6_tco.json"
         write_json(output_file, result)
+
+        tco_run_id = None
+        client = get_supabase()
+        owner_id = get_request_user_id()
+        if client and project_id:
+            try:
+                tco_run_id = insert_tco_run(client, project_id, module4_id, result)
+                if tco_run_id:
+                    insert_tco_details(client, tco_run_id, result)
+                if output_file.exists():
+                    output_file_id, output_file_url = upload_and_register_file(
+                        client=client,
+                        project_id=project_id,
+                        owner_id=owner_id,
+                        local_path=str(output_file),
+                        category="module6-output",
+                        label=output_file.name,
+                    )
+                    result.setdefault("sourcing_metadata", {})
+                    result["sourcing_metadata"]["module6_output_file_id"] = output_file_id
+                    result["sourcing_metadata"]["module6_output_file_url"] = output_file_url
+            except Exception:
+                pass
+
+        if tco_run_id:
+            result["tco_run_id"] = tco_run_id
 
         return jsonify(result)
     except Exception as e:

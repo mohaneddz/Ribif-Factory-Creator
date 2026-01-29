@@ -22,6 +22,9 @@ from pydantic import BaseModel, Field
 from google import genai
 from google.genai import types
 
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 # ============================================
 # PYDANTIC MODELS
@@ -208,7 +211,7 @@ Respond ONLY with valid JSON containing estimates in DZD."""
         self.client = genai.Client(api_key=self.api_key)
         self.model_name = "gemini-2.5-flash"
         self._detected_language = "en"  # Default to English
-        print(f"✅ Gemini initialized for TCO Module: {self.model_name}")
+        logger.info("Gemini initialized for TCO Module: %s", self.model_name)
 
     def detect_language(self, input_data: Dict[str, Any]) -> str:
         """
@@ -255,7 +258,7 @@ Respond ONLY with valid JSON containing estimates in DZD."""
                     content = content.split("```")[0].strip()
                 
                 # Debug: Print content after cleanup
-                print(f"📄 Content after cleanup (first 150 chars): {content[:150]}")
+                logger.info("Content after cleanup (first 150 chars): %s", content[:150])
                 
                 # Extract JSON from response
                 json_start = content.find('{')
@@ -264,19 +267,19 @@ Respond ONLY with valid JSON containing estimates in DZD."""
                     try:
                         return json.loads(content[json_start:json_end])
                     except json.JSONDecodeError as je:
-                        print(f"❌ JSON parse error: {je}")
-                        print(f"   Raw content: {content[:300]}")
+                        logger.error("JSON parse error: %s", je)
+                        logger.error("Raw content: %s", content[:300])
                 else:
-                    print(f"❌ No JSON braces found. json_start={json_start}, json_end={json_end}")
-                    print(f"   Content: {content[:200]}")
+                    logger.error("No JSON braces found. json_start=%s, json_end=%s", json_start, json_end)
+                    logger.error("Content: %s", content[:200])
             else:
                 if hasattr(response, 'prompt_feedback'):
-                    print(f"❌ Response blocked: {response.prompt_feedback}")
+                    logger.error("Response blocked: %s", response.prompt_feedback)
                 else:
-                    print(f"❌ Empty response from Gemini")
+                    logger.error("Empty response from Gemini")
             return {}
         except Exception as e:
-            print(f"❌ Gemini API Error: {e}")
+            logger.error("Gemini API Error: %s", e)
             return {}
 
     def _get_defaults_by_capacity(self, capacite: str, manufacturer: str) -> Dict:
@@ -482,7 +485,7 @@ Respond in JSON:
             result = self.call_gemini(base_prompt)
             if result:
                 validated = self._validate_machine_estimate(result, machine)
-                print(f"✅ LLM estimation SUCCESS for machine: {machine.get('name', 'Unknown')}")
+                logger.info("LLM estimation SUCCESS for machine: %s", machine.get("name", "Unknown"))
                 return validated
             raise ValueError(f"Empty LLM response for machine: {machine.get('name', 'Unknown')}")
         except Exception as first_error:
@@ -490,7 +493,7 @@ Respond in JSON:
                 result = self.call_gemini(retry_prompt)
                 if result:
                     validated = self._validate_machine_estimate(result, machine)
-                    print(f"✅ LLM estimation SUCCESS for machine: {machine.get('name', 'Unknown')}")
+                    logger.info("LLM estimation SUCCESS for machine: %s", machine.get("name", "Unknown"))
                     return validated
                 raise ValueError(f"Empty LLM response for machine: {machine.get('name', 'Unknown')}")
             except Exception as e:
@@ -609,7 +612,7 @@ Respond in JSON with EXACT material names as keys:
         try:
             result = self.call_gemini(prompt)
             if result and isinstance(result, dict):
-                print(f"✅ BATCH LLM estimation SUCCESS for {len(result)} materials")
+                logger.info("BATCH LLM estimation SUCCESS for %s materials", len(result))
                 return result
             raise ValueError("Empty batch LLM response for materials")
         except Exception as e:
@@ -947,7 +950,7 @@ Respond in JSON with EXACT material names as keys:
         with open(json_file, "w", encoding="utf-8") as f:
             json.dump(result_dict, f, ensure_ascii=False, indent=2, default=str)
         
-        print(f"✅ TCO calculation saved: {json_file}")
+        logger.info("TCO calculation saved: %s", json_file)
         return result_dict
 
 

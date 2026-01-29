@@ -22,6 +22,9 @@ import fitz  # PyMuPDF
 from docx import Document as DocxDocument
 from dotenv import load_dotenv
 
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 # =========================================================
 # 0) Constants
@@ -373,8 +376,8 @@ class VertexJSON:
         try:
             return _json_loads_relaxed(raw)
         except Exception as e:
-            print(f"⚠️  {tag}: JSON parse failed -> {e}")
-            print(f"   Raw head: {_short(raw)}")
+            logger.warning("%s: JSON parse failed -> %s", tag, e)
+            logger.warning("Raw head: %s", _short(raw))
             # One repair attempt
             repair = (
                 "Your previous output was NOT valid JSON.\n"
@@ -396,8 +399,8 @@ class VertexJSON:
 class RIBIFExtractor:
     def __init__(self):
         self.llm = VertexJSON()
-        print("✅ RIBIF Module1 ready (parallel, Vertex-only)")
-        print(f"   Vertex requested model: {self.llm.vertex_model}")
+        logger.info("RIBIF Module1 ready (parallel, Vertex-only)")
+        logger.info("Vertex requested model: %s", self.llm.vertex_model)
 
     def _run_stage(self, stage_key: str, schema: Dict[str, Any], excerpt: str, temperature: float) -> Dict[str, Any]:
         prompt = build_stage_prompt(stage_key, schema, excerpt)
@@ -437,13 +440,12 @@ class RIBIFExtractor:
         if not p.exists():
             raise FileNotFoundError(f"Document not found: {document_path}")
 
-        print("\n" + "=" * 70)
-        print("🚀 RIBIF MODULE 1 — Parallel Extraction (Vertex-only)")
-        print("=" * 70)
-        print(f"📄 Input: {p.name}")
-        print(f"🧵 max_workers: {max_workers}")
-        print(f"📄 pages/stage: {max_pages_per_stage} | excerpt_chars: {excerpt_chars}")
-        print("=" * 70)
+        logger.info("=" * 70)
+        logger.info("START RIBIF MODULE 1 — Parallel Extraction (Vertex-only)")
+        logger.info("Input: %s", p.name)
+        logger.info("max_workers: %s", max_workers)
+        logger.info("pages/stage: %s | excerpt_chars: %s", max_pages_per_stage, excerpt_chars)
+        logger.info("=" * 70)
 
         t0 = time.time()
         full_text, pages = read_document_text(str(p))
@@ -481,11 +483,11 @@ class RIBIFExtractor:
             excerpt = excerpts[stage_key]
             return ex.submit(self._run_stage, stage_key, schema, excerpt, temp)
 
-        print("\n🧠 Launching stages in parallel...")
+        logger.info("START Launching stages in parallel...")
         with ThreadPoolExecutor(max_workers=max_workers) as ex:
             future_map = {}
             for stage_key, schema, temp in stage_jobs:
-                print(f"▶️  {stage_key} SUBMIT")
+                logger.info("START %s SUBMIT", stage_key)
                 fut = submit_stage(ex, stage_key, schema, temp)
                 future_map[fut] = (stage_key, schema, temp, excerpts[stage_key])
 
@@ -508,24 +510,24 @@ class RIBIFExtractor:
                         extra = f" | count={len(data.get('machines_production', []))}"
                     if stage_key == "stage_5_processus_production":
                         extra = f" | steps={len(data.get('processus_production', []))}"
-                    print(f"✅ {stage_key} DONE in {dt:.2f}s{extra}")
+                    logger.info("DONE %s in %.2fs%s", stage_key, dt, extra)
                 except FuturesTimeoutError:
                     warnings.append(f"{stage_key}: timeout after {timeout_s}s, retrying with smaller excerpt")
-                    print(f"⏳ {stage_key} TIMEOUT -> retry smaller excerpt")
+                    logger.warning("TIMEOUT %s -> retry smaller excerpt", stage_key)
                     try:
                         smaller = excerpt[:6000]
                         prompt = build_stage_prompt(stage_key, schema, smaller)
                         data = self.llm.generate_json(prompt, temperature=0.0, tag=stage_key + "_retry_small")
                         data = _drop_empty_items(data)
                         results[stage_key] = data
-                        print(f"✅ {stage_key} RETRY SUCCESS")
+                        logger.info("DONE %s RETRY SUCCESS", stage_key)
                     except Exception as e2:
                         warnings.append(f"{stage_key}: retry failed: {e2}")
-                        print(f"❌ {stage_key} RETRY FAIL -> {e2}")
+                        logger.error("ERROR %s RETRY FAIL -> %s", stage_key, e2)
                         results[stage_key] = {}
                 except Exception as e:
                     warnings.append(f"{stage_key}: failed: {e}")
-                    print(f"❌ {stage_key} FAIL -> {e}")
+                    logger.error("ERROR %s FAIL -> %s", stage_key, e)
                     results[stage_key] = {}
 
         # Build final JSON (exact format)
@@ -564,7 +566,7 @@ class RIBIFExtractor:
 
         # Hard assert: if still nulls, one more forced fix
         if _contains_null(final_json):
-            print("⚠️  Nulls still detected after global fill. Forcing final repair pass...")
+            logger.warning("Nulls still detected after global fill. Forcing final repair pass...")
             final_json = self._global_fill_no_nulls(final_json, context_excerpt)
 
         # Save
@@ -573,14 +575,13 @@ class RIBIFExtractor:
         out_file = out_dir / f"module_1.json"
         out_file.write_text(json.dumps(final_json, indent=2, ensure_ascii=False), encoding="utf-8")
 
-        print("\n" + "=" * 70)
-        print("✅ MODULE 1 DONE")
-        print("=" * 70)
-        print(f"⏱️  Time: {processing_time:.2f}s")
-        print(f"💾 Saved: {out_file.resolve()}")
+        logger.info("=" * 70)
+        logger.info("DONE MODULE 1")
+        logger.info("Time: %.2fs", processing_time)
+        logger.info("Saved: %s", out_file.resolve())
         if warnings:
-            print(f"⚠️  Warnings: {len(warnings)} (see ribif_metadata.note)")
-        print("=" * 70 + "\n")
+            logger.warning("Warnings: %s (see ribif_metadata.note)", len(warnings))
+        logger.info("=" * 70)
 
         return final_json
 

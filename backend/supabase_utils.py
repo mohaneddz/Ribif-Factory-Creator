@@ -47,6 +47,14 @@ def build_object_path(project_id: Optional[str], category: str, filename: str) -
     return f"{pid}/{cat}/{_now_stamp()}_{safe_filename}"
 
 
+def build_name_timestamp_object_path(project_id: Optional[str], category: str, filename: str) -> str:
+    safe_filename = _safe_name(filename)
+    stem, ext = os.path.splitext(safe_filename)
+    pid = project_id or "unassigned"
+    cat = _safe_name(category or "misc")
+    return f"{pid}/{cat}/{stem}_{_now_stamp()}{ext}"
+
+
 def upload_bytes(
     client: Client,
     bucket: str,

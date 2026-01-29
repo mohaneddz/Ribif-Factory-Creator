@@ -1,0 +1,9 @@
+{
+  "layout_2d": "data/module_2/layout_square.png",
+  "layout_3d": "data/module_2/factory_model.glb",
+  "product": {
+    "name": "Template Product",
+    "category": "template"
+  },
+  "project_id": null
+}

@@ -1,8 +1,11 @@
+from pathlib import Path
 from flask import Blueprint, jsonify, request
 
-from config import BASE_URL, OUTPUT_DIRS
+from config import BASE_URL, OUTPUT_DIRS, SKIP_MODULE_7, SKIP_MODULE_8
+from supabase_utils import get_supabase, insert_business_plan, insert_pitch_deck
 from utils.module_7.business_plan import RIBIFModule7BusinessPlan, BusinessPlanInput
 from utils.module_7.pitch_deck import RIBIFModule8PitchDeck, PitchDeckInput
+from utils.app_helpers import get_request_user_id, load_template_payload, upload_and_register_file
 
 bp_module7 = Blueprint("module7", __name__)
 
@@ -10,6 +13,14 @@ bp_module7 = Blueprint("module7", __name__)
 @bp_module7.route("/api/module7/business-plan", methods=["POST"])
 def generate_business_plan():
     try:
+        if SKIP_MODULE_7:
+            payload = load_template_payload("module7_business_plan") or {}
+            project_id = request.get_json(silent=True) or {}
+            pid = project_id.get("project_id") or project_id.get("ribif_metadata", {}).get("project_id")
+            if isinstance(payload, dict) and pid:
+                payload["project_id"] = payload.get("project_id") or pid
+            return jsonify(payload)
+
         data = request.get_json()
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
@@ -42,7 +53,7 @@ def generate_business_plan():
         file_id = None
         download_url = result.download_url
 
-        return jsonify({
+        response_payload = {
             "message": "Business plan generated successfully",
             "filepath": result.filepath,
             "filename": result.filename,
@@ -50,7 +61,36 @@ def generate_business_plan():
             "file_id": file_id,
             "data": data_payload,
             "project_id": project_id,
-        })
+        }
+
+        client = get_supabase()
+        owner_id = get_request_user_id()
+        if client and project_id:
+            try:
+                file_path = Path(result.filepath)
+                if file_path.exists():
+                    file_id, file_url = upload_and_register_file(
+                        client=client,
+                        project_id=project_id,
+                        owner_id=owner_id,
+                        local_path=str(file_path),
+                        category="business-plan",
+                        label=result.filename,
+                    )
+                    response_payload["file_id"] = file_id
+                    response_payload["download_url"] = file_url or download_url
+                insert_business_plan(
+                    client=client,
+                    project_id=project_id,
+                    tco_run_id=tco_run_id,
+                    file_id=response_payload.get("file_id"),
+                    filename=result.filename,
+                    data=data_payload,
+                )
+            except Exception:
+                pass
+
+        return jsonify(response_payload)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -58,6 +98,14 @@ def generate_business_plan():
 @bp_module7.route("/api/module7/pitch-deck", methods=["POST"])
 def generate_pitch_deck():
     try:
+        if SKIP_MODULE_8:
+            payload = load_template_payload("module7_pitch_deck") or {}
+            project_id = request.get_json(silent=True) or {}
+            pid = project_id.get("project_id") or project_id.get("ribif_metadata", {}).get("project_id")
+            if isinstance(payload, dict) and pid:
+                payload["project_id"] = payload.get("project_id") or pid
+            return jsonify(payload)
+
         data = request.get_json()
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
@@ -95,7 +143,7 @@ def generate_pitch_deck():
         download_url = result.download_url
         pdf_download_url = result.pdf_download_url
 
-        return jsonify({
+        response_payload = {
             "message": "Pitch deck generated successfully",
             "filepath": result.filepath,
             "filename": result.filename,
@@ -106,6 +154,47 @@ def generate_pitch_deck():
             "file_id": file_id,
             "data": data_payload,
             "project_id": project_id,
-        })
+        }
+
+        client = get_supabase()
+        owner_id = get_request_user_id()
+        if client and project_id:
+            try:
+                file_path = Path(result.filepath)
+                pdf_path = Path(result.pdf_filepath) if result.pdf_filepath else None
+                if file_path.exists():
+                    file_id, file_url = upload_and_register_file(
+                        client=client,
+                        project_id=project_id,
+                        owner_id=owner_id,
+                        local_path=str(file_path),
+                        category="pitch-deck",
+                        label=result.filename,
+                    )
+                    response_payload["file_id"] = file_id
+                    response_payload["download_url"] = file_url or download_url
+                if pdf_path and pdf_path.exists():
+                    _, pdf_url = upload_and_register_file(
+                        client=client,
+                        project_id=project_id,
+                        owner_id=owner_id,
+                        local_path=str(pdf_path),
+                        category="pitch-deck-pdf",
+                        label=result.pdf_filename,
+                    )
+                    response_payload["pdf_download_url"] = pdf_url or pdf_download_url
+                insert_pitch_deck(
+                    client=client,
+                    project_id=project_id,
+                    tco_run_id=tco_run_id,
+                    file_id=response_payload.get("file_id"),
+                    presentation_id=None,
+                    edit_url=None,
+                    data=data_payload,
+                )
+            except Exception:
+                pass
+
+        return jsonify(response_payload)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

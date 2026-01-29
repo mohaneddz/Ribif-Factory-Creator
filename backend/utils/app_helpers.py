@@ -7,6 +7,7 @@ from flask import request
 from supabase_utils import (
     SUPABASE_BUCKET_FILES,
     SUPABASE_BUCKET_PUBLIC,
+    build_name_timestamp_object_path,
     build_object_path,
     create_signed_url,
     get_public_url,
@@ -14,6 +15,7 @@ from supabase_utils import (
     insert_project_file,
     upload_file,
 )
+from config import TEMPLATE_DIR
 
 
 def get_request_user_id() -> Optional[str]:
@@ -63,11 +65,12 @@ def upload_and_register_file(
     category: str,
     label: Optional[str] = None,
     bucket: Optional[str] = None,
+    object_path: Optional[str] = None,
 ) -> Tuple[Optional[str], Optional[str]]:
     if not client:
         return None, None
     bucket_id = bucket or SUPABASE_BUCKET_FILES
-    object_path = build_object_path(project_id, category, os.path.basename(local_path))
+    object_path = object_path or build_object_path(project_id, category, os.path.basename(local_path))
     upload_file(client, bucket_id, object_path, local_path)
     file_id = insert_project_file(
         client=client,
@@ -83,6 +86,56 @@ def upload_and_register_file(
     )
     signed_url = create_signed_url(client, bucket_id, object_path)
     return file_id, signed_url
+
+
+def upload_with_name_timestamp(
+    client,
+    project_id: str,
+    owner_id: Optional[str],
+    local_path: str,
+    category: str,
+    label: Optional[str] = None,
+    bucket: Optional[str] = None,
+) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    if not client:
+        return None, None, None
+    bucket_id = bucket or SUPABASE_BUCKET_FILES
+    object_path = build_name_timestamp_object_path(project_id, category, os.path.basename(local_path))
+    file_id, signed_url = upload_and_register_file(
+        client=client,
+        project_id=project_id,
+        owner_id=owner_id,
+        local_path=local_path,
+        category=category,
+        label=label,
+        bucket=bucket_id,
+        object_path=object_path,
+    )
+    return file_id, signed_url, object_path
+
+
+def load_template_payload(name: str) -> Optional[Dict[str, Any]]:
+    if not TEMPLATE_DIR.exists():
+        return None
+    template_path = TEMPLATE_DIR / f"{name}.json"
+    if not template_path.exists():
+        return None
+    try:
+        return json.loads(template_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def insert_machine_assets(client, machine_id: str, file_id: str, asset_type: str, label: Optional[str] = None) -> None:
+    if not client or not machine_id or not file_id:
+        return
+    client.table("machine_assets").insert({
+        "machine_id": machine_id,
+        "file_id": file_id,
+        "asset_type": asset_type,
+        "label": label,
+        "metadata": {},
+    }).execute()
 
 
 def insert_machines_from_stage(client, project_id: str, machines: list, image_meta: dict) -> Dict[str, str]:

@@ -6,9 +6,20 @@ from pathlib import Path
 from flask import Blueprint, jsonify, request
 from werkzeug.utils import secure_filename
 
-from config import BASE_URL, OUTPUT_DIRS, UPLOAD_DIR, CREATE_IMAGES, write_json
+from config import BASE_URL, OUTPUT_DIRS, UPLOAD_DIR, CREATE_IMAGES, SKIP_MODULE_1, write_json
+from supabase_utils import get_supabase, insert_module1_extraction
 from utils.module_1.core import RIBIFExtractor
-from utils.app_helpers import get_pipeline_settings, get_request_project_id
+from utils.app_helpers import (
+    get_pipeline_settings,
+    get_request_project_id,
+    get_request_user_id,
+    ensure_project_id,
+    insert_machines_from_stage,
+    insert_machine_assets,
+    load_template_payload,
+    upload_and_register_file,
+    upload_with_name_timestamp,
+)
 from utils.image_selector import find_best_image
 from vertex_utils import generate_image
 
@@ -50,6 +61,17 @@ The image should be:
 
 @bp_module1.route("/api/module1/process", methods=["POST"])
 def process_module_1():
+    if SKIP_MODULE_1:
+        payload = load_template_payload("module1") or {"message": "Template", "data": {}}
+        project_id = get_request_project_id(include_form=True, include_json=True)
+        if isinstance(payload, dict):
+            if "data" in payload and isinstance(payload["data"], dict):
+                payload["data"]["project_id"] = payload["data"].get("project_id") or project_id
+                meta = payload["data"].get("ribif_metadata")
+                if isinstance(meta, dict):
+                    meta["project_id"] = meta.get("project_id") or project_id
+        return jsonify(payload)
+
     if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
 
@@ -63,12 +85,29 @@ def process_module_1():
 
     settings = get_pipeline_settings()
     project_id = get_request_project_id(include_form=True)
+    owner_id = get_request_user_id()
+    client = get_supabase()
+    project_id = ensure_project_id(client, project_id, owner_id, Path(filename).stem or "Project")
+
+    source_file_id = None
+    source_file_url = None
+    source_object_path = None
+    if client and project_id:
+        try:
+            source_file_id, source_file_url, source_object_path = upload_with_name_timestamp(
+                client=client,
+                project_id=project_id,
+                owner_id=owner_id,
+                local_path=str(filepath),
+                category="uploads",
+                label="module1_source",
+            )
+        except Exception:
+            pass
 
     extraction_result = extractor.process_document(str(filepath), str(OUTPUT_DIRS["module1"]))
 
-    machines = extraction_result.get("stage_4_machines_equipements", {}).get("machines_production", [])
-    if not machines:
-        return jsonify({"message": "Success (no machines found)", "data": extraction_result, "project_id": project_id})
+    machines = extraction_result.get("stage_4_machines_equipements", {}).get("machines_production", []) or []
 
     enriched_machines = []
     for machine_data in machines:
@@ -121,6 +160,9 @@ def process_module_1():
     final_result["ribif_metadata"].update({
         "project_id": project_id,
         "source_file_path": str(filepath),
+        "source_file_id": source_file_id,
+        "source_file_object_path": source_object_path,
+        "source_file_url": source_file_url,
         "pipeline_settings": settings,
     })
     final_result["project_id"] = project_id
@@ -130,5 +172,55 @@ def process_module_1():
 
     final_result["module1_output_path"] = str(output_file)
     final_result["module1_download_url"] = f"{BASE_URL}/download/{output_file.name}"
+
+    module1_id = None
+    if client and project_id:
+        try:
+            module1_id = insert_module1_extraction(client, project_id, source_file_id, final_result)
+            output_file_id, output_file_url = upload_and_register_file(
+                client=client,
+                project_id=project_id,
+                owner_id=owner_id,
+                local_path=str(output_file),
+                category="module1-output",
+                label=output_file.name,
+            )
+            final_result["module1_output_file_id"] = output_file_id
+            final_result["module1_output_file_url"] = output_file_url
+
+            image_meta = {}
+            for m in enriched_machines:
+                image_path = m.get("image_local_path")
+                name = m.get("nom_machine")
+                if image_path and name and Path(image_path).exists():
+                    try:
+                        img_file_id, img_url, img_object_path = upload_with_name_timestamp(
+                            client=client,
+                            project_id=project_id,
+                            owner_id=owner_id,
+                            local_path=image_path,
+                            category="machine-images",
+                            label=name,
+                        )
+                        image_meta[name] = {
+                            "image_file_id": img_file_id,
+                            "image_url": img_url,
+                            "image_object_path": img_object_path,
+                        }
+                    except Exception:
+                        continue
+
+            machine_ids = insert_machines_from_stage(client, project_id, machines, image_meta)
+            for name, meta in image_meta.items():
+                machine_id = machine_ids.get(name)
+                file_id = meta.get("image_file_id")
+                if machine_id and file_id:
+                    insert_machine_assets(client, machine_id, file_id, asset_type="image", label=name)
+
+        except Exception:
+            pass
+
+    final_result.setdefault("ribif_metadata", {})
+    final_result["ribif_metadata"]["module1_id"] = module1_id
 
     return jsonify({"message": "Success", "data": final_result})

@@ -36,6 +36,9 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
 from vertex_utils import generate_message  # Vertex wrapper (must exist in your codebase)
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # =========================================================
@@ -426,8 +429,8 @@ class VertexJSON:
             raw = self.generate_raw(prompt, temperature=temperature, timeout_s=timeout_s)
             return _json_loads_relaxed(raw)
         except Exception as e:
-            print(f"❌ {tag}: JSON generation failed, skipping. Reason: {e}")
-            print(f"   Raw head: {_short(raw) if 'raw' in locals() else ''}")
+            logger.error("%s: JSON generation failed, skipping. Reason: %s", tag, e)
+            logger.error("Raw head: %s", _short(raw) if "raw" in locals() else "")
             return None
 
     def generate_bool_true_false(self, prompt: str, tag: str, timeout_s: int = DEFAULT_LLM_CALL_TIMEOUT_S) -> Optional[bool]:
@@ -452,7 +455,7 @@ class VertexJSON:
                 return False
             return None
         except Exception as e:
-            print(f"❌ {tag}: classifier failed: {e}")
+            logger.error("%s: classifier failed: %s", tag, e)
             return None
 
 
@@ -708,17 +711,22 @@ def build_machines_enriched(
 
     machines = load_machines_from_module1(input_path)
 
-    print("\n" + "=" * 70)
-    print("🚀 RIBIF MODULE 4 — Parallel Machine Enrichment (Vertex-only)")
-    print("=" * 70)
-    print(f"📄 Input: {p_in.name}")
-    print(f"🧵 max_workers: {max_workers} | items: {len(machines)}")
-    print(f"⏳ per_machine_timeout_s: {per_machine_timeout_s} | domain_gap_s: {domain_gap_s} | llm_call_timeout_s: {llm_call_timeout_s} | budget_s: {total_machine_budget_s}")
-    print(f"🖼️  generated_images_dir: {generated_images_dir}")
-    print("=" * 70)
+    logger.info("=" * 70)
+    logger.info("START RIBIF MODULE 4 — Parallel Machine Enrichment (Vertex-only)")
+    logger.info("Input: %s", p_in.name)
+    logger.info("max_workers: %s | items: %s", max_workers, len(machines))
+    logger.info(
+        "per_machine_timeout_s: %s | domain_gap_s: %s | llm_call_timeout_s: %s | budget_s: %s",
+        per_machine_timeout_s,
+        domain_gap_s,
+        llm_call_timeout_s,
+        total_machine_budget_s,
+    )
+    logger.info("generated_images_dir: %s", generated_images_dir)
+    logger.info("=" * 70)
 
     llm = VertexJSON()
-    print(f"✅ Vertex requested model: {llm.vertex_model}")
+    logger.info("Vertex requested model: %s", llm.vertex_model)
 
     cfg = EnrichConfig(
         domain_gap_s=domain_gap_s,
@@ -731,14 +739,14 @@ def build_machines_enriched(
     warnings: List[str] = []
     filtered_non_machines = 0
 
-    print("\n🧠 Launching enrichments in parallel...")
+    logger.info("START Launching enrichments in parallel...")
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
         future_map: Dict[Any, Tuple[int, Dict[str, Any], float]] = {}
 
         # submit
         for i, m in enumerate(machines):
             name = safe_s(m.get("nom_machine"), f"item_{i+1}")
-            print(f"▶️  SUBMIT [{i+1}/{len(machines)}] {name}")
+            logger.info("START SUBMIT [%s/%s] %s", i + 1, len(machines), name)
             fut = ex.submit(enrich_one_machine, llm, m, cfg)
             future_map[fut] = (i, m, time.time())  # correct timing
 
@@ -753,16 +761,16 @@ def build_machines_enriched(
 
                 if item is None:
                     filtered_non_machines += 1
-                    print(f"🧹 FILTER [{i+1}/{len(machines)}] {name} (not a machine) in {dt:.2f}s")
+                    logger.info("SKIP FILTER [%s/%s] %s (not a machine) in %.2fs", i + 1, len(machines), name, dt)
                     continue
 
                 results.append(item)
-                print(f"✅ DONE [{i+1}/{len(machines)}] {name} in {dt:.2f}s")
+                logger.info("DONE [%s/%s] %s in %.2fs", i + 1, len(machines), name, dt)
 
             except FuturesTimeoutError:
                 warn = f"{name}: per-machine timeout after {per_machine_timeout_s}s, retrying once (temp=0.0)"
                 warnings.append(warn)
-                print(f"⏳ TIMEOUT {name} -> retry once")
+                logger.warning("TIMEOUT %s -> retry once", name)
 
                 try:
                     cfg2 = EnrichConfig(
@@ -777,18 +785,18 @@ def build_machines_enriched(
 
                     if item is None:
                         filtered_non_machines += 1
-                        print(f"🧹 FILTER RETRY {name} (not a machine)")
+                        logger.info("SKIP FILTER RETRY %s (not a machine)", name)
                         continue
 
                     results.append(item)
-                    print(f"✅ RETRY SUCCESS {name}")
+                    logger.info("DONE RETRY SUCCESS %s", name)
                 except Exception as e2:
                     warnings.append(f"{name}: retry failed: {e2}")
-                    print(f"❌ RETRY FAIL {name} -> {e2}")
+                    logger.error("ERROR RETRY FAIL %s -> %s", name, e2)
 
             except Exception as e:
                 warnings.append(f"{name}: failed: {e}")
-                print(f"❌ FAIL {name} -> {e}")
+                logger.error("ERROR FAIL %s -> %s", name, e)
 
     processing_time = round(time.time() - t0, 3)
 
@@ -812,15 +820,14 @@ def build_machines_enriched(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(out_obj, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print("\n" + "=" * 70)
-    print("✅ MODULE 4 DONE")
-    print("=" * 70)
-    print(f"⏱️  Time: {processing_time:.2f}s")
-    print(f"💾 Saved: {out_path.resolve()}")
-    print(f"🧹 Filtered non-machines: {filtered_non_machines}")
+    logger.info("=" * 70)
+    logger.info("DONE MODULE 4")
+    logger.info("Time: %.2fs", processing_time)
+    logger.info("Saved: %s", out_path.resolve())
+    logger.info("Filtered non-machines: %s", filtered_non_machines)
     if warnings:
-        print(f"⚠️  Warnings: {len(warnings)} (see ribif_metadata.note)")
-    print("=" * 70 + "\n")
+        logger.warning("Warnings: %s (see ribif_metadata.note)", len(warnings))
+    logger.info("=" * 70)
 
     return out_obj
 

@@ -1,0 +1,20 @@
+{
+  "message": "Template",
+  "data": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "project_name": "Template Project",
+    "company_name": "Template Company",
+    "output_format": "both",
+    "pdf_filename": "template_catalog.pdf",
+    "pdf_filepath": "data/catalogs/template_catalog.pdf",
+    "pdf_size_bytes": 0,
+    "pdf_download_url": "",
+    "html_filename": "template_catalog.html",
+    "html_filepath": "data/catalogs/template_catalog.html",
+    "html_size_bytes": 0,
+    "html_download_url": ""
+  },
+  "project_id": null,
+  "pdf_file_id": null,
+  "html_file_id": null
+}
