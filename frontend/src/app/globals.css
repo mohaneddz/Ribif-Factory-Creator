@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+:root {
+  --bg-dark: #0b0c10;
+  --panel-bg: #1f2833;
+  --accent-cyan: #66fcf1;
+  --text-gray: #c5c6c7;
+  --success: #45a29e;
+  --bg-light: #f8fafc;
+  --panel-light: #ffffff;
+  --text-dark: #0f172a;
+  --surface-0: #f8fafc;
+  --surface-1: #ffffff;
+  --surface-2: #f1f5f9;
+  --text-1: #0f172a;
+  --text-2: #475569;
+  --border-1: #e2e8f0;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-gray);
+}
+
+.theme-light body {
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+}
+
+.theme-dark body {
+  background-color: var(--bg-dark);
+  color: var(--text-gray);
+}
+
+.theme-dark {
+  --surface-0: #0b0c10;
+  --surface-1: #111827;
+  --surface-2: #0f172a;
+  --text-1: #e2e8f0;
+  --text-2: #94a3b8;
+  --border-1: #1f2937;
+}
+
+@font-face {
+  font-family: "Neue Einstellung";
+  src: url("/fonts/reg.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+.glass-panel {
+  background: rgba(31, 40, 51, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-200%);
+  }
+
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+html,
+body {
+  font-family: 'Neue Einstellung', sans-serif !important;
+}

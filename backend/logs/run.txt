@@ -1,0 +1,359 @@
+D:\Programming\AI\Hackathons\.Competitions\EliteHack\ribif\backend>python app.py
+✅ RIBIF Module1 ready (parallel, Vertex-only)
+   Vertex requested model: gemini-2.5-flash-lite
+ * Serving Flask app 'app'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+📥 Processing: FICHE_IDENTITE_INDUSTRIELLE.pdf...
+
+====================================================================== 
+📊 STAGE 1: RIBIF EXTRACTION (Vertex Gemini - Parallel)
+====================================================================== 
+
+====================================================================== 
+🚀 RIBIF MODULE 1 — Parallel Extraction (Vertex-only)
+====================================================================== 
+📄 Input: FICHE_IDENTITE_INDUSTRIELLE.pdf
+🧵 max_workers: 7
+📄 pages/stage: 4 | excerpt_chars: 18000
+====================================================================== 
+
+🧠 Launching stages in parallel...
+▶️  stage_1_informations_generales SUBMIT
+▶️  stage_2_matieres_premieres SUBMIT
+▶️  stage_3_produits_fabriques SUBMIT
+📄 pages/stage: 4 | excerpt_chars: 18000
+====================================================================== 
+
+🧠 Launching stages in parallel...
+▶️  stage_1_informations_generales SUBMIT
+▶️  stage_2_matieres_premieres SUBMIT
+▶️  stage_3_produits_fabriques SUBMIT
+▶️  stage_4_machines_equipements SUBMIT
+▶️  stage_5_processus_production SUBMIT
+▶️  stage_6_informations_complementaires SUBMIT
+✅ stage_1_informations_generales DONE in 0.00s
+✅ stage_5_processus_production DONE in 0.00s | steps=3
+✅ stage_6_informations_complementaires DONE in 0.00s
+✅ stage_2_matieres_premieres DONE in 0.00s | count=16
+✅ stage_4_machines_equipements DONE in 0.00s | count=13
+✅ stage_3_produits_fabriques DONE in 0.00s | count=10
+
+======================================================================
+✅ MODULE 1 DONE
+====================================================================== 
+⏱️  Time: 32.72s
+💾 Saved: D:\Programming\AI\Hackathons\.Competitions\EliteHack\ribif\backend\data\extracted_data\module_1.json
+====================================================================== 
+
+
+====================================================================== 
+🎨 STAGE 2: MACHINE IMAGE GENERATION (AI) - SKIPPED
+====================================================================== 
+📋 Found 13 machines
+⏭️  Image generation temporarily disabled for faster processing        
+
+[1/13] Processing: Presse à injection plastique
+           Type: Moulage par injection
+           Manufacturer: Engel, KraussMaffei, Arburg
+           🎨 Generating image for: Presse à injection plastique       
+           ✅ Image generated and saved: Presse_à_injection_plastique.png
+
+[2/13] Processing: Extrudeuse
+           Type: Extrusion de polymères
+           Manufacturer: Battenfeld-Cincinnati, KraussMaffei Berstorff 
+           🎨 Generating image for: Extrudeuse
+           ✅ Image generated and saved: Extrudeuse.png
+
+[3/13] Processing: Thermoformeuse
+           Type: Thermoformage de feuilles plastiques
+           Manufacturer: Kiefel, Illig, Gabler
+           🎨 Generating image for: Thermoformeuse
+           ✅ Image generated and saved: Thermoformeuse.png
+
+[4/13] Processing: Presse à membrane 3D
+           Type: Revêtement de surfaces
+           Manufacturer: Wemhöner, Burkle, Friz
+           🎨 Generating image for: Presse à membrane 3D
+           ✅ Image generated and saved: Presse_à_membrane_3D.png
+
+[5/13] Processing: Robot de peinture et vernis
+           Type: Application robotisée de revêtements
+           Manufacturer: ABB, Fanuc, Kuka, Dürr
+           🎨 Generating image for: Robot de peinture et vernis        
+           ✅ Image generated and saved: Robot_de_peinture_et_vernis.png
+
+[6/13] Processing: Ligne d'assemblage de portes polymères
+           Type: Assemblage automatisé
+           Manufacturer: Homag, Biesse, SCM
+           🎨 Generating image for: Ligne d'assemblage de portes polymères
+           ✅ Image generated and saved: Ligne_d'assemblage_de_portes_polymères.png
+
+[7/13] Processing: Ligne de recyclage de pneus / Granulateur
+           Type: Recyclage et granulation
+           Manufacturer: Eldan Recycling, Genox, Forrec
+           🎨 Generating image for: Ligne de recyclage de pneus / Granulateur
+           ✅ Image generated and saved: Ligne_de_recyclage_de_pneus___Granulateur.png
+
+[8/13] Processing: Ligne de lamination de verre
+           Type: Lamination de verre de sécurité
+           Manufacturer: Lisec, Bystronic Glass, Glaston
+           🎨 Generating image for: Ligne de lamination de verre       
+           ✅ Image generated and saved: Ligne_de_lamination_de_verre.png
+
+[9/13] Processing: Four de trempe de verre
+           Type: Trempe thermique de verre
+           Manufacturer: Glaston, Lisec, NorthGlass
+           🎨 Generating image for: Four de trempe de verre
+           ✅ Image generated and saved: Four_de_trempe_de_verre.png
+
+[10/13] Processing: Machine de cintrage de verre
+           Type: Cintrage à chaud de verre
+           Manufacturer: Benteler, Glasstech, Lisec
+           🎨 Generating image for: Machine de cintrage de verre       
+           ✅ Image generated and saved: Machine_de_cintrage_de_verre.png
+
+[11/13] Processing: Véhicule à Guidage Automatisé (AGV)
+           Type: Transport logistique interne
+           Manufacturer: Kuka, Dematic, Toyota Material Handling       
+           🎨 Generating image for: Véhicule à Guidage Automatisé (AGV)
+           ✅ Image generated and saved: Véhicule_à_Guidage_Automatisé_(AGV).png
+
+[12/13] Processing: Système Automatisé de Stockage et de Récupération (ASRS)
+           Type: Stockage et récupération automatisés
+           Manufacturer: Dematic, Kardex Remstar, TGW Logistics        
+           🎨 Generating image for: Système Automatisé de Stockage et de Récupération (ASRS)
+           ✅ Image generated and saved: Système_Automatisé_de_Stockage_et_de_Récupération_.png
+
+[13/13] Processing: Silos de stockage de matières premières
+           Type: Stockage en vrac
+           Manufacturer: Zeppelin Systems, Coperion, Palamatic Process 
+           🎨 Generating image for: Silos de stockage de matières premières
+           ✅ Image generated and saved: Silos_de_stockage_de_matières_premières.png
+
+
+====================================================================== 
+💾 STAGE 3: SAVING COMPLETE PIPELINE RESULTS
+====================================================================== 
+✅ Complete pipeline saved: data/extracted_data\FICHE_IDENTITE_INDUSTRIELLE_complete_pipeline.json
+📊 Machines: 13 (images skipped)
+
+====================================================================== 
+✅ MODULE 1 COMPLETE PIPELINE FINISHED
+====================================================================== 
+📦 Ready for RIBIF Modules 2-9
+💡 Financial analysis: Module 6 (TCO) & Module 7 (Business Plan)       
+
+127.0.0.1 - - [29/Jan/2026 13:33:40] "POST /api/module1/process HTTP/1.1" 200 -
+127.0.0.1 - - [29/Jan/2026 13:33:41] "OPTIONS /api/module4/enrich HTTP/1.1" 200 -
+
+====================================================================== 
+🔧 MODULE 4: MACHINE ENRICHMENT WITH SUPPLIERS
+====================================================================== 
+📋 Found 13 machines to enrich
+
+
+====================================================================== 
+🚀 RIBIF MODULE 4 — Parallel Machine Enrichment (Vertex-only)
+====================================================================== 
+📄 Input: tmpdluz9s35.json
+🧵 max_workers: 4 | items: 13
+⏳ per_machine_timeout_s: 75 | domain_gap_s: 1.5 | llm_call_timeout_s: 30 | budget_s: 60
+🖼️  generated_images_dir: data/extracted_data\module_4_images
+====================================================================== 
+✅ Vertex requested model: gemini-2.5-flash-lite
+
+🧠 Launching enrichments in parallel...
+▶️  SUBMIT [1/13] Presse à injection plastique
+▶️  SUBMIT [2/13] Extrudeuse
+▶️  SUBMIT [3/13] Thermoformeuse
+▶️  SUBMIT [4/13] Presse à membrane 3D
+▶️  SUBMIT [5/13] Robot de peinture et vernis
+▶️  SUBMIT [6/13] Ligne d'assemblage de portes polymères
+▶️  SUBMIT [7/13] Ligne de recyclage de pneus / Granulateur
+▶️  SUBMIT [8/13] Ligne de lamination de verre
+▶️  SUBMIT [9/13] Four de trempe de verre
+▶️  SUBMIT [10/13] Machine de cintrage de verre
+▶️  SUBMIT [11/13] Véhicule à Guidage Automatisé (AGV)
+▶️  SUBMIT [12/13] Système Automatisé de Stockage et de Récupération (AASRS)
+▶️  SUBMIT [13/13] Silos de stockage de matières premières
+✅ DONE [3/13] Thermoformeuse in 48.69s
+✅ DONE [2/13] Extrudeuse in 56.20s
+✅ DONE [1/13] Presse à injection plastique in 57.40s
+✅ DONE [4/13] Presse à membrane 3D in 61.96s
+✅ DONE [6/13] Ligne d'assemblage de portes polymères in 103.75s
+✅ DONE [7/13] Ligne de recyclage de pneus / Granulateur in 105.98s
+✅ DONE [8/13] Ligne de lamination de verre in 106.89s
+✅ DONE [5/13] Robot de peinture et vernis in 113.19s
+✅ DONE [10/13] Machine de cintrage de verre in 151.84s
+✅ DONE [11/13] Véhicule à Guidage Automatisé (AGV) in 152.82s
+✅ DONE [9/13] Four de trempe de verre in 158.81s
+✅ DONE [12/13] Système Automatisé de Stockage et de Récupération (ASRS) in 162.52s
+✅ DONE [13/13] Silos de stockage de matières premières in 216.41s
+
+====================================================================== 
+✅ MODULE 4 DONE
+======================================================================
+⏱️  Time: 217.49s
+💾 Saved: D:\Programming\AI\Hackathons\.Competitions\EliteHack\ribif\backend\data\extracted_data\module_4.json
+🧹 Filtered non-machines: 0
+====================================================================== 
+
+
+====================================================================== 
+✅ MODULE 4 COMPLETE
+📦 Enriched 13 machines with suppliers
+====================================================================== 
+
+127.0.0.1 - - [29/Jan/2026 13:37:19] "POST /api/module4/enrich HTTP/1.1" 200 -
+127.0.0.1 - - [29/Jan/2026 13:37:19] "OPTIONS /api/module6/tco-from-sourcing HTTP/1.1" 200 -
+
+====================================================================== 
+📊 MODULE 6: TCO CALCULATION FROM SOURCING
+====================================================================== 
+📋 Processing 13 machines for TCO calculation
+
+✅ Gemini initialized for TCO Module: gemini-2.5-flash
+[1/13] Processing: Thermoformeuse
+           Top Supplier: Kiefel GmbH (score: 0.95)
+📄 Content after cleanup (first 150 chars): {
+    "estimated_purchase_price": 169000000,
+    "implementation_cost": 16900000,
+    "annual_operations_cost": 7644000,
+    "annual_maintenance_cost"
+✅ LLM estimation SUCCESS for machine: Thermoformeuse
+[2/13] Processing: Extrudeuse
+           Top Supplier: Battenfeld-Cincinnati (score: 0.98)
+📄 Content after cleanup (first 150 chars): {
+    "estimated_purchase_price": 121500000,
+    "implementation_cost": 14580000,
+    "annual_operations_cost": 8505000,
+    "annual_maintenance_cost"
+✅ LLM estimation SUCCESS for machine: Extrudeuse
+[3/13] Processing: Presse à injection plastique
+           Top Supplier: Engel Austria GmbH (score: 0.95)
+📄 Content after cleanup (first 150 chars): {
+    "estimated_purchase_price": 67500000,
+    "implementation_cost": 8100000,
+    "annual_operations_cost": 3713000,
+    "annual_maintenance_cost":
+✅ LLM estimation SUCCESS for machine: Presse à injection plastique    
+[4/13] Processing: Presse à membrane 3D
+           Top Supplier: Wemhöner Surface Technologies GmbH & Co. KG (score: 0.95)
+📄 Content after cleanup (first 150 chars): {
+    "estimated_purchase_price": 50000000,
+    "implementation_cost": 6000000,
+    "annual_operations_cost": 3000000,
+    "annual_maintenance_cost":
+✅ LLM estimation SUCCESS for machine: Presse à membrane 3D
+[5/13] Processing: Ligne d'assemblage de portes polymères
+           Top Supplier: Homag Group (score: 0.95)
+📄 Content after cleanup (first 150 chars): {
+    "estimated_purchase_price": 135000000,
+    "implementation_cost": 16200000,
+    "annual_operations_cost": 5180000,
+    "annual_maintenance_cost"
+✅ LLM estimation SUCCESS for machine: Ligne d'assemblage de portes polymères
+[6/13] Processing: Ligne de recyclage de pneus / Granulateur
+           Top Supplier: Eldan Recycling AB (score: 0.95)
+📄 Content after cleanup (first 150 chars): {
+    "estimated_purchase_price": 253125000,
+    "implementation_cost": 25313000,
+    "annual_operations_cost": 20250000,
+    "annual_maintenance_cost
+✅ LLM estimation SUCCESS for machine: Ligne de recyclage de pneus / Granulateur
+[7/13] Processing: Ligne de lamination de verre
+           Top Supplier: Lisec GmbH (score: 0.95)
+📄 Content after cleanup (first 150 chars): {
+  "estimated_purchase_price": 202500000,
+  "implementation_cost": 24300000,
+  "annual_operations_cost": 15500000,
+  "annual_maintenance_cost": 10125
+✅ LLM estimation SUCCESS for machine: Ligne de lamination de verre    
+[8/13] Processing: Robot de peinture et vernis
+           Top Supplier: ABB Robotics (score: 0.95)
+📄 Content after cleanup (first 150 chars): {
+    "estimated_purchase_price": 24300000,
+    "implementation_cost": 2916000,
+    "annual_operations_cost": 1458000,
+    "annual_maintenance_cost":
+✅ LLM estimation SUCCESS for machine: Robot de peinture et vernis     
+[9/13] Processing: Machine de cintrage de verre
+           Top Supplier: Benteler Glass Processing Equipment (score: 0.98)
+📄 Content after cleanup (first 150 chars): {
+    "estimated_purchase_price": 185625000,
+    "implementation_cost": 22275000,
+    "annual_operations_cost": 9544000,
+    "annual_maintenance_cost"
+✅ LLM estimation SUCCESS for machine: Machine de cintrage de verre    
+[10/13] Processing: Véhicule à Guidage Automatisé (AGV)
+           Top Supplier: KUKA AG (score: 0.95)
+📄 Content after cleanup (first 150 chars): {
+    "estimated_purchase_price": 16875000,
+    "implementation_cost": 2025000,
+    "annual_operations_cost": 844000,
+    "annual_maintenance_cost": 8
+✅ LLM estimation SUCCESS for machine: Véhicule à Guidage Automatisé (AGV)
+[11/13] Processing: Four de trempe de verre
+           Top Supplier: Glaston Corporation (score: 0.98)
+📄 Content after cleanup (first 150 chars): {
+    "estimated_purchase_price": 405000000,
+    "implementation_cost": 48600000,
+    "annual_operations_cost": 28120000,
+    "annual_maintenance_cost
+✅ LLM estimation SUCCESS for machine: Four de trempe de verre
+[12/13] Processing: Système Automatisé de Stockage et de Récupération (ASRS)
+           Top Supplier: Dematic (score: 0.95)
+📄 Content after cleanup (first 150 chars): {
+    "estimated_purchase_price": 1350000000,
+    "implementation_cost": 162000000,
+    "annual_operations_cost": 67500000,
+    "annual_maintenance_co
+✅ LLM estimation SUCCESS for machine: Système Automatisé de Stockage et de Récupération (ASRS)
+[13/13] Processing: Silos de stockage de matières premières
+           Top Supplier: Zeppelin Systems GmbH (score: 0.95)
+📄 Content after cleanup (first 150 chars): {
+    "estimated_purchase_price": 14580000,
+    "implementation_cost": 1750000,
+    "annual_operations_cost": 656000,
+    "annual_maintenance_cost": 7
+✅ LLM estimation SUCCESS for machine: Silos de stockage de matières premières
+
+📦 Processing 16 raw materials...
+📄 Content after cleanup (first 150 chars): {
+    "Polyuréthane (PU)": {
+        "unit_price": 430000,
+        "transport_pct": 0.15,
+        "storage_pct": 0.03,
+        "wastage_pct": 0.02,
+
+✅ BATCH LLM estimation SUCCESS for 16 materials
+
+====================================================================== 
+✅ MODULE 6 TCO COMPLETE
+💰 Total TCO (5 years): 146,989,724,851 DZD
+📊 Machines: 13 | Products: 10 | Materials: 16
+====================================================================== 
+
+127.0.0.1 - - [29/Jan/2026 13:41:42] "POST /api/module6/tco-from-sourcing HTTP/1.1" 200 -
+127.0.0.1 - - [29/Jan/2026 13:41:42] "OPTIONS /api/module7/business-plan HTTP/1.1" 200 -
+✅ Gemini initialized for Business Plan Module: gemini-2.5-flash
+✅ LLM CapEx estimation SUCCESS
+✅ LLM OpEx estimation SUCCESS
+✅ LLM Pricing estimation SUCCESS
+✅ BATCH LLM BMC generation SUCCESS
+127.0.0.1 - - [29/Jan/2026 13:42:54] "POST /api/module7/business-plan HTTP/1.1" 200 -
+127.0.0.1 - - [29/Jan/2026 13:42:54] "OPTIONS /api/module7/pitch-deck HTTP/1.1" 200 -
+✅ Presenton API configured at: https://api.presenton.ai
+📝 Built pitch content (2027 chars), Language: French
+📤 Calling Presenton API: https://api.presenton.ai/api/v3/presentation/generate
+✅ Presenton response: {'presentation_id': '38bbee6b-1afb-41ef-8c17-a0adbe9fa920', 'path': 'https://presenton-public.s3.ap-southeast-1.amazonaws.com/exports/pdf/ALLO-MAISON--Fabrication-automatise-de-matriaux-polymres_2331335e-2eac-4e13-a6c6-53ca937300a3.pdf', 'edit_path': 'https://presenton.ai/presentation?id=38bbee6b-1afb-41ef-8c17-a0adbe9fa920&type=standard', 'credits_consumed': 11.0}
+📥 Downloading from: https://presenton-public.s3.ap-southeast-1.amazonaws.com/exports/pdf/ALLO-MAISON--Fabrication-automatise-de-matriaux-polymres_2331335e-2eac-4e13-a6c6-53ca937300a3.pdf
+127.0.0.1 - - [29/Jan/2026 13:44:01] "POST /api/module7/pitch-deck HTTP/1.1" 200 -
+127.0.0.1 - - [29/Jan/2026 13:44:01] "OPTIONS /api/module9/catalog HTTP/1.1" 200 -
+D:\Programming\AI\Hackathons\.Competitions\EliteHack\ribif\backend\utils\module_9\core.py:535: SyntaxWarning: invalid escape sequence '\/'    
+  (r"\lipsum[9][1-3]", f"Primary product: {self._escape_latex(str(product.get('name', 'Industrial Product')))} with target output of {self._escape_latex(str(product.get('target_output_per_hour', 'N/A')))} {self._escape_latex(str(product.get('output_unit', 'units')))}\/hour."),       
+🔥 Module 9 Catalog Error: Missing PDF/image dependencies. Install reportlab and pillow.
+127.0.0.1 - - [29/Jan/2026 13:44:02] "POST /api/module9/catalog HTTP/1.1" 500 -

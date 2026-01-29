@@ -14,6 +14,7 @@
 /coverage
 
 # next.js
+.next/
 /.next/
 /out/
 
@@ -48,5 +49,3 @@ public/models/**.glb
 
 backend/mohaned/__pycache__/*
 backend/mohaned/assets_cache/*
-
-**.json

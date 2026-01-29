@@ -1,10 +1,10 @@
 import os
-import sys
 import json
 import base64
 import shutil
 from datetime import datetime
 from pathlib import Path
+from typing import Optional, Tuple
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
@@ -13,6 +13,27 @@ from module_1 import RIBIFExtractor
 
 # Import image generation from vertex_utils
 from vertex_utils import generate_image
+from supabase_utils import (
+    SUPABASE_BUCKET_FILES,
+    SUPABASE_BUCKET_PUBLIC,
+    build_object_path,
+    create_signed_url,
+    get_public_url,
+    get_supabase,
+    guess_mime,
+    insert_business_plan,
+    insert_catalog,
+    insert_layout,
+    insert_module1_extraction,
+    insert_module4_sourcing,
+    insert_pitch_deck,
+    insert_project,
+    insert_project_file,
+    insert_tco_run,
+    insert_video,
+    upload_file,
+    upload_bytes,
+)
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
@@ -39,6 +60,180 @@ os.makedirs(TEMP_OUTPUT_FOLDER, exist_ok=True)
 os.makedirs(CATALOG_FOLDER, exist_ok=True)
 
 extractor = RIBIFExtractor()
+
+def get_request_user_id() -> Optional[str]:
+    return request.headers.get("x-user-id") or request.headers.get("X-User-Id")
+
+
+def get_request_project_id(include_form: bool = False, include_json: bool = False) -> Optional[str]:
+    project_id = request.headers.get("x-project-id") or request.headers.get("X-Project-Id")
+    if include_form:
+        project_id = project_id or request.form.get("project_id")
+    if include_json and request.is_json:
+        payload = request.get_json(silent=True) or {}
+        project_id = project_id or payload.get("project_id") or payload.get("ribif_metadata", {}).get("project_id")
+    return project_id
+
+
+def get_pipeline_settings() -> dict:
+    raw = None
+    if request.is_json:
+        payload = request.get_json(silent=True) or {}
+        raw = payload.get("pipeline_settings") or payload.get("settings")
+    raw = raw or request.form.get("pipeline_settings") or request.form.get("settings")
+    raw = raw or request.headers.get("x-pipeline-settings") or request.headers.get("X-Pipeline-Settings")
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, str) and raw.strip():
+        try:
+            return json.loads(raw)
+        except Exception:
+            return {}
+    return {}
+
+
+def ensure_project_id(
+    client,
+    project_id: Optional[str],
+    owner_id: Optional[str],
+    fallback_name: str,
+) -> Optional[str]:
+    if project_id:
+        return project_id
+    if not client:
+        return None
+    return insert_project(client, owner_id, fallback_name, metadata={"source": "module1_upload"})
+
+
+def insert_machines_from_stage(client, project_id: str, machines: list, image_meta: dict) -> dict:
+    if not client or not machines:
+        return {}
+    rows = []
+    for m in machines:
+        name = m.get("nom_machine") or m.get("name") or "Machine"
+        meta = {}
+        if name in image_meta:
+            meta = image_meta[name]
+        rows.append({
+            "project_id": project_id,
+            "name": name,
+            "machine_type": m.get("type"),
+            "manufacturer": m.get("fabricant_recommande"),
+            "quantity": m.get("quantite_necessaire", 1),
+            "use": m.get("use"),
+            "specifications": m.get("specifications", {}) or {},
+            "performance": m.get("performance", {}) or {},
+            "source_reference": m.get("source_reference"),
+            "metadata": meta or {},
+        })
+    if not rows:
+        return {}
+    res = client.table("machines").insert(rows).execute()
+    data = getattr(res, "data", None) or []
+    return {row.get("name"): row.get("id") for row in data if row.get("name")}
+
+
+def upload_and_register_file(
+    client,
+    project_id: str,
+    owner_id: Optional[str],
+    local_path: str,
+    category: str,
+    label: Optional[str] = None,
+    bucket: Optional[str] = None,
+) -> Tuple[Optional[str], Optional[str]]:
+    if not client:
+        return None, None
+    bucket_id = bucket or SUPABASE_BUCKET_FILES
+    object_path = build_object_path(project_id, category, os.path.basename(local_path))
+    upload_file(client, bucket_id, object_path, local_path, content_type=guess_mime(local_path))
+    file_id = insert_project_file(
+        client=client,
+        project_id=project_id,
+        owner_id=owner_id,
+        bucket=bucket_id,
+        object_path=object_path,
+        mime_type=guess_mime(local_path),
+        size_bytes=os.path.getsize(local_path),
+        category=category,
+        label=label,
+        metadata={},
+    )
+    signed_url = create_signed_url(client, bucket_id, object_path)
+    return file_id, signed_url
+
+
+def insert_tco_details(client, tco_run_id: str, tco_data: dict) -> None:
+    if not client or not tco_run_id:
+        return
+    machine_rows = []
+    for m in tco_data.get("machine_tco", []) or []:
+        machine_rows.append({
+            "tco_run_id": tco_run_id,
+            "machine_name": m.get("machine_name") or m.get("name"),
+            "category": m.get("category"),
+            "manufacturer": m.get("manufacturer"),
+            "initial_cost": m.get("initial_cost"),
+            "operations_cost": m.get("operations_cost"),
+            "maintenance_cost": m.get("maintenance_cost"),
+            "downtime_cost": m.get("downtime_cost"),
+            "resale_value": m.get("resale_value"),
+            "total_tco": m.get("total_tco"),
+            "annual_tco": m.get("annual_tco"),
+            "lifetime_years": m.get("lifetime_years"),
+            "cost_breakdown": m.get("cost_breakdown"),
+            "metadata": {},
+        })
+    if machine_rows:
+        client.table("tco_machines").insert(machine_rows).execute()
+
+    product_rows = []
+    for p in tco_data.get("product_tco", []) or []:
+        product_rows.append({
+            "tco_run_id": tco_run_id,
+            "product_name": p.get("nom_produit") or p.get("product_name"),
+            "category": p.get("categorie") or p.get("category"),
+            "landing_cost": p.get("landing_cost"),
+            "holding_cost": p.get("holding_cost"),
+            "quality_cost": p.get("quality_cost"),
+            "administrative_cost": p.get("administrative_cost"),
+            "total_tco": p.get("total_tco"),
+            "metadata": {},
+        })
+    if product_rows:
+        client.table("tco_products").insert(product_rows).execute()
+
+    raw_rows = []
+    for r in tco_data.get("raw_materials_tco", []) or []:
+        raw_rows.append({
+            "tco_run_id": tco_run_id,
+            "material_name": r.get("nom_materiau") or r.get("material_name"),
+            "material_type": r.get("type_materiau") or r.get("material_type"),
+            "total_tco": r.get("total_tco"),
+            "annual_cost": r.get("annual_cost"),
+            "transport_cost": r.get("transport_cost"),
+            "storage_cost": r.get("storage_cost"),
+            "wastage_cost": r.get("wastage_cost"),
+            "estimation_confidence": r.get("estimation_confidence"),
+            "metadata": {},
+        })
+    if raw_rows:
+        client.table("tco_raw_materials").insert(raw_rows).execute()
+
+    annual_rows = []
+    for a in tco_data.get("annual_tco", []) or []:
+        annual_rows.append({
+            "tco_run_id": tco_run_id,
+            "year": a.get("year"),
+            "machines_tco": a.get("machines_tco"),
+            "products_tco": a.get("products_tco"),
+            "raw_materials_tco": a.get("raw_materials_tco"),
+            "total_tco": a.get("total_tco"),
+            "cumulative_tco": a.get("cumulative_tco"),
+            "metadata": {},
+        })
+    if annual_rows:
+        client.table("tco_annual").insert(annual_rows).execute()
 
 def reset_temp_outputs() -> None:
     """Clear temp JSON outputs from previous workflow runs."""
@@ -177,6 +372,44 @@ def process_module_1():
     filepath = os.path.join(UPLOAD_FOLDER, filename)
     file.save(filepath)
 
+    settings = get_pipeline_settings()
+    user_id = get_request_user_id()
+    project_id = get_request_project_id(include_form=True)
+    supabase_client = get_supabase()
+    project_id = ensure_project_id(
+        supabase_client,
+        project_id,
+        user_id,
+        Path(filename).stem or "Untitled Project",
+    )
+    source_file_id = None
+    source_file_url = None
+    if supabase_client and project_id:
+        try:
+            source_path = build_object_path(project_id, "uploads", filename)
+            upload_file(
+                supabase_client,
+                SUPABASE_BUCKET_FILES,
+                source_path,
+                filepath,
+                content_type=guess_mime(filepath),
+            )
+            source_file_id = insert_project_file(
+                client=supabase_client,
+                project_id=project_id,
+                owner_id=user_id,
+                bucket=SUPABASE_BUCKET_FILES,
+                object_path=source_path,
+                mime_type=guess_mime(filepath),
+                size_bytes=os.path.getsize(filepath),
+                category="uploads",
+                label="source_document",
+                metadata={"original_filename": filename},
+            )
+            source_file_url = create_signed_url(supabase_client, SUPABASE_BUCKET_FILES, source_path)
+        except Exception as e:
+            print(f"⚠️  Supabase upload failed: {str(e)[:80]}")
+
     # Clear previous temp outputs at the start of a new workflow
     reset_temp_outputs()
 
@@ -203,37 +436,76 @@ def process_module_1():
         # Generate professional product images for each machine
         # ========================================
         print("\n" + "="*70)
-        print("🎨 STAGE 2: MACHINE IMAGE GENERATION (AI) - SKIPPED")
+        print("🎨 STAGE 2: MACHINE IMAGE GENERATION (AI)")
         print("="*70)
-        
+
         # Get machines from extraction result
         machines = extraction_result.get("stage_4_machines_equipements", {}).get("machines_production", [])
-        
+
         if not machines:
             print("⚠️  No machines found")
             return jsonify({
                 "message": "Success (no machines found)",
-                "data": extraction_result
+                "data": extraction_result,
+                "project_id": project_id
             })
-        
+
         print(f"📋 Found {len(machines)} machines")
-        print("⏭️  Image generation temporarily disabled for faster processing\n")
-        
-        # IMAGE GENERATION COMMENTED OUT FOR NOW - UNCOMMENT TO ENABLE
+        enable_images = settings.get("enableMachineImages", True)
+        if not enable_images:
+            print("⏭️  Image generation disabled by settings\n")
+
         enriched_machines = []
-        
+        image_meta_by_name: dict = {}
+
         for idx, machine_data in enumerate(machines, 1):
             nom_machine = machine_data.get('nom_machine', 'Unknown')
             machine_type = machine_data.get('type', 'industrial machine')
             manufacturer = machine_data.get('fabricant_recommande', '')
-            
+
             print(f"[{idx}/{len(machines)}] Processing: {nom_machine}")
             print(f"           Type: {machine_type}")
             print(f"           Manufacturer: {manufacturer or 'N/A'}")
-            
-            # Generate image for this machine
-            image_result = generate_machine_image(nom_machine, machine_type, manufacturer)
-            
+
+            image_result = {"image_url": None, "status": "skipped"}
+            if enable_images:
+                image_result = generate_machine_image(nom_machine, machine_type, manufacturer)
+
+            image_public_url = None
+            image_file_id = None
+            if enable_images and image_result.get("image_path") and supabase_client and project_id:
+                try:
+                    local_image = image_result.get("image_path")
+                    object_path = build_object_path(project_id, "machine-images", os.path.basename(local_image))
+                    upload_file(
+                        supabase_client,
+                        SUPABASE_BUCKET_PUBLIC,
+                        object_path,
+                        local_image,
+                        content_type="image/png",
+                    )
+                    image_public_url = get_public_url(supabase_client, SUPABASE_BUCKET_PUBLIC, object_path)
+                    image_file_id = insert_project_file(
+                        client=supabase_client,
+                        project_id=project_id,
+                        owner_id=user_id,
+                        bucket=SUPABASE_BUCKET_PUBLIC,
+                        object_path=object_path,
+                        mime_type="image/png",
+                        size_bytes=os.path.getsize(local_image),
+                        category="machine_images",
+                        label=nom_machine,
+                        metadata={"source": "module1_generation"},
+                    )
+                except Exception as e:
+                    print(f"⚠️  Supabase machine image upload failed: {str(e)[:80]}")
+
+            if image_file_id or image_public_url:
+                image_meta_by_name[nom_machine] = {
+                    "image_file_id": image_file_id,
+                    "image_public_url": image_public_url,
+                }
+
             # Build enriched machine data with accurate specifications
             enriched_machine = {
                 "nom_machine": nom_machine,
@@ -245,9 +517,11 @@ def process_module_1():
                 "performance": machine_data.get('performance', {}),
                 "image_url": image_result.get('image_url'),
                 "image_status": image_result.get('status'),
+                "image_public_url": image_public_url,
+                "image_file_id": image_file_id,
                 "source": "vertex_extraction"
             }
-            
+
             enriched_machines.append(enriched_machine)
             print()
         
@@ -269,6 +543,15 @@ def process_module_1():
             "successful_scrapes": successful,
             "failed_scrapes": len(machines) - successful
         }
+
+        final_result.setdefault("ribif_metadata", {})
+        final_result["ribif_metadata"].update({
+            "project_id": project_id,
+            "source_file_id": source_file_id,
+            "source_file_url": source_file_url,
+            "pipeline_settings": settings,
+        })
+        final_result["project_id"] = project_id
         
         # Save combined result
         pdf_stem = Path(filepath).stem
@@ -284,8 +567,59 @@ def process_module_1():
         print("="*70)
         print("📦 Ready for RIBIF Modules 2-9")
         print("💡 Financial analysis: Module 6 (TCO) & Module 7 (Business Plan)\n")
-        
-        write_temp_json("module1_extraction", final_result)
+
+        module1_file = write_temp_json("module1_extraction", final_result)
+
+        module1_id = None
+        if supabase_client and project_id:
+            try:
+                module1_id = insert_module1_extraction(
+                    client=supabase_client,
+                    project_id=project_id,
+                    source_file_id=source_file_id,
+                    data=final_result,
+                )
+                final_result["module1_id"] = module1_id
+
+                machine_id_map = insert_machines_from_stage(
+                    supabase_client,
+                    project_id,
+                    machines,
+                    image_meta_by_name,
+                )
+                machine_assets_rows = []
+                for m in enriched_machines:
+                    file_id = m.get("image_file_id")
+                    if not file_id:
+                        continue
+                    machine_name = m.get("nom_machine")
+                    machine_id = machine_id_map.get(machine_name)
+                    if not machine_id:
+                        continue
+                    machine_assets_rows.append({
+                        "machine_id": machine_id,
+                        "file_id": file_id,
+                        "asset_type": "photo",
+                        "label": machine_name,
+                        "metadata": {"source": "module1_generation"},
+                    })
+                if machine_assets_rows:
+                    supabase_client.table("machine_assets").insert(machine_assets_rows).execute()
+
+                file_id, signed_url = upload_and_register_file(
+                    supabase_client,
+                    project_id,
+                    user_id,
+                    module1_file.get("filepath"),
+                    "module_outputs",
+                    label="module1_extraction",
+                    bucket=SUPABASE_BUCKET_FILES,
+                )
+                if signed_url:
+                    final_result["module1_download_url"] = signed_url
+            except Exception as e:
+                print(f"⚠️  Supabase module1 persistence failed: {str(e)[:80]}")
+
         return jsonify({"message": "Success", "data": final_result})
         
     except Exception as e:
@@ -327,11 +661,16 @@ def enrich_machines_module4():
         print("🔧 MODULE 4: MACHINE ENRICHMENT WITH SUPPLIERS")
         print("="*70)
         
+        project_id = get_request_project_id(include_json=True)
+        supabase_client = get_supabase()
+        module1_id = None
+
         # Get input data
         if not request.is_json:
             return jsonify({"error": "Expected JSON input (module_1 output)"}), 400
         
         input_data = request.get_json()
+        module1_id = input_data.get("module1_id") or input_data.get("ribif_metadata", {}).get("module1_id")
         
         # Validate input has required structure
         machines = input_data.get("stage_4_machines_equipements", {}).get("machines_production", [])
@@ -381,6 +720,20 @@ def enrich_machines_module4():
         print("="*70 + "\n")
         
         write_temp_json("module4_sourcing", result)
+
+        if supabase_client and project_id:
+            try:
+                module4_id = insert_module4_sourcing(
+                    client=supabase_client,
+                    project_id=project_id,
+                    module1_id=module1_id,
+                    data=result,
+                )
+                result["module4_id"] = module4_id
+                result["project_id"] = project_id
+            except Exception as e:
+                print(f"⚠️  Supabase module4 persistence failed: {str(e)[:80]}")
+
         return jsonify(result)
         
     except Exception as e:
@@ -410,6 +763,9 @@ def calculate_tco_from_sourcing():
         print("\n" + "="*70)
         print("📊 MODULE 6: TCO CALCULATION FROM SOURCING")
         print("="*70)
+        project_id = get_request_project_id(include_json=True)
+        supabase_client = get_supabase()
+        module4_id = None
         
         if not request.is_json:
             return jsonify({"error": "Expected JSON input"}), 400
@@ -419,6 +775,8 @@ def calculate_tco_from_sourcing():
         # Handle nested data structure
         if "data" in data:
             data = data["data"]
+
+        module4_id = data.get("module4_id") or data.get("ribif_metadata", {}).get("module4_id")
         
         machines_enriched = data.get("machines_enriched", [])
         ribif_metadata = data.get("ribif_metadata", {})
@@ -592,6 +950,9 @@ def calculate_tco_from_sourcing():
             "stage_6_informations_complementaires": stage_6,
             "sourcing_metadata": ribif_metadata
         }
+
+        if project_id:
+            result["project_id"] = project_id
         
         # Save result
         output_file = os.path.join(OUTPUT_FOLDER, "module_6_tco.json")
@@ -605,6 +966,19 @@ def calculate_tco_from_sourcing():
         print("="*70 + "\n")
         
         write_temp_json("module6_tco", result)
+        if supabase_client and project_id:
+            try:
+                tco_run_id = insert_tco_run(
+                    client=supabase_client,
+                    project_id=project_id,
+                    module4_id=module4_id,
+                    data=result,
+                )
+                if tco_run_id:
+                    result["tco_run_id"] = tco_run_id
+                    insert_tco_details(supabase_client, tco_run_id, result)
+            except Exception as e:
+                print(f"⚠️  Supabase TCO persistence failed: {str(e)[:80]}")
         return jsonify(result)
         
     except Exception as e:
@@ -646,6 +1020,8 @@ def generate_video_from_images():
         print("\n" + "="*70)
         print("🎬 MODULE 3: VIDEO GENERATION FROM IMAGES (Veo 2)")
         print("="*70)
+        project_id = get_request_project_id(include_form=True, include_json=True)
+        supabase_client = get_supabase()
         
         images_data = []  # Will store (image_bytes, prompt) tuples
         
@@ -667,6 +1043,30 @@ def generate_video_from_images():
                         prompt = request.form.get(f'prompt{i+1}', default_prompts[i])
                         images_data.append((img_bytes, prompt))
                         print(f"📷 Received: {file.filename}")
+                        if supabase_client and project_id:
+                            try:
+                                object_path = build_object_path(project_id, "video_inputs", file.filename)
+                                upload_bytes(
+                                    supabase_client,
+                                    SUPABASE_BUCKET_FILES,
+                                    object_path,
+                                    img_bytes,
+                                    content_type=file.mimetype or "image/jpeg",
+                                )
+                                insert_project_file(
+                                    client=supabase_client,
+                                    project_id=project_id,
+                                    owner_id=get_request_user_id(),
+                                    bucket=SUPABASE_BUCKET_FILES,
+                                    object_path=object_path,
+                                    mime_type=file.mimetype or "image/jpeg",
+                                    size_bytes=len(img_bytes),
+                                    category="video_inputs",
+                                    label=key,
+                                    metadata={"prompt": prompt},
+                                )
+                            except Exception as e:
+                                print(f"⚠️  Supabase video input upload failed: {str(e)[:80]}")
         
         # Check for JSON input
         elif request.is_json:
@@ -879,6 +1279,29 @@ def generate_video_from_images():
             "duration_seconds": total_duration,
             "status": "success"
         }
+
+        if supabase_client and project_id:
+            try:
+                file_id, signed_url = upload_and_register_file(
+                    supabase_client,
+                    project_id,
+                    get_request_user_id(),
+                    merged_path,
+                    "videos",
+                    label=os.path.basename(merged_path),
+                    bucket=SUPABASE_BUCKET_FILES,
+                )
+                if signed_url:
+                    result["video_url"] = signed_url
+                result["file_id"] = file_id
+                insert_video(
+                    client=supabase_client,
+                    project_id=project_id,
+                    file_id=file_id,
+                    data=result,
+                )
+            except Exception as e:
+                print(f"⚠️  Supabase video persistence failed: {str(e)[:80]}")
         
         print("\n" + "="*70)
         print("✅ MODULE 3 COMPLETE")
@@ -926,6 +1349,10 @@ def generate_business_plan():
         data = request.get_json()
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
+
+        project_id = data.get("project_id") or data.get("ribif_metadata", {}).get("project_id")
+        tco_run_id = data.get("tco_run_id")
+        supabase_client = get_supabase()
         
         # Initialize business plan generator
         from module_7_business_model import RIBIFModule7BusinessPlan, BusinessPlanInput
@@ -952,13 +1379,43 @@ def generate_business_plan():
         generator = RIBIFModule7BusinessPlan()
         result = generator.generate_business_plan(bp_input)
         
-        write_temp_json("module7_business_plan", result.model_dump())
+        data_payload = result.model_dump()
+        write_temp_json("module7_business_plan", data_payload)
+
+        file_id = None
+        download_url = result.download_url
+        if supabase_client and project_id:
+            try:
+                file_id, signed_url = upload_and_register_file(
+                    supabase_client,
+                    project_id,
+                    get_request_user_id(),
+                    result.filepath,
+                    "business_plans",
+                    label=result.filename,
+                    bucket=SUPABASE_BUCKET_FILES,
+                )
+                if signed_url:
+                    download_url = signed_url
+                insert_business_plan(
+                    client=supabase_client,
+                    project_id=project_id,
+                    tco_run_id=tco_run_id,
+                    file_id=file_id,
+                    filename=result.filename,
+                    data=data_payload,
+                )
+            except Exception as e:
+                print(f"⚠️  Supabase business plan persistence failed: {str(e)[:80]}")
+
         return jsonify({
             "message": "Business plan generated successfully",
             "filepath": result.filepath,
             "filename": result.filename,
-            "download_url": result.download_url,
-            "data": result.model_dump()
+            "download_url": download_url,
+            "file_id": file_id,
+            "data": data_payload,
+            "project_id": project_id
         })
     
     except Exception as e:
@@ -971,6 +1428,10 @@ def generate_pitch_deck():
         data = request.get_json()
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
+
+        project_id = data.get("project_id") or data.get("ribif_metadata", {}).get("project_id")
+        tco_run_id = data.get("tco_run_id")
+        supabase_client = get_supabase()
         
         # Initialize pitch deck generator
         from module_7_pitch_deck import RIBIFModule8PitchDeck, PitchDeckInput
@@ -1001,16 +1462,51 @@ def generate_pitch_deck():
         generator = RIBIFModule8PitchDeck()
         result = generator.generate_pitch_deck(pd_input)
 
-        write_temp_json("module7_pitch_deck", result.model_dump())
+        data_payload = result.model_dump()
+        write_temp_json("module7_pitch_deck", data_payload)
+
+        file_id = None
+        download_url = result.download_url
+        pdf_download_url = result.pdf_download_url
+        if supabase_client and project_id:
+            try:
+                source_path = result.pdf_filepath or result.filepath
+                if source_path:
+                    file_id, signed_url = upload_and_register_file(
+                        supabase_client,
+                        project_id,
+                        get_request_user_id(),
+                        source_path,
+                        "pitch_decks",
+                        label=result.pdf_filename or result.filename,
+                        bucket=SUPABASE_BUCKET_FILES,
+                    )
+                    if signed_url:
+                        download_url = signed_url
+                        pdf_download_url = signed_url
+                insert_pitch_deck(
+                    client=supabase_client,
+                    project_id=project_id,
+                    tco_run_id=tco_run_id,
+                    file_id=file_id,
+                    presentation_id=result.presentation_id,
+                    edit_url=result.edit_url,
+                    data=data_payload,
+                )
+            except Exception as e:
+                print(f"⚠️  Supabase pitch deck persistence failed: {str(e)[:80]}")
+
         response_payload = {
             "message": "Pitch deck generated successfully",
             "filepath": result.filepath,
             "filename": result.filename,
-            "download_url": result.download_url,
+            "download_url": download_url,
             "pdf_filepath": result.pdf_filepath,
             "pdf_filename": result.pdf_filename,
-            "pdf_download_url": result.pdf_download_url,
-            "data": result.model_dump()
+            "pdf_download_url": pdf_download_url,
+            "file_id": file_id,
+            "data": data_payload,
+            "project_id": project_id
         }
 
         # Cleanup temp outputs after workflow finishes
@@ -1055,16 +1551,65 @@ def generate_catalog_module9():
         if "module1_data" not in payload:
             payload = {"module1_data": data}
 
+        project_id = payload.get("project_id") or payload.get("module1_data", {}).get("project_id")
+        module1_id = payload.get("module1_id") or payload.get("module1_data", {}).get("module1_id")
+        supabase_client = get_supabase()
+
         from module_9 import RIBIFModule9Catalog, CatalogInput
 
         catalog_input = CatalogInput(**payload)
         generator = RIBIFModule9Catalog(image_base_path=catalog_input.image_base_path)
         result = generator.generate_catalog(catalog_input, base_url=BASE_URL)
 
-        write_temp_json("module9_catalog", result.model_dump())
+        data_payload = result.model_dump()
+        write_temp_json("module9_catalog", data_payload)
+
+        pdf_file_id = None
+        html_file_id = None
+        if supabase_client and project_id:
+            try:
+                if result.pdf_filepath:
+                    pdf_file_id, pdf_url = upload_and_register_file(
+                        supabase_client,
+                        project_id,
+                        get_request_user_id(),
+                        result.pdf_filepath,
+                        "catalogs",
+                        label=result.pdf_filename,
+                        bucket=SUPABASE_BUCKET_FILES,
+                    )
+                    if pdf_url:
+                        data_payload["pdf_download_url"] = pdf_url
+                if result.html_filepath:
+                    html_file_id, html_url = upload_and_register_file(
+                        supabase_client,
+                        project_id,
+                        get_request_user_id(),
+                        result.html_filepath,
+                        "catalogs",
+                        label=result.html_filename,
+                        bucket=SUPABASE_BUCKET_FILES,
+                    )
+                    if html_url:
+                        data_payload["html_download_url"] = html_url
+
+                insert_catalog(
+                    client=supabase_client,
+                    project_id=project_id,
+                    module1_id=module1_id,
+                    pdf_file_id=pdf_file_id,
+                    html_file_id=html_file_id,
+                    data=data_payload,
+                )
+            except Exception as e:
+                print(f"⚠️  Supabase catalog persistence failed: {str(e)[:80]}")
+
         return jsonify({
             "message": "Catalog generated successfully",
-            "data": result.model_dump()
+            "data": data_payload,
+            "project_id": project_id,
+            "pdf_file_id": pdf_file_id,
+            "html_file_id": html_file_id
         })
 
     except Exception as e:
@@ -1110,6 +1655,9 @@ def generate_layout():
         data = request.get_json()
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
+
+        project_id = get_request_project_id(include_json=True)
+        supabase_client = get_supabase()
         
         # Extract product info and machines
         product = data.get('product', {})
@@ -1157,6 +1705,46 @@ def generate_layout():
         print(f"📐 2D Layout: {result['layout_2d']}")
         print(f"🎮 3D Model: {result['layout_3d']}")
         
+        if supabase_client and project_id:
+            try:
+                layout_2d_id = None
+                layout_3d_id = None
+                if os.path.exists(result["layout_2d"]):
+                    layout_2d_id, layout_2d_url = upload_and_register_file(
+                        supabase_client,
+                        project_id,
+                        get_request_user_id(),
+                        result["layout_2d"],
+                        "layouts",
+                        label="layout_2d",
+                        bucket=SUPABASE_BUCKET_FILES,
+                    )
+                    if layout_2d_url:
+                        result["layout_2d_url"] = layout_2d_url
+                if os.path.exists(result["layout_3d"]):
+                    layout_3d_id, layout_3d_url = upload_and_register_file(
+                        supabase_client,
+                        project_id,
+                        get_request_user_id(),
+                        result["layout_3d"],
+                        "layouts",
+                        label="layout_3d",
+                        bucket=SUPABASE_BUCKET_FILES,
+                    )
+                    if layout_3d_url:
+                        result["layout_3d_url"] = layout_3d_url
+
+                insert_layout(
+                    client=supabase_client,
+                    project_id=project_id,
+                    pipeline_id=None,
+                    layout_2d_file_id=layout_2d_id,
+                    layout_3d_file_id=layout_3d_id,
+                    data=result,
+                )
+            except Exception as e:
+                print(f"⚠️  Supabase layout persistence failed: {str(e)[:80]}")
+
         return jsonify(result)
     
     except Exception as e:

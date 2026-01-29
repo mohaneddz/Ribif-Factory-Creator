@@ -38,6 +38,9 @@ XlsxWriter
 # Async & Concurrency
 aiohttp
 
+# Supabase
+supabase
+
 # Utilities
 certifi
 moviepy

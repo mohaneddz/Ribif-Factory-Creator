@@ -1,0 +1,277 @@
+import os
+import re
+import mimetypes
+from datetime import datetime
+from typing import Any, Dict, Optional, Tuple
+
+from supabase import create_client, Client
+
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+
+SUPABASE_BUCKET_FILES = os.getenv("SUPABASE_BUCKET_FILES", "project-files")
+SUPABASE_BUCKET_PUBLIC = os.getenv("SUPABASE_BUCKET_PUBLIC", "public-assets")
+SUPABASE_SIGNED_URL_EXPIRES = int(os.getenv("SUPABASE_SIGNED_URL_EXPIRES", "3600"))
+
+
+def _now_stamp() -> str:
+    return datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+
+
+def _safe_name(name: str) -> str:
+    name = name or "file"
+    name = re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("_")
+    return name or "file"
+
+
+def get_supabase() -> Optional[Client]:
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+        return None
+    return create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+
+def is_enabled() -> bool:
+    return bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
+
+
+def guess_mime(path: str, fallback: str = "application/octet-stream") -> str:
+    mime, _ = mimetypes.guess_type(path)
+    return mime or fallback
+
+
+def build_object_path(project_id: Optional[str], category: str, filename: str) -> str:
+    safe_filename = _safe_name(filename)
+    pid = project_id or "unassigned"
+    cat = _safe_name(category or "misc")
+    return f"{pid}/{cat}/{_now_stamp()}_{safe_filename}"
+
+
+def upload_bytes(
+    client: Client,
+    bucket: str,
+    object_path: str,
+    data: bytes,
+    content_type: str,
+    upsert: bool = True,
+) -> None:
+    client.storage.from_(bucket).upload(
+        object_path,
+        data,
+        file_options={"content-type": content_type, "upsert": upsert},
+    )
+
+
+def upload_file(
+    client: Client,
+    bucket: str,
+    object_path: str,
+    file_path: str,
+    content_type: Optional[str] = None,
+    upsert: bool = True,
+) -> None:
+    with open(file_path, "rb") as f:
+        data = f.read()
+    upload_bytes(
+        client=client,
+        bucket=bucket,
+        object_path=object_path,
+        data=data,
+        content_type=content_type or guess_mime(file_path),
+        upsert=upsert,
+    )
+
+
+def get_public_url(client: Client, bucket: str, object_path: str) -> str:
+    return client.storage.from_(bucket).get_public_url(object_path)
+
+
+def create_signed_url(client: Client, bucket: str, object_path: str, expires_in: Optional[int] = None) -> str:
+    exp = expires_in or SUPABASE_SIGNED_URL_EXPIRES
+    res = client.storage.from_(bucket).create_signed_url(object_path, exp)
+    return res.get("signedURL") or res.get("signed_url") or ""
+
+
+def insert_project(
+    client: Client,
+    owner_id: Optional[str],
+    name: str,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Optional[str]:
+    payload = {
+        "owner_id": owner_id,
+        "name": name,
+        "metadata": metadata or {},
+    }
+    res = client.table("projects").insert(payload).execute()
+    data = getattr(res, "data", None) or []
+    return data[0]["id"] if data else None
+
+
+def insert_project_file(
+    client: Client,
+    project_id: str,
+    owner_id: Optional[str],
+    bucket: str,
+    object_path: str,
+    mime_type: Optional[str],
+    size_bytes: Optional[int],
+    category: str,
+    label: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Optional[str]:
+    payload = {
+        "project_id": project_id,
+        "owner_id": owner_id,
+        "bucket": bucket,
+        "object_path": object_path,
+        "mime_type": mime_type,
+        "size_bytes": size_bytes,
+        "category": category,
+        "label": label,
+        "metadata": metadata or {},
+    }
+    res = client.table("project_files").insert(payload).execute()
+    data = getattr(res, "data", None) or []
+    return data[0]["id"] if data else None
+
+
+def insert_module1_extraction(
+    client: Client,
+    project_id: str,
+    source_file_id: Optional[str],
+    data: Dict[str, Any],
+) -> Optional[str]:
+    payload = {
+        "project_id": project_id,
+        "source_file_id": source_file_id,
+        "data": data,
+    }
+    res = client.table("module1_extractions").insert(payload).execute()
+    data_rows = getattr(res, "data", None) or []
+    return data_rows[0]["id"] if data_rows else None
+
+
+def insert_module4_sourcing(
+    client: Client,
+    project_id: str,
+    module1_id: Optional[str],
+    data: Dict[str, Any],
+) -> Optional[str]:
+    payload = {
+        "project_id": project_id,
+        "module1_id": module1_id,
+        "data": data,
+    }
+    res = client.table("module4_sourcing").insert(payload).execute()
+    data_rows = getattr(res, "data", None) or []
+    return data_rows[0]["id"] if data_rows else None
+
+
+def insert_tco_run(
+    client: Client,
+    project_id: str,
+    module4_id: Optional[str],
+    data: Dict[str, Any],
+) -> Optional[str]:
+    payload = {
+        "project_id": project_id,
+        "module4_id": module4_id,
+        "currency": data.get("currency") or "DZD",
+        "total_tco": data.get("total_tco"),
+        "average_annual_tco": data.get("average_annual_tco"),
+        "tco_per_unit_revenue": data.get("tco_per_unit_revenue"),
+        "data": data,
+    }
+    res = client.table("tco_runs").insert(payload).execute()
+    data_rows = getattr(res, "data", None) or []
+    return data_rows[0]["id"] if data_rows else None
+
+
+def insert_business_plan(
+    client: Client,
+    project_id: str,
+    tco_run_id: Optional[str],
+    file_id: Optional[str],
+    filename: Optional[str],
+    data: Dict[str, Any],
+) -> None:
+    payload = {
+        "project_id": project_id,
+        "tco_run_id": tco_run_id,
+        "file_id": file_id,
+        "filename": filename,
+        "data": data,
+    }
+    client.table("business_plans").insert(payload).execute()
+
+
+def insert_pitch_deck(
+    client: Client,
+    project_id: str,
+    tco_run_id: Optional[str],
+    file_id: Optional[str],
+    presentation_id: Optional[str],
+    edit_url: Optional[str],
+    data: Dict[str, Any],
+) -> None:
+    payload = {
+        "project_id": project_id,
+        "tco_run_id": tco_run_id,
+        "file_id": file_id,
+        "presentation_id": presentation_id,
+        "edit_url": edit_url,
+        "data": data,
+    }
+    client.table("pitch_decks").insert(payload).execute()
+
+
+def insert_catalog(
+    client: Client,
+    project_id: str,
+    module1_id: Optional[str],
+    pdf_file_id: Optional[str],
+    html_file_id: Optional[str],
+    data: Dict[str, Any],
+) -> None:
+    payload = {
+        "project_id": project_id,
+        "module1_id": module1_id,
+        "pdf_file_id": pdf_file_id,
+        "html_file_id": html_file_id,
+        "data": data,
+    }
+    client.table("catalogs").insert(payload).execute()
+
+
+def insert_layout(
+    client: Client,
+    project_id: str,
+    pipeline_id: Optional[str],
+    layout_2d_file_id: Optional[str],
+    layout_3d_file_id: Optional[str],
+    data: Dict[str, Any],
+) -> None:
+    payload = {
+        "project_id": project_id,
+        "pipeline_id": pipeline_id,
+        "layout_2d_file_id": layout_2d_file_id,
+        "layout_3d_file_id": layout_3d_file_id,
+        "data": data,
+    }
+    client.table("layouts").insert(payload).execute()
+
+
+def insert_video(
+    client: Client,
+    project_id: str,
+    file_id: Optional[str],
+    data: Dict[str, Any],
+) -> None:
+    payload = {
+        "project_id": project_id,
+        "file_id": file_id,
+        "data": data,
+    }
+    client.table("videos").insert(payload).execute()
+

@@ -198,7 +198,6 @@ def generate_video(
 
     return operation.result.generated_videos[0].video.uri
 
-
 def remove_background(image_bytes: bytes) -> bytes:
     """
     Smart background removal:
