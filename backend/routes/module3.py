@@ -14,7 +14,7 @@ from utils.app_helpers import (
     load_template_payload,
     upload_and_register_file,
 )
-from utils.logger import log_skip
+from utils.logger import log_skip, get_logger
 
 try:
     from vertex_utils import generate_video
@@ -164,6 +164,7 @@ def generate_video_from_images():
         images_data = [(images_bytes[i], prompts[i]) for i in range(3)]
 
         video_uris = []
+        log = get_logger(__name__)
         for img_bytes, prompt in images_data:
             try:
                 video_uri = generate_video(
@@ -172,13 +173,16 @@ def generate_video_from_images():
                     aspect_ratio="16:9",
                     duration_seconds=8,
                 )
+                log.info("module3: generated video uri=%s for prompt=%s", str(video_uri)[:200], prompt[:80])
                 video_uris.append(video_uri)
-            except Exception:
+            except Exception as exc:
+                log.exception("module3: generate_video failed for prompt=%s", prompt[:120])
                 video_uris.append(None)
 
         valid_videos = [v for v in video_uris if v is not None]
         if not valid_videos:
-            return jsonify({"error": "All video generations failed", "status": "error"}), 500
+            log.error("module3: all video generation attempts failed. video_uris=%s", video_uris)
+            return jsonify({"error": "All video generations failed", "status": "error", "video_uris": video_uris}), 500
 
         output_dir = OUTPUT_DIRS["videos"]
         os.makedirs(output_dir, exist_ok=True)

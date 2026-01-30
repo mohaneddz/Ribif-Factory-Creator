@@ -10,8 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.5.0",
+    "@react-three/drei": "^9.117.3",
+    "@react-three/fiber": "^8.17.14",
     "@supabase/supabase-js": "^2.93.2",
     "clsx": "^2.1.1",
     "dxf-parser": "^1.1.2",
@@ -19,8 +19,8 @@
     "leva": "^0.9.36",
     "lucide-react": "^0.453.0",
     "next": "16.1.6",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-pageflip": "^2.0.3",
     "recharts": "^2.12.7",
     "three": "0.163.0"
@@ -28,8 +28,8 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
     "@types/three": "0.163.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
@@ -41,7 +41,9 @@
   },
   "pnpm": {
     "overrides": {
-      "@types/three": "0.163.0"
+      "@types/three": "0.163.0",
+      "@types/react": "^18",
+      "@types/react-dom": "^18"
     }
   }
 }

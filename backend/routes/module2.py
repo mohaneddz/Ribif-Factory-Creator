@@ -22,6 +22,25 @@ from utils.module_2.main import run_pipeline
 from utils.logger import log_skip
 from utils.module_2 import config as module2_config
 
+def convert_dxf_to_png(dxf_path: str, png_path: str) -> bool:
+    """Convert DXF file to PNG using ezdxf and matplotlib."""
+    try:
+        import ezdxf
+        from ezdxf.addons.drawing import RenderContext, Frontend
+        from ezdxf.addons.drawing.matplotlib import MatplotlibBackend
+        import matplotlib.pyplot as plt
+
+        doc = ezdxf.readfile(dxf_path)
+        fig = plt.figure()
+        ax = fig.add_axes([0, 0, 1, 1])
+        Frontend(RenderContext(doc), MatplotlibBackend(ax)).draw_layout(doc.modelspace())
+        plt.savefig(png_path, dpi=300)
+        plt.close(fig)
+        return True
+    except Exception as e:
+        print(f"Error converting DXF to PNG: {e}")
+        return False
+
 bp_module2 = Blueprint("module2", __name__)
 PIPELINE_LOCK = threading.Lock()
 
@@ -295,7 +314,18 @@ def generate_layout():
         finally:
             PIPELINE_LOCK.release()
 
-        layout_2d = _copy_output(module2_config.OUTPUT_PNG, output_dir / "layout_square.png")
+        # Convert DXF to PNG using ezdxf
+        converted_png = output_dir / "layout_square.png"
+        dxf_path = module2_config.OUTPUT_DXF
+        if Path(dxf_path).exists():
+            success = convert_dxf_to_png(dxf_path, str(converted_png))
+            if success:
+                layout_2d = str(converted_png)
+            else:
+                layout_2d = _copy_output(module2_config.OUTPUT_PNG, output_dir / "layout_square.png")
+        else:
+            layout_2d = _copy_output(module2_config.OUTPUT_PNG, output_dir / "layout_square.png")
+
         layout_dxf = _copy_output(module2_config.OUTPUT_DXF, output_dir / "layout_square.dxf")
         layout_realistic = _copy_output(module2_config.REALISTIC_PNG, output_dir / "realistic_layout.png")
         layout_realistic_clean = _copy_output(module2_config.REALISTIC_CLEAN_PNG, output_dir / "realistic_clean.png")

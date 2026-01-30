@@ -15,6 +15,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import requests
 from PIL import Image
+import shutil
 
 from dotenv import load_dotenv
 
@@ -47,6 +48,16 @@ load_dotenv()
 
 _CACHE_LOCK = threading.Lock()
 _CACHE: Optional[Dict[str, Any]] = None
+_SESSION: Optional[requests.Session] = None
+
+
+def _get_session() -> requests.Session:
+    global _SESSION
+    if _SESSION is None:
+        s = requests.Session()
+        s.headers.update({"User-Agent": "Mozilla/5.0", "Accept": "image/*,*/*;q=0.8"})
+        _SESSION = s
+    return _SESSION
 
 
 def _auto_workers(item_count: int, multiplier: int = 4, min_workers: int = 4, max_workers: Optional[int] = None) -> int:
@@ -91,18 +102,21 @@ def _download_url_original(url: str) -> Optional[str]:
         info(f"Cache hit (original): {url} -> {cached_path}")
         return cached_path
 
+    session = _get_session()
     for attempt in range(3):
         try:
-            headers = {"User-Agent": "Mozilla/5.0", "Accept": "image/*,*/*;q=0.8"}
-            r = requests.get(url, headers=headers, timeout=30)
+            r = session.get(url, timeout=30, stream=True)
             r.raise_for_status()
             content_type = r.headers.get("Content-Type", "")
             if content_type and "image" not in content_type:
                 warn(f"URL did not return an image: {url} ({content_type})")
                 return None
             local_path = _local_image_path(url, content_type)
+            # Stream to disk to avoid large memory usage
             with open(local_path, "wb") as f:
-                f.write(r.content)
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
 
             def _update(c):
                 c.setdefault("originals", {})[url] = local_path
@@ -281,6 +295,28 @@ def download_image(url: str) -> Optional[str]:
         local_path = _download_url_original(url)
         if not local_path or not os.path.exists(local_path):
             return None
+
+        # Fast-path: if the downloaded image already has an alpha channel,
+        # avoid expensive background removal and just save as PNG.
+        try:
+            with Image.open(local_path) as im:
+                has_alpha = (im.mode in ("LA", "RGBA")) or (im.mode == "P" and "transparency" in im.info)
+                if has_alpha:
+                    # Convert/save to PNG to normalize format
+                    im = im.convert("RGBA")
+                    im.save(target_path, format="PNG")
+                    def _update(c):
+                        c.setdefault("downloads", {})[url] = target_path
+                        c.setdefault("backgrounds", {})[url] = target_path
+                        c.setdefault("originals", {})[url] = local_path
+                    _update_cache(_update)
+                    info(f"Skipped background removal (alpha present): {url}")
+                    return target_path
+        except Exception:
+            # If image inspection fails, fall back to full pipeline below
+            pass
+
+        # Otherwise perform background removal (slow path)
         with open(local_path, "rb") as f:
             cleaned = remove_background(f.read())
         with open(target_path, "wb") as f:

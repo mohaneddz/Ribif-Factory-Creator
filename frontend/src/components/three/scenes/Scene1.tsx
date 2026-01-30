@@ -9,9 +9,10 @@ import CaptureCamera from "../cameras/CaptureCamera"
 
 interface SceneContentProps {
     logic: BaseLogic
+    viewMode?: 'exterior' | 'interior'
 }
 
-export default function Scene1({ logic }: SceneContentProps) {
+export default function Scene1({ logic, viewMode = 'exterior' }: SceneContentProps) {
 
     const {
         showBoundingBox,
@@ -20,6 +21,9 @@ export default function Scene1({ logic }: SceneContentProps) {
         activeCam,
         autoRotate
     } = logic
+
+    // Determine which model to show based on view mode
+    const modelUrl = viewMode === 'interior' ? '/models/factory2.glb' : '/models/factory1.glb'
 
     const {
         cam1Settings,
@@ -55,7 +59,7 @@ export default function Scene1({ logic }: SceneContentProps) {
             {/* Factory Model */}
             <Suspense fallback={null}>
                 <Load3D
-                    url="/models/factory1.glb"
+                    url={modelUrl}
                     size={[10, 10, 10]}
                     worldCenter
                     boundingBox={showBoundingBox}

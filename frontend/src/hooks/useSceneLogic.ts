@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useRef, useState, useEffect } from "react"
-import { useThree, useFrame } from "@react-three/fiber"
+// Note: useThree/useFrame are imported dynamically in useSceneThreeLogic
 import { useControls, button } from "leva"
 
 export interface CameraDef {
@@ -207,64 +207,6 @@ export function useLightingSettings() {
 }
 
 /**
- * Hook for Three.js specific logic (camera access, exports)
- * MUST be used INSIDE Canvas.
- */
-export function useSceneThreeLogic() {
-    // This will error if called outside Canvas
-    const { gl, scene, camera } = useThree()
-    const controlsRef = useRef<any>(null)
-
-    /*
-    const { screenshotCam } = useControls("Screenshot Tool", {
-        screenshotCam: {
-            options: {
-                "Cam 0 (Free)": 0,
-                "Cam 1": 1,
-                "Cam 2": 2,
-                "Cam 3": 3,
-                "Cam 4": 4,
-                "Cam 5": 5,
-                "Cam 6": 6,
-                "Cam 7": 7,
-                "Cam 8": 8
-            },
-            value: 0,
-            label: "Target Camera"
-        },
-        "Take Screenshot": button((get) => {
-            const currentCamNum = get("Screenshot Tool.screenshotCam")
-            take_camera_screenshot(gl, scene, currentCamNum, `camera-${currentCamNum}-${Date.now()}`)
-        })
-    })
-    */
-
-    const handleExport = () => {
-        gl.render(scene, camera)
-        const dataURL = gl.domElement.toDataURL("image/png")
-        const link = document.createElement("a")
-        link.download = `capture-${new Date().toISOString()}.png`
-        link.href = dataURL
-        link.click()
-    }
-
-    const mockMachineStates = useMemo(() => [
-        { id: "INJ-100T-01", status: "running", oee: 88, temp: 190 },
-        { id: "EXT-120-01", status: "running", oee: 92, temp: 210 },
-        { id: "RCY-GRIND-01", status: "warning", oee: 75, temp: 45 },
-    ], [])
-
-    return {
-        gl,
-        scene,
-        camera,
-        controlsRef,
-        handleExport,
-        mockMachineStates,
-    }
-}
-
-/**
  * Compatibility export for components that expect the old structure
  * Use with caution: will only work if called within the correct context
  */
@@ -285,4 +227,15 @@ export function useSceneLogic(params?: SceneLogicParams) {
     }
 }
 
-export type BaseLogic = ReturnType<typeof useSceneSettings> & ReturnType<typeof useSceneThreeLogic>
+// Note: useSceneThreeLogic is in a separate file (useSceneThreeLogic.ts)
+// Components using it must be dynamically imported with ssr: false
+// Import directly: import { useSceneThreeLogic } from "@/hooks/useSceneThreeLogic"
+
+export type BaseLogic = ReturnType<typeof useSceneSettings> & {
+    mockMachineStates: { id: string, status: string, oee: number, temp: number }[]
+    gl: any
+    scene: any
+    camera: any
+    controlsRef: { current: any }
+    handleExport: () => void
+}

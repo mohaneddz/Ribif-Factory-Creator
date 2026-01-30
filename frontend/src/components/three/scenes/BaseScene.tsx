@@ -1,10 +1,17 @@
 "use client"
 
 import { ReactNode, useCallback, useState, useRef, useMemo } from "react"
-import { Canvas, useFrame } from "@react-three/fiber"
+import dynamic from "next/dynamic"
+import { useFrame } from "@react-three/fiber"
 // import { PerformanceMonitor, Stats } from "@react-three/drei"
 import { Leva } from "leva"
 import * as THREE from "three"
+
+// Dynamic import for Canvas to disable SSR (fixes ReactDOM.render compatibility with React 19)
+const Canvas = dynamic(
+    () => import("@react-three/fiber").then((mod) => mod.Canvas),
+    { ssr: false }
+)
 
 import CaptureCamera from "../cameras/CaptureCamera"
 import CameraStatusHUD from "../helpers/CameraStatusHUD"

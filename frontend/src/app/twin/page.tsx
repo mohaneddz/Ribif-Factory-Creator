@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import dynamic from "next/dynamic";
+import { useFrame } from "@react-three/fiber";
 import {
     LayoutDashboard, AlertTriangle, ShieldCheck, Factory,
     BarChart3, BrainCircuit, Settings, Server, Wind, CheckCircle2, Calculator,
-    TrendingUp, Activity, Zap, Clock, DollarSign, ArrowRight
+    TrendingUp, Activity, Zap, Clock, DollarSign, ArrowRight, Building, Home
 } from "lucide-react";
 import {
     ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip as RechartsTooltip,
@@ -14,6 +15,12 @@ import {
 import * as THREE from "three";
 import clsx from "clsx";
 import Scene from "@/components/three/scenes/Scene";
+
+// Dynamic import for Canvas to disable SSR (fixes ReactDOM.render compatibility with React 19)
+const Canvas = dynamic(
+    () => import("@react-three/fiber").then((mod) => mod.Canvas),
+    { ssr: false }
+);
 // ==========================================
 // 0. STYLES
 // ==========================================
@@ -265,16 +272,14 @@ const AGV = () => {
     );
 };
 
-const ComplexFactoryScene = ({ machineStates }: { machineStates: any[] }) => {
+const ComplexFactoryScene = ({ machineStates, viewMode = 'exterior' }: { machineStates: any[], viewMode?: 'exterior' | 'interior' }) => {
     const cnc1Status = machineStates.find(m => m.id === "INJ-100T-01")?.status || "running";
     const cnc2Status = machineStates.find(m => m.id === "EXT-120-01")?.status || "running";
     const cnc3Status = machineStates.find(m => m.id === "RCY-GRIND-01")?.status || "warning";
 
     return (
         <>
-
-
-            <Scene />
+            <Scene viewMode={viewMode} />
         </>
     );
 };
@@ -287,6 +292,7 @@ export default function TwinDashboard() {
     const [view, setView] = useState<'overview' | 'machines' | 'maintenance' | 'safety' | 'tco'>('overview');
     const [selectedMachineId, setSelectedMachineId] = useState<string>(INITIAL_MACHINES[0].id);
     const [machines, setMachines] = useState(INITIAL_MACHINES);
+    const [viewMode, setViewMode] = useState<'exterior' | 'interior'>('exterior');
 
     const [tcoParams, setTcoParams] = useState({
         years: 10,
@@ -573,8 +579,35 @@ export default function TwinDashboard() {
                                 </div>
 
                                 <div className="flex-1 relative rounded-4xl overflow-hidden shadow-xl border border-slate-200 bg-white">
+                                    {/* View Mode Toggle Buttons */}
+                                    <div className="absolute top-6 left-6 z-10 flex gap-2">
+                                        <button
+                                            onClick={() => setViewMode('exterior')}
+                                            className={clsx(
+                                                "flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all border shadow-sm",
+                                                viewMode === 'exterior'
+                                                    ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-200"
+                                                    : "bg-white/90 backdrop-blur text-slate-600 border-slate-200 hover:bg-white hover:border-indigo-200"
+                                            )}
+                                        >
+                                            <Building size={18} />
+                                            Exterior
+                                        </button>
+                                        <button
+                                            onClick={() => setViewMode('interior')}
+                                            className={clsx(
+                                                "flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all border shadow-sm",
+                                                viewMode === 'interior'
+                                                    ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-200"
+                                                    : "bg-white/90 backdrop-blur text-slate-600 border-slate-200 hover:bg-white hover:border-indigo-200"
+                                            )}
+                                        >
+                                            <Home size={18} />
+                                            Interior
+                                        </button>
+                                    </div>
                                     <Canvas shadows camera={{ position: [15, 12, 15], fov: 45 }}>
-                                        <ComplexFactoryScene machineStates={machines} />
+                                        <ComplexFactoryScene machineStates={machines} viewMode={viewMode} />
                                     </Canvas>
                                     <div className="absolute bottom-6 right-6 bg-white/90 backdrop-blur px-6 py-4 rounded-2xl border border-slate-200 shadow-lg text-xs font-bold text-slate-600 flex flex-col gap-1">
                                         <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Running</div>

@@ -20,6 +20,10 @@ google-cloud-documentai
 reportlab
 pillow
 
+# CAD & Drawing
+ezdxf
+matplotlib
+
 # Data Processing & Validation
 Pydantic
 numpy

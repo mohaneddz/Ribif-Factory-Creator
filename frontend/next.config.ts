@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+    // Transpile R3F packages to fix Turbopack bundling issues
+    transpilePackages: [
+        "@react-three/fiber",
+        "@react-three/drei",
+        "three",
+    ],
     async rewrites() {
         return [
             {

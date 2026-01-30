@@ -436,7 +436,7 @@ export default function FactoryCopilot() {
                     })
                 });
                 const module3Json = await module3Res.json();
-                if (!module3Res.ok) throw new Error(module3Json?.error || 'Module 3 failed');
+                if (!module3Res.ok) throw new Error(module3Json?.error || JSON.stringify(module3Json) || 'Module 3 failed');
                 setVideoData(module3Json);
                 setVideoLoading(false);
                 markArtifact(idxVideo);
