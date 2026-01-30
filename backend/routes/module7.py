@@ -6,6 +6,7 @@ from supabase_utils import get_supabase, insert_business_plan, insert_pitch_deck
 from utils.module_7.business_plan import RIBIFModule7BusinessPlan, BusinessPlanInput
 from utils.module_7.pitch_deck import RIBIFModule8PitchDeck, PitchDeckInput
 from utils.app_helpers import get_request_user_id, load_template_payload, upload_and_register_file
+from utils.logger import log_skip
 
 bp_module7 = Blueprint("module7", __name__)
 
@@ -14,6 +15,7 @@ bp_module7 = Blueprint("module7", __name__)
 def generate_business_plan():
     try:
         if SKIP_MODULE_7:
+            log_skip("module7.generate_business_plan", reason="SKIP_MODULE_7")
             payload = load_template_payload("module7_business_plan") or {}
             project_id = request.get_json(silent=True) or {}
             pid = project_id.get("project_id") or project_id.get("ribif_metadata", {}).get("project_id")
@@ -99,6 +101,7 @@ def generate_business_plan():
 def generate_pitch_deck():
     try:
         if SKIP_MODULE_8:
+            log_skip("module7.generate_pitch_deck", reason="SKIP_MODULE_8")
             payload = load_template_payload("module7_pitch_deck") or {}
             project_id = request.get_json(silent=True) or {}
             pid = project_id.get("project_id") or project_id.get("ribif_metadata", {}).get("project_id")

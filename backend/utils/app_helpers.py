@@ -14,6 +14,7 @@ from supabase_utils import (
     insert_project,
     insert_project_file,
     upload_file,
+    upsert_project_settings,
 )
 from config import TEMPLATE_DIR
 
@@ -55,6 +56,12 @@ def ensure_project_id(client, project_id: Optional[str], owner_id: Optional[str]
     if not client:
         return None
     return insert_project(client, owner_id, fallback_name, metadata={"source": "module1_upload"})
+
+
+def store_project_settings(client, project_id: Optional[str], settings: dict, owner_id: Optional[str]) -> None:
+    if not client or not project_id or not settings:
+        return
+    upsert_project_settings(client, project_id, settings, updated_by=owner_id)
 
 
 def upload_and_register_file(
@@ -233,3 +240,55 @@ def insert_tco_details(client, tco_run_id: str, tco_data: dict) -> None:
         })
     if annual_rows:
         client.table("tco_annual").insert(annual_rows).execute()
+
+
+def get_project_machines(client, project_id: str) -> Dict[str, str]:
+    if not client or not project_id:
+        return {}
+    res = client.table("machines").select("id,name").eq("project_id", project_id).execute()
+    data = getattr(res, "data", None) or []
+    return {row.get("name"): row.get("id") for row in data if row.get("name")}
+
+
+def upsert_supplier(client, name: str, website: Optional[str], region: Optional[str], metadata: Optional[dict] = None) -> Optional[str]:
+    if not client or not name:
+        return None
+    query = client.table("suppliers").select("id").eq("name", name)
+    if website:
+        query = query.eq("website", website)
+    res = query.execute()
+    data = getattr(res, "data", None) or []
+    if data:
+        return data[0].get("id")
+    payload = {
+        "name": name,
+        "website": website,
+        "region": region,
+        "metadata": metadata or {},
+    }
+    res = client.table("suppliers").insert(payload).execute()
+    data = getattr(res, "data", None) or []
+    return data[0].get("id") if data else None
+
+
+def insert_machine_supplier(
+    client,
+    machine_id: str,
+    supplier_id: str,
+    supplier_payload: dict,
+    metadata: Optional[dict] = None,
+) -> None:
+    if not client or not machine_id or not supplier_id:
+        return
+    payload = {
+        "machine_id": machine_id,
+        "supplier_id": supplier_id,
+        "price_estimate": supplier_payload.get("price_estimate"),
+        "price_type": supplier_payload.get("price_type"),
+        "price_currency": supplier_payload.get("price_currency"),
+        "lead_time_days": supplier_payload.get("lead_time_days"),
+        "relevance_score": supplier_payload.get("relevance_score"),
+        "notes": supplier_payload.get("notes"),
+        "metadata": metadata or {},
+    }
+    client.table("machine_suppliers").upsert(payload, on_conflict="machine_id,supplier_id").execute()

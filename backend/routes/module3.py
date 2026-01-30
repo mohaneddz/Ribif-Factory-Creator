@@ -14,6 +14,7 @@ from utils.app_helpers import (
     load_template_payload,
     upload_and_register_file,
 )
+from utils.logger import log_skip
 
 try:
     from vertex_utils import generate_video
@@ -111,6 +112,7 @@ def generate_video_from_images():
 
     try:
         if SKIP_MODULE_3:
+            log_skip("module3.generate_video_from_images", reason="SKIP_MODULE_3")
             payload = load_template_payload("module3") or {}
             project_id = get_request_project_id(include_form=True, include_json=True)
             if isinstance(payload, dict) and project_id:

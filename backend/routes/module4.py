@@ -4,10 +4,14 @@ from flask import Blueprint, jsonify, request
 from config import OUTPUT_DIRS, SKIP_MODULE_4
 from supabase_utils import get_supabase, insert_module4_sourcing
 from utils.module_4.core import build_machines_enriched
+from utils.logger import log_skip
 from utils.app_helpers import (
     get_request_project_id,
     get_request_user_id,
+    get_project_machines,
+    insert_machine_supplier,
     load_template_payload,
+    upsert_supplier,
     upload_and_register_file,
 )
 
@@ -18,6 +22,7 @@ bp_module4 = Blueprint("module4", __name__)
 def enrich_machines_module4():
     try:
         if SKIP_MODULE_4:
+            log_skip("module4.enrich_machines_module4", reason="SKIP_MODULE_4")
             payload = load_template_payload("module4") or {}
             project_id = get_request_project_id(include_json=True)
             if isinstance(payload, dict) and project_id:
@@ -85,6 +90,31 @@ def enrich_machines_module4():
                     )
                     result["ribif_metadata"]["module4_output_file_id"] = output_file_id
                     result["ribif_metadata"]["module4_output_file_url"] = output_file_url
+
+                machines_map = get_project_machines(client, project_id)
+                machines_enriched = result.get("machines_enriched", []) or []
+                for entry in machines_enriched:
+                    machine_input = entry.get("machine_input", {}) if isinstance(entry, dict) else {}
+                    machine_name = machine_input.get("nom_machine") or machine_input.get("name")
+                    machine_id = machines_map.get(machine_name)
+                    if not machine_id:
+                        continue
+                    for supplier in entry.get("suppliers", []) or []:
+                        supplier_id = upsert_supplier(
+                            client,
+                            supplier.get("supplier_name") or supplier.get("name") or "Unknown",
+                            supplier.get("website"),
+                            supplier.get("region"),
+                            metadata={"source": "module4"},
+                        )
+                        if supplier_id:
+                            insert_machine_supplier(
+                                client,
+                                machine_id,
+                                supplier_id,
+                                supplier,
+                                metadata={"source": "module4"},
+                            )
             except Exception:
                 pass
 

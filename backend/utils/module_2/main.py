@@ -240,6 +240,8 @@ def run_pipeline(
     force_links: bool = False,
     skip_images: bool = False,
     stop_at: int | None = None,
+    create_realistic_render: bool = True,
+    create_3d_model: bool = True,
 ) -> None:
     _ensure_dirs()
     timer = Timer()
@@ -347,55 +349,64 @@ def run_pipeline(
             timer.print_summary()
             return
 
-        # 7) Gemini: realistic render
-        def _render_realistic():
-            with open(OUTPUT_PNG, "rb") as f:
-                layout_bytes = f.read()
-            images = generate_image(prompt=TOP_VIEW_REALISTIC_BELTS, images=[layout_bytes])
-            if not images:
-                raise RuntimeError("No image returned from image generation.")
-            with open(REALISTIC_PNG, "wb") as f:
-                f.write(images[0])
-        _run_step(timer, "Gemini realistic render", _render_realistic)
+        if not create_realistic_render:
+            info("Skipping realistic render.")
+        else:
+            # 7) Gemini: realistic render
+            def _render_realistic():
+                with open(OUTPUT_PNG, "rb") as f:
+                    layout_bytes = f.read()
+                images = generate_image(prompt=TOP_VIEW_REALISTIC_BELTS, images=[layout_bytes])
+                if not images:
+                    raise RuntimeError("No image returned from image generation.")
+                with open(REALISTIC_PNG, "wb") as f:
+                    f.write(images[0])
+            _run_step(timer, "Gemini realistic render", _render_realistic)
 
         if stop_at == 4:
             info("Stopped after step 4")
             timer.print_summary()
             return
 
-        # 8) Remove background
-        def _bg_remove():
-            with open(REALISTIC_PNG, "rb") as f:
-                src = f.read()
-            clean = remove_background(src)
-            with open(REALISTIC_CLEAN_PNG, "wb") as f:
-                f.write(clean)
-        _run_step(timer, "Background removal", _bg_remove)
+        if create_realistic_render:
+            # 8) Remove background
+            def _bg_remove():
+                with open(REALISTIC_PNG, "rb") as f:
+                    src = f.read()
+                clean = remove_background(src)
+                with open(REALISTIC_CLEAN_PNG, "wb") as f:
+                    f.write(clean)
+            _run_step(timer, "Background removal", _bg_remove)
 
         if stop_at == 5:
             info("Stopped after step 5")
             timer.print_summary()
             return
 
-        # 9) Replicate: 3D model
-        def _gen_3d():
-            result = generate_3d_model(REALISTIC_CLEAN_PNG)
-            model_url = None
-            if isinstance(result, dict):
-                model_url = result.get("model_file")
-            if not model_url and isinstance(result, str):
-                model_url = result
+        if not create_realistic_render and create_3d_model:
+            warn("Skipping 3D model because realistic render is disabled.")
+            create_3d_model = False
 
-            if not model_url:
-                raise RuntimeError("3D generation output did not include model_file.")
+        if create_3d_model:
+            # 9) Replicate: 3D model
+            def _gen_3d():
+                result = generate_3d_model(REALISTIC_CLEAN_PNG)
+                model_url = None
+                if isinstance(result, dict):
+                    model_url = result.get("model_file")
+                if not model_url and isinstance(result, str):
+                    model_url = result
 
-            r = requests.get(model_url, timeout=120)
-            r.raise_for_status()
-            with open(FINAL_GLB_PATH, "wb") as f:
-                f.write(r.content)
-        _run_step(timer, "Replicate 3D + download", _gen_3d)
+                if not model_url:
+                    raise RuntimeError("3D generation output did not include model_file.")
 
-        success(f"Saved GLB: {FINAL_GLB_PATH}")
+                r = requests.get(model_url, timeout=120)
+                r.raise_for_status()
+                with open(FINAL_GLB_PATH, "wb") as f:
+                    f.write(r.content)
+            _run_step(timer, "Replicate 3D + download", _gen_3d)
+
+            success(f"Saved GLB: {FINAL_GLB_PATH}")
         timer.print_summary()
 
         if stop_at == 6:

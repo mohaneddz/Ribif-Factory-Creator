@@ -1,12 +1,42 @@
 {
-  "message": "Template",
-  "filepath": "data/module_7/template_business_plan.docx",
-  "filename": "template_business_plan.docx",
-  "download_url": "",
-  "file_id": null,
+  "message": "Business plan generated successfully",
+  "filepath": "backend/data/module_7/BusinessPlan_ALLO_MAISON___Complexe_Industriel_Polymère___Matériaux_Avancés_20260129_231928.xlsx",
+  "filename": "BusinessPlan_ALLO_MAISON___Complexe_Industriel_Polymère___Matériaux_Avancés_20260129_231928.xlsx",
+  "download_url": "/download/BusinessPlan_ALLO_MAISON___Complexe_Industriel_Polymère___Matériaux_Avancés_20260129_231928.xlsx",
   "data": {
-    "project_name": "Template Project",
-    "company_name": "Template Company"
+    "executive_summary": "ALLO MAISON construit un complexe Industrie 5.0 prêt pour produire des polymères, composites, verre de sécurité et solutions constructives avancées pour les marchés MENA et Europe.",
+    "company_overview": {
+      "nom_entreprise": "SARL ALLO MAISON",
+      "secteur": "Matériaux polymères, composites et verrier",
+      "objectif": "Automatiser 100% de la production, réduire l'artisanat et accélérer l'export."
+    },
+    "market_analysis": {
+      "target_markets": ["Algérie", "MENA", "Afrique", "Europe"],
+      "differentiators": [
+        "Automatisation (Industrie 5.0)",
+        "Gammes de produits polymères + verre de sécurité",
+        "Cadre réglementaire anticipé (ATEX, ISO, CE)"
+      ]
+    },
+    "go_to_market": {
+      "channels": [
+        "Partenariats avec distributeurs B2B en Algérie/MENA",
+        "Plateformes d'export via filières françaises et européennes",
+        "Direct sales vers fabricants de menuiseries premium"
+      ],
+      "pricing_strategy": "Positionnement premium avec un mix d'export et d'approvisionnement national."
+    },
+    "financials": {
+      "capex_estimate": 1500000000,
+      "opex_year_1": 420000000,
+      "break_even_months": 28,
+      "funding_plan": "Mix de capitaux propres, financements bancaires, subventions ANDI."
+    },
+    "key_risks": [
+      "Délais pour les autorisations ATEX et environnementales",
+      "Volatilité du prix des résines/polymères",
+      "Complexité de la logistique co-production verre+polymères"
+    ]
   },
   "project_id": null
 }

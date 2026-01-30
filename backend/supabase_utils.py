@@ -116,6 +116,20 @@ def insert_project(
     return data[0]["id"] if data else None
 
 
+def upsert_project_settings(
+    client: Client,
+    project_id: str,
+    settings: Dict[str, Any],
+    updated_by: Optional[str] = None,
+) -> None:
+    payload = {
+        "project_id": project_id,
+        "settings": settings or {},
+        "updated_by": updated_by,
+    }
+    client.table("project_settings").upsert(payload, on_conflict="project_id").execute()
+
+
 def insert_project_file(
     client: Client,
     project_id: str,
@@ -268,6 +282,34 @@ def insert_layout(
         "data": data,
     }
     client.table("layouts").insert(payload).execute()
+
+
+def insert_pipeline(
+    client: Client,
+    project_id: str,
+    generated_by: Optional[str],
+    groups: Optional[Dict[str, Any]],
+    flows: Optional[Dict[str, Any]],
+    layout_suggestion: Optional[Dict[str, Any]],
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Optional[str]:
+    payload = {
+        "project_id": project_id,
+        "generated_by": generated_by,
+        "groups": groups,
+        "flows": flows,
+        "layout_suggestion": layout_suggestion,
+        "metadata": metadata or {},
+    }
+    res = client.table("pipelines").insert(payload).execute()
+    data_rows = getattr(res, "data", None) or []
+    return data_rows[0]["id"] if data_rows else None
+
+
+def update_project_current_pipeline(client: Client, project_id: str, pipeline_id: str) -> None:
+    if not project_id or not pipeline_id:
+        return
+    client.table("projects").update({"current_pipeline_id": pipeline_id}).eq("id", project_id).execute()
 
 
 def insert_video(

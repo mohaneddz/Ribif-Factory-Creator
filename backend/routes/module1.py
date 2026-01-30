@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 from config import BASE_URL, OUTPUT_DIRS, UPLOAD_DIR, CREATE_IMAGES, SKIP_MODULE_1, write_json
 from supabase_utils import get_supabase, insert_module1_extraction
 from utils.module_1.core import RIBIFExtractor
+from utils.logger import log_skip
 from utils.app_helpers import (
     get_pipeline_settings,
     get_request_project_id,
@@ -17,6 +18,7 @@ from utils.app_helpers import (
     insert_machines_from_stage,
     insert_machine_assets,
     load_template_payload,
+    store_project_settings,
     upload_and_register_file,
     upload_with_name_timestamp,
 )
@@ -62,15 +64,16 @@ The image should be:
 @bp_module1.route("/api/module1/process", methods=["POST"])
 def process_module_1():
     if SKIP_MODULE_1:
-        payload = load_template_payload("module1") or {"message": "Template", "data": {}}
+        log_skip("module1.process", reason="SKIP_MODULE_1")
+        payload = load_template_payload("module1") or {}
         project_id = get_request_project_id(include_form=True, include_json=True)
-        if isinstance(payload, dict):
-            if "data" in payload and isinstance(payload["data"], dict):
-                payload["data"]["project_id"] = payload["data"].get("project_id") or project_id
-                meta = payload["data"].get("ribif_metadata")
-                if isinstance(meta, dict):
-                    meta["project_id"] = meta.get("project_id") or project_id
-        return jsonify(payload)
+        if isinstance(payload, dict) and project_id:
+            payload["project_id"] = payload.get("project_id") or project_id
+            meta = payload.get("ribif_metadata")
+            if isinstance(meta, dict):
+                meta["project_id"] = meta.get("project_id") or project_id
+        response_payload = {"message": "Success", "data": payload, "status": "skipped"}
+        return jsonify(response_payload)
 
     if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
@@ -88,6 +91,11 @@ def process_module_1():
     owner_id = get_request_user_id()
     client = get_supabase()
     project_id = ensure_project_id(client, project_id, owner_id, Path(filename).stem or "Project")
+    if client and project_id and settings:
+        try:
+            store_project_settings(client, project_id, settings, owner_id)
+        except Exception:
+            pass
 
     source_file_id = None
     source_file_url = None

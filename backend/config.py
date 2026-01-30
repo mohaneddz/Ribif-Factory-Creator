@@ -1,8 +1,10 @@
 import os
 import json
 from pathlib import Path
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(dotenv_path=BASE_DIR / ".env")
 DATA_DIR = BASE_DIR / "data"
 UPLOAD_DIR = BASE_DIR / "uploads"
 CACHE_DIR = BASE_DIR / "cache"
@@ -40,6 +42,9 @@ SKIP_MODULE_6 = _env_bool("SKIP_MODULE_6", False)
 SKIP_MODULE_7 = _env_bool("SKIP_MODULE_7", False)
 SKIP_MODULE_8 = _env_bool("SKIP_MODULE_8", False)
 SKIP_MODULE_9 = _env_bool("SKIP_MODULE_9", False)
+
+CREATE_REALISTIC_RENDER = _env_bool("CREATE_REALISTIC_RENDER", True)
+CREATE_3D_MODEL = _env_bool("CREATE_3D_MODEL", True)
 
 PIPLEINE_3D_CAP = _env_int("PIPLEINE_3D_CAP", 6)
 

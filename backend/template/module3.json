@@ -1,9 +1,42 @@
 {
-  "message": "Template",
-  "video_url": "data/videos/template_video.mp4",
-  "individual_videos": [],
-  "downloaded_videos": [],
-  "duration_seconds": 0,
-  "status": "template",
+  "message": "Video generation completed",
+  "video_url": "/download/video_1_1769766017.mp4",
+  "video_storage": {
+    "local_path": "backend/data/videos/video_1_1769766017.mp4",
+    "format": "mp4",
+    "resolution": "3840x2160",
+    "duration_seconds": 8
+  },
+  "individual_videos": [
+    {
+      "prompt": "Cinematic slow pan across industrial manufacturing equipment, smooth camera movement, professional lighting, 4K quality",
+      "source": "/download/video_1_1769766017.mp4",
+      "status": "success"
+    },
+    {
+      "prompt": "Dramatic walkthrough of factory production line, machines operating, cinematic motion blur, professional industrial video",
+      "source": "/download/video_1_1769766017.mp4",
+      "status": "success"
+    },
+    {
+      "prompt": "Aerial-style view of manufacturing facility interior, sweeping camera movement, dramatic lighting, high production value",
+      "source": "/download/video_1_1769766017.mp4",
+      "status": "success"
+    }
+  ],
+  "downloaded_videos": [
+    "/download/video_1_1769766017.mp4"
+  ],
+  "duration_seconds": 24,
+  "status": "success",
+  "prompts": [
+    "Cinematic slow pan across industrial manufacturing equipment, smooth camera movement, professional lighting, 4K quality",
+    "Dramatic walkthrough of factory production line, machines operating, cinematic motion blur, professional industrial video",
+    "Aerial-style view of manufacturing facility interior, sweeping camera movement, dramatic lighting, high production value"
+  ],
+  "images_used": [
+    "/download/realistic_layout.png",
+    "/download/realistic_clean.png"
+  ],
   "project_id": null
 }

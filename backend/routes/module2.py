@@ -8,16 +8,18 @@ from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request
 
-from config import BASE_URL, OUTPUT_DIRS, SKIP_MODULE_2, PIPLEINE_3D_CAP
-from supabase_utils import get_supabase, insert_layout
+from config import BASE_URL, OUTPUT_DIRS, SKIP_MODULE_2, PIPLEINE_3D_CAP, CREATE_REALISTIC_RENDER, CREATE_3D_MODEL
+from supabase_utils import get_supabase, insert_layout, insert_pipeline, update_project_current_pipeline
 from utils.app_helpers import (
     get_pipeline_settings,
     get_request_project_id,
     get_request_user_id,
     load_template_payload,
+    store_project_settings,
     upload_and_register_file,
 )
 from utils.module_2.main import run_pipeline
+from utils.logger import log_skip
 from utils.module_2 import config as module2_config
 
 bp_module2 = Blueprint("module2", __name__)
@@ -194,6 +196,7 @@ def _download_url_for(path_str: Optional[str]) -> Optional[str]:
 def generate_layout():
     try:
         if SKIP_MODULE_2:
+            log_skip("module2.generate_layout", reason="SKIP_MODULE_2")
             payload = load_template_payload("module2") or {}
             project_id = get_request_project_id(include_json=True)
             if isinstance(payload, dict) and project_id:
@@ -250,6 +253,13 @@ def generate_layout():
         ])
 
         settings = get_pipeline_settings()
+        client = get_supabase()
+        owner_id = get_request_user_id()
+        if client and project_id and settings:
+            try:
+                store_project_settings(client, project_id, settings, owner_id)
+            except Exception:
+                pass
         seed_raw = settings.get("seed") or settings.get("layout_seed") or 7
         try:
             seed = int(seed_raw)
@@ -258,6 +268,16 @@ def generate_layout():
         force_links = _as_bool(settings.get("force_links") or settings.get("force-links"))
         skip_images = _as_bool(settings.get("skip_images") or settings.get("skip-images"))
         stop_at = _resolve_stop_at(settings)
+        create_realistic_render = _as_bool(
+            settings.get("create_realistic_render")
+            or settings.get("create-realistic-render")
+            or CREATE_REALISTIC_RENDER
+        )
+        create_3d_model = _as_bool(
+            settings.get("create_3d_model")
+            or settings.get("create-3d-model")
+            or CREATE_3D_MODEL
+        )
 
         if not PIPELINE_LOCK.acquire(blocking=False):
             return jsonify({"error": "Module 2 pipeline is busy. Try again shortly."}), 429
@@ -269,6 +289,8 @@ def generate_layout():
                 force_links=force_links,
                 skip_images=skip_images,
                 stop_at=stop_at,
+                create_realistic_render=create_realistic_render,
+                create_3d_model=create_3d_model,
             )
         finally:
             PIPELINE_LOCK.release()
@@ -311,12 +333,17 @@ def generate_layout():
             if url:
                 result[f"{key}_url"] = url
 
-        client = get_supabase()
-        owner_id = get_request_user_id()
+        client = client or get_supabase()
+        owner_id = owner_id or get_request_user_id()
         if client and project_id:
             try:
                 layout_2d_file_id = None
                 layout_3d_file_id = None
+                layout_dxf_file_id = None
+                layout_realistic_file_id = None
+                layout_realistic_clean_file_id = None
+                pipeline_links_file_id = None
+
                 if layout_2d and Path(layout_2d).exists():
                     layout_2d_file_id, _ = upload_and_register_file(
                         client=client,
@@ -335,14 +362,74 @@ def generate_layout():
                         category="layout-3d",
                         label=Path(layout_3d).name,
                     )
+                if layout_dxf and Path(layout_dxf).exists():
+                    layout_dxf_file_id, _ = upload_and_register_file(
+                        client=client,
+                        project_id=project_id,
+                        owner_id=owner_id,
+                        local_path=layout_dxf,
+                        category="layout-dxf",
+                        label=Path(layout_dxf).name,
+                    )
+                if layout_realistic and Path(layout_realistic).exists():
+                    layout_realistic_file_id, _ = upload_and_register_file(
+                        client=client,
+                        project_id=project_id,
+                        owner_id=owner_id,
+                        local_path=layout_realistic,
+                        category="layout-realistic",
+                        label=Path(layout_realistic).name,
+                    )
+                if layout_realistic_clean and Path(layout_realistic_clean).exists():
+                    layout_realistic_clean_file_id, _ = upload_and_register_file(
+                        client=client,
+                        project_id=project_id,
+                        owner_id=owner_id,
+                        local_path=layout_realistic_clean,
+                        category="layout-realistic-clean",
+                        label=Path(layout_realistic_clean).name,
+                    )
+                if pipeline_links and Path(pipeline_links).exists():
+                    pipeline_links_file_id, _ = upload_and_register_file(
+                        client=client,
+                        project_id=project_id,
+                        owner_id=owner_id,
+                        local_path=pipeline_links,
+                        category="pipeline-links",
+                        label=Path(pipeline_links).name,
+                    )
+                pipeline_id = None
+                pipeline_payload = None
+                if pipeline_links and Path(pipeline_links).exists():
+                    try:
+                        pipeline_payload = json.loads(Path(pipeline_links).read_text(encoding="utf-8"))
+                    except Exception:
+                        pipeline_payload = None
+                if pipeline_payload is not None:
+                    pipeline_id = insert_pipeline(
+                        client=client,
+                        project_id=project_id,
+                        generated_by=owner_id,
+                        groups=pipeline_payload.get("groups"),
+                        flows=pipeline_payload.get("flows") or pipeline_payload,
+                        layout_suggestion=pipeline_payload.get("layout_suggestion"),
+                        metadata={"source": "module2"},
+                    )
+                    if pipeline_id:
+                        update_project_current_pipeline(client, project_id, pipeline_id)
+
                 insert_layout(
                     client=client,
                     project_id=project_id,
-                    pipeline_id=None,
+                    pipeline_id=pipeline_id,
                     layout_2d_file_id=layout_2d_file_id,
                     layout_3d_file_id=layout_3d_file_id,
                     data=result,
                 )
+                result["layout_dxf_file_id"] = layout_dxf_file_id
+                result["layout_realistic_file_id"] = layout_realistic_file_id
+                result["layout_realistic_clean_file_id"] = layout_realistic_clean_file_id
+                result["pipeline_links_file_id"] = pipeline_links_file_id
             except Exception:
                 pass
 

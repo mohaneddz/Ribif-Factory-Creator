@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request
 from config import OUTPUT_DIRS, SKIP_MODULE_6, write_json
 from supabase_utils import get_supabase, insert_tco_run
 from utils.module_6.core import RIBIFModule6TCO, ProductTCO, RawMaterialTCO
+from utils.logger import log_skip
 from utils.app_helpers import (
     get_request_project_id,
     get_request_user_id,
@@ -20,6 +21,7 @@ bp_module6 = Blueprint("module6", __name__)
 def calculate_tco_from_sourcing():
     try:
         if SKIP_MODULE_6:
+            log_skip("module6.calculate_tco_from_sourcing", reason="SKIP_MODULE_6")
             payload = load_template_payload("module6") or {}
             project_id = get_request_project_id(include_json=True)
             if isinstance(payload, dict) and project_id:

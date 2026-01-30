@@ -44,10 +44,10 @@ const MODULES = [
     { id: 3, title: "Email Center", icon: Mail, file: "Email_Negotiations.md", type: "email", statusText: "Préparation des emails..." },
     { id: 4, title: "Phone Calls Negotiations", icon: Phone, file: "Call_Transcripts.wav", type: "calls", statusText: "Simulation d'appels..." },
     { id: 5, title: "Analyse TCO", icon: Calculator, file: "Rapport_TCO.json", type: "tco", statusText: "Calcul des coûts..." },
-    { id: 6, title: "Business Plan", icon: Briefcase, file: "Business_Plan.xlsx", type: "businessplan", statusText: "Génération du plan..." },
+    { id: 6, title: "Business Plan", icon: Briefcase, file: "Business_Plan.pdf", type: "businessplan", statusText: "Génération du plan..." },
     { id: 7, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." },
-    { id: 8, title: "2D Layout Design", icon: Layers, file: "Layout_2D.dwg", type: "layout2d", statusText: "Génération du layout 2D..." },
-    { id: 9, title: "3D Model Generation", icon: Box, file: "Model_3D.ifc", type: "model3d", statusText: "Modélisation 3D..." },
+    { id: 8, title: "2D Layout Design", icon: Layers, file: "layout_square.dxf", type: "layout2d", statusText: "Génération du layout 2D..." },
+    { id: 9, title: "3D Model Generation", icon: Box, file: "factory1.glb", type: "model3d", statusText: "Modélisation 3D..." },
     { id: 10, title: "Video Model Presentation", icon: Video, file: "Presentation_HD.mp4", type: "video", statusText: "Rendu vidéo HD..." }
 ];
 
@@ -2112,6 +2112,28 @@ export default function FactoryCopilot() {
     const [layoutLoading, setLayoutLoading] = useState(false);
     const [videoData, setVideoData] = useState<any>(null);
     const [videoLoading, setVideoLoading] = useState(false);
+    const runHasData = useRef(false);
+    const lastStableState = useRef<{
+        status: 'idle' | 'uploading' | 'processing' | 'finished';
+        currentModule: number;
+        selectedModule: number;
+        subStep: number;
+        artifacts: number[];
+        extractedData: any;
+        module4Data: any;
+        module4Loading: boolean;
+        tcoData: any;
+        tcoLoading: boolean;
+        businessPlanData: any;
+        pitchDeckData: any;
+        businessPlanLoading: boolean;
+        catalogData: any;
+        catalogLoading: boolean;
+        layoutData: any;
+        layoutLoading: boolean;
+        videoData: any;
+        videoLoading: boolean;
+    } | null>(null);
 
     // Animate loading progress while a module is running
     useEffect(() => {
@@ -2132,6 +2154,43 @@ export default function FactoryCopilot() {
         return filename ? `${API_BASE}/download/${filename}` : null;
     };
 
+    const deliverableFallbacks: Record<string, string> = {
+        specs: "/deliverables/Specs_V1.pdf",
+        sourcing: "/deliverables/Liste_Sourcing.xlsx",
+        tco: "/deliverables/Rapport_TCO.json",
+        businessplan: "/deliverables/Business_Plan.pdf",
+        catalogue: "/deliverables/Catalogue_Produits.pdf",
+        layout2d: "/deliverables/layout_square.dxf",
+        model3d: "/models/factory1.glb",
+        video: "/deliverables/Presentation_HD.mp4",
+    };
+
+    const getArtifactDownloadUrl = (moduleType?: string | null) => {
+        if (!moduleType) return null;
+        if (moduleType === "businessplan") {
+            return resolveDownloadUrl(businessPlanData?.download_url) || deliverableFallbacks.businessplan;
+        }
+        if (moduleType === "catalogue") {
+            return resolveDownloadUrl(catalogData?.data?.pdf_download_url) || deliverableFallbacks.catalogue;
+        }
+        if (moduleType === "layout2d") {
+            return (
+                resolveDownloadUrl(
+                    layoutData?.layout_realistic_clean_url ||
+                    layoutData?.layout_realistic_url ||
+                    layoutData?.layout_2d_url ||
+                    layoutData?.layout_realistic_clean ||
+                    layoutData?.layout_realistic ||
+                    layoutData?.layout_2d
+                ) || deliverableFallbacks.layout2d
+            );
+        }
+        if (moduleType === "video") {
+            return resolveDownloadUrl(videoData?.video_url) || deliverableFallbacks.video;
+        }
+        return deliverableFallbacks[moduleType] || null;
+    };
+
     // ----------------------------------------------------
     // REAL FILE UPLOAD HANDLER
     // ----------------------------------------------------
@@ -2139,6 +2198,28 @@ export default function FactoryCopilot() {
         if (!e.target.files || e.target.files.length === 0) return;
 
         const file = e.target.files[0];
+        lastStableState.current = {
+            status,
+            currentModule,
+            selectedModule,
+            subStep,
+            artifacts,
+            extractedData,
+            module4Data,
+            module4Loading,
+            tcoData,
+            tcoLoading,
+            businessPlanData,
+            pitchDeckData,
+            businessPlanLoading,
+            catalogData,
+            catalogLoading,
+            layoutData,
+            layoutLoading,
+            videoData,
+            videoLoading,
+        };
+        runHasData.current = false;
         setStatus('processing');
         setArtifacts([]);
         setCurrentModule(0);
@@ -2178,6 +2259,7 @@ export default function FactoryCopilot() {
 
             const module1Data = module1Json?.data || module1Json;
             setExtractedData(module1Data);
+            runHasData.current = true;
 
             const jsonHeaders: HeadersInit = { 'Content-Type': 'application/json' };
             const idxSpecs = getModuleIndex("specs");
@@ -2359,7 +2441,30 @@ export default function FactoryCopilot() {
             setCatalogLoading(false);
             setLayoutLoading(false);
             setVideoLoading(false);
-            setStatus('idle');
+            if (!runHasData.current && lastStableState.current) {
+                const prev = lastStableState.current;
+                setStatus(prev.status);
+                setCurrentModule(prev.currentModule);
+                setSelectedModule(prev.selectedModule);
+                setSubStep(prev.subStep);
+                setArtifacts(prev.artifacts);
+                setExtractedData(prev.extractedData);
+                setModule4Data(prev.module4Data);
+                setModule4Loading(prev.module4Loading);
+                setTcoData(prev.tcoData);
+                setTcoLoading(prev.tcoLoading);
+                setBusinessPlanData(prev.businessPlanData);
+                setPitchDeckData(prev.pitchDeckData);
+                setBusinessPlanLoading(prev.businessPlanLoading);
+                setCatalogData(prev.catalogData);
+                setCatalogLoading(prev.catalogLoading);
+                setLayoutData(prev.layoutData);
+                setLayoutLoading(prev.layoutLoading);
+                setVideoData(prev.videoData);
+                setVideoLoading(prev.videoLoading);
+            } else {
+                setStatus('idle');
+            }
         }
     };
 
@@ -2387,29 +2492,20 @@ export default function FactoryCopilot() {
 
     const handleArtifactDownload = (idx: number) => {
         const moduleType = MODULES[idx]?.type;
-        if (moduleType === 'businessplan') {
-            const url = businessPlanData?.download_url;
-            if (url) window.open(url, '_blank', 'noopener,noreferrer');
-            return;
-        }
-        if (moduleType === 'catalogue') {
-            const url = catalogData?.data?.pdf_download_url;
-            if (url) window.open(url, '_blank', 'noopener,noreferrer');
-            return;
-        }
+        const url = getArtifactDownloadUrl(moduleType);
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
     };
 
     const handleDownloadAll = () => {
-        const urls = [businessPlanData?.download_url, catalogData?.data?.pdf_download_url];
-        urls.forEach((url) => {
+        downloadableArtifacts.forEach((idx) => {
+            const url = getArtifactDownloadUrl(MODULES[idx]?.type);
             if (url) window.open(url, '_blank', 'noopener,noreferrer');
         });
     };
 
-    const downloadableArtifacts = artifacts.filter((idx) => {
-        const type = MODULES[idx]?.type;
-        return type === 'businessplan' || type === 'catalogue';
-    });
+    const displayArtifacts = status === 'finished' ? MODULES.map((_, idx) => idx) : artifacts;
+    const deliverableTypes = new Set(["specs", "sourcing", "tco", "businessplan", "catalogue", "layout2d", "model3d", "video"]);
+    const downloadableArtifacts = displayArtifacts.filter((idx) => deliverableTypes.has(MODULES[idx]?.type));
 
     const layoutImageUrl = layoutLoading ? null : resolveDownloadUrl(
         layoutData?.layout_realistic_clean_url ||

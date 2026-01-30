@@ -5,6 +5,7 @@ from config import BASE_URL, OUTPUT_DIRS, SKIP_MODULE_9
 from supabase_utils import get_supabase, insert_catalog
 from utils.module_9.core import RIBIFModule9Catalog, CatalogInput
 from utils.app_helpers import get_request_user_id, load_template_payload, upload_and_register_file
+from utils.logger import log_skip
 
 bp_module9 = Blueprint("module9", __name__)
 
@@ -13,6 +14,7 @@ bp_module9 = Blueprint("module9", __name__)
 def generate_catalog_module9():
     try:
         if SKIP_MODULE_9:
+            log_skip("module9.generate_catalog_module9", reason="SKIP_MODULE_9")
             payload = load_template_payload("module9") or {}
             project_id = request.get_json(silent=True) or {}
             pid = project_id.get("project_id") or project_id.get("module1_data", {}).get("project_id")

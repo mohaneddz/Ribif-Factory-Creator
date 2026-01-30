@@ -14,7 +14,7 @@ import {
     Upload,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 
 import { BusinessPlanView } from "@/sections/BusinessPlanView";
@@ -59,6 +59,29 @@ export default function FactoryCopilot() {
     const [projectId, setProjectId] = useState<string | null>(
         routeProjectId && routeProjectId !== "new" ? routeProjectId : null
     );
+    const runHasData = useRef(false);
+    const lastStableState = useRef<{
+        status: 'idle' | 'uploading' | 'processing' | 'finished';
+        currentModule: number;
+        selectedModule: number;
+        subStep: number;
+        artifacts: number[];
+        extractedData: any;
+        module4Data: any;
+        module4Loading: boolean;
+        tcoData: any;
+        tcoLoading: boolean;
+        businessPlanData: any;
+        pitchDeckData: any;
+        businessPlanLoading: boolean;
+        catalogData: any;
+        catalogLoading: boolean;
+        layoutData: any;
+        layoutLoading: boolean;
+        videoData: any;
+        videoLoading: boolean;
+        projectId: string | null;
+    } | null>(null);
 
     useEffect(() => {
         if (routeProjectId && routeProjectId !== projectId) {
@@ -85,6 +108,46 @@ export default function FactoryCopilot() {
         return filename ? `${API_BASE}/download/${filename}` : null;
     };
 
+    const deliverableFallbacks: Record<string, string> = {
+        specs: "/deliverables/Specs_V1.pdf",
+        sourcing: "/deliverables/Liste_Sourcing.xlsx",
+        tco: "/deliverables/Rapport_TCO.json",
+        businessplan: "/deliverables/Business_Plan.pdf",
+        catalogue: "/deliverables/Catalogue_Produits.pdf",
+        layout2d: "/deliverables/layout_square.dxf",
+        model3d: "/models/factory1.glb",
+        video: "/deliverables/Presentation_HD.mp4",
+    };
+
+    const getArtifactDownloadUrl = (moduleType?: string | null) => {
+        if (!moduleType) return null;
+        if (moduleType === "businessplan") {
+            return resolveDownloadUrl(businessPlanData?.download_url) || deliverableFallbacks.businessplan;
+        }
+        if (moduleType === "catalogue") {
+            return (
+                resolveDownloadUrl(catalogData?.data?.pdf_download_url || catalogData?.data?.html_download_url) ||
+                deliverableFallbacks.catalogue
+            );
+        }
+        if (moduleType === "layout2d") {
+            return (
+                resolveDownloadUrl(
+                    layoutData?.layout_realistic_clean_url ||
+                    layoutData?.layout_realistic_url ||
+                    layoutData?.layout_2d_url ||
+                    layoutData?.layout_realistic_clean ||
+                    layoutData?.layout_realistic ||
+                    layoutData?.layout_2d
+                ) || deliverableFallbacks.layout2d
+            );
+        }
+        if (moduleType === "video") {
+            return resolveDownloadUrl(videoData?.video_url) || deliverableFallbacks.video;
+        }
+        return deliverableFallbacks[moduleType] || null;
+    };
+
     // ----------------------------------------------------
     // REAL FILE UPLOAD HANDLER
     // ----------------------------------------------------
@@ -99,6 +162,30 @@ export default function FactoryCopilot() {
         const file = e.target.files[0];
         const activeSettings = loadPipelineSettings();
 
+        lastStableState.current = {
+            status,
+            currentModule,
+            selectedModule,
+            subStep,
+            artifacts,
+            extractedData,
+            module4Data,
+            module4Loading,
+            tcoData,
+            tcoLoading,
+            businessPlanData,
+            pitchDeckData,
+            businessPlanLoading,
+            catalogData,
+            catalogLoading,
+            layoutData,
+            layoutLoading,
+            videoData,
+            videoLoading,
+            projectId,
+        };
+
+        runHasData.current = false;
         setStatus('processing');
         setArtifacts([]);
         setCurrentModule(0);
@@ -150,6 +237,7 @@ export default function FactoryCopilot() {
 
             const module1Data = module1Json?.data || module1Json;
             setExtractedData(module1Data);
+            runHasData.current = true;
 
             const newProjectId =
                 module1Data?.project_id ||
@@ -366,7 +454,31 @@ export default function FactoryCopilot() {
             setCatalogLoading(false);
             setLayoutLoading(false);
             setVideoLoading(false);
-            setStatus('idle');
+            if (!runHasData.current && lastStableState.current) {
+                const prev = lastStableState.current;
+                setStatus(prev.status);
+                setCurrentModule(prev.currentModule);
+                setSelectedModule(prev.selectedModule);
+                setSubStep(prev.subStep);
+                setArtifacts(prev.artifacts);
+                setExtractedData(prev.extractedData);
+                setModule4Data(prev.module4Data);
+                setModule4Loading(prev.module4Loading);
+                setTcoData(prev.tcoData);
+                setTcoLoading(prev.tcoLoading);
+                setBusinessPlanData(prev.businessPlanData);
+                setPitchDeckData(prev.pitchDeckData);
+                setBusinessPlanLoading(prev.businessPlanLoading);
+                setCatalogData(prev.catalogData);
+                setCatalogLoading(prev.catalogLoading);
+                setLayoutData(prev.layoutData);
+                setLayoutLoading(prev.layoutLoading);
+                setVideoData(prev.videoData);
+                setVideoLoading(prev.videoLoading);
+                setProjectId(prev.projectId);
+            } else {
+                setStatus('idle');
+            }
         }
     };
 
@@ -394,32 +506,17 @@ export default function FactoryCopilot() {
 
     const handleArtifactDownload = (idx: number) => {
         const moduleType = MODULES[idx]?.type;
-        if (moduleType === 'businessplan') {
-            const url = businessPlanData?.download_url;
-            if (url) window.open(url, '_blank', 'noopener,noreferrer');
-            return;
-        }
-        if (moduleType === 'catalogue') {
-            const url = catalogData?.data?.pdf_download_url || catalogData?.data?.html_download_url;
-            if (url) window.open(url, '_blank', 'noopener,noreferrer');
-            return;
-        }
+        const url = getArtifactDownloadUrl(moduleType);
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
     };
 
     const handleDownloadAll = () => {
-        const urls = [
-            businessPlanData?.download_url,
-            catalogData?.data?.pdf_download_url || catalogData?.data?.html_download_url
-        ];
-        urls.forEach((url) => {
+        downloadableArtifacts.forEach((idx) => {
+            const url = getArtifactDownloadUrl(MODULES[idx]?.type);
             if (url) window.open(url, '_blank', 'noopener,noreferrer');
         });
     };
 
-    const downloadableArtifacts = artifacts.filter((idx) => {
-        const type = MODULES[idx]?.type;
-        return type === 'businessplan' || type === 'catalogue';
-    });
 
     const layoutImageUrl = layoutLoading ? null : resolveDownloadUrl(
         layoutData?.layout_realistic_clean_url ||
@@ -440,6 +537,8 @@ export default function FactoryCopilot() {
     const isSelectedDone = artifacts.includes(selectedModule) || status === 'finished' || selectedModule < currentModule;
     const selectedProgress = isSelectedProcessing ? (subStep / 4) * 100 : isSelectedDone ? 100 : 0;
     const displayArtifacts = status === 'finished' ? MODULES.map((_, idx) => idx) : artifacts;
+    const deliverableTypes = new Set(["specs", "sourcing", "tco", "businessplan", "catalogue", "layout2d", "model3d", "video"]);
+    const downloadableArtifacts = displayArtifacts.filter((idx) => deliverableTypes.has(MODULES[idx]?.type));
 
     return (
         <>

@@ -1,7 +1,6 @@
 "use client"
 
 import { Suspense } from "react"
-import BoundingBox from "../helpers/BoundingBox"
 import { Load3D } from "@/utils/load3d"
 import { ComplexFactoryScene } from "../factory/ComplexFactory"
 import { BaseLogic, useCameraSettings, useLightingSettings } from "@/hooks/useSceneLogic"
@@ -45,9 +44,6 @@ export default function Scene2({ logic }: SceneContentProps) {
 
     const lightingSettings = useLightingSettings()
 
-    const cordsLeftCorner: [number, number, number] = [-3, 0.4, -3]
-    const cordsRightCorner: [number, number, number] = [0, 1, -1]
-
     return (
         <>
             {/* Background scene (keep it, but disable its lights if it has strong lighting) */}
@@ -59,7 +55,7 @@ export default function Scene2({ logic }: SceneContentProps) {
             {/* Factory Model */}
             <Suspense fallback={null}>
                 <Load3D
-                    url="/models/factory_2.glb"
+                    url="/models/factory2.glb"
                     size={[10, 10, 10]}
                     worldCenter
                     boundingBox={showBoundingBox}
@@ -68,18 +64,6 @@ export default function Scene2({ logic }: SceneContentProps) {
                     receiveShadow
                 />
             </Suspense>
-
-            {/* Machines Model */}
-            <BoundingBox leftCorner={cordsLeftCorner} rightCorner={cordsRightCorner} >
-                <Load3D
-                    url="/models/sample.glb"
-                    size={[1, 1, 1]}
-                    castShadow
-                    boundingBox
-                    position={[0, 0.5, 0]}
-                    rotation={[0, 0, 0]}
-                    receiveShadow />
-            </BoundingBox>
 
             {/* SCENE SPECIFIC CAMERAS */}
             <CaptureCamera

@@ -1,18 +1,63 @@
 {
-  "message": "Template",
+  "message": "Catalog generated successfully",
   "data": {
-    "created_at": "2026-01-01T00:00:00Z",
-    "project_name": "Template Project",
-    "company_name": "Template Company",
-    "output_format": "both",
-    "pdf_filename": "template_catalog.pdf",
-    "pdf_filepath": "data/catalogs/template_catalog.pdf",
-    "pdf_size_bytes": 0,
-    "pdf_download_url": "",
-    "html_filename": "template_catalog.html",
-    "html_filepath": "data/catalogs/template_catalog.html",
-    "html_size_bytes": 0,
-    "html_download_url": ""
+    "catalog_title": "ALLO MAISON - Matériaux avancés & solutions industrielles",
+    "sections": [
+      {
+        "title": "Machines clés",
+        "description": "Sélection des équipements critiques pour la production automatisée."
+      },
+      {
+        "title": "Produits finis",
+        "description": "Gamme polymères, composites, verre et solutions constructives."
+      },
+      {
+        "title": "Sourcing & logistique",
+        "description": "Fournisseurs recommandés, flux AGV/ASRS et chaîne de transport intégrée."
+      }
+    ],
+    "products": [
+      {
+        "name": "Presse à injection plastique",
+        "description": "Double configuration 100T-5000T pour pièces moulées de haute précision.",
+        "image_url": "/download/Presse_à_injection_plastique.png",
+        "specs": {
+          "tonnage": "100-5000T",
+          "repeatability": "±0.05 mm",
+          "cycle_time": "30-120 sec"
+        }
+      },
+      {
+        "name": "Machine de thermoformage grand format",
+        "description": "Cellule double-station pour pièces XXL (portes, panneaux).",
+        "image_url": "/download/Machine_de_thermoformage.png",
+        "specs": {
+          "max_sheet": "3000x2000 mm",
+          "station_count": 2,
+          "throughput": "20-40 cycles/heure"
+        }
+      },
+      {
+        "name": "Système ASRS + AGV",
+        "description": "Logistique robotisée pour matières premières et produits finis.",
+        "image_url": "/download/Véhicule_à_Guidage_Automatisé_(AGV).png",
+        "specs": {
+          "capacity": "10 000 emplacements",
+          "agv_speed": "1.5 m/s",
+          "integration": "WMS / MES central"
+        }
+      }
+    ],
+    "references": [
+      {
+        "name": "Module 1 - Extraction industrielle",
+        "link": "/download/module_1.json"
+      },
+      {
+        "name": "Module 2 - Plan d'usine 2D/3D",
+        "link": "/download/layout_square.png"
+      }
+    ]
   },
   "project_id": null,
   "pdf_file_id": null,
