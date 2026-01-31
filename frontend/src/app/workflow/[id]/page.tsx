@@ -564,12 +564,64 @@ export default function FactoryCopilot() {
         runHasData.current = true; // Trigger the processing loop again
     };
 
-    const regenerateAll = () => {
-        setArtifacts([]);
-        setCurrentModule(0);
-        setSelectedModule(0);
-        setSubStep(0);
-        setStatus('processing');
+    const regenerateAll = async () => {
+        if (!projectId) return;
+
+        try {
+            console.log("🔄 Resetting project data...");
+            setStatus('loading');
+            
+            const res = await fetch(`${API_BASE}/api/projects/${projectId}/reset`, { method: 'POST' });
+            if (!res.ok) {
+                const errText = await res.text();
+                console.error("❌ Reset failed with status:", res.status, res.statusText, errText);
+                throw new Error(`Failed to reset project: ${res.status} ${res.statusText}`);
+            }
+
+            console.log("✅ Project reset on backend. restart frontend flow...");
+
+            // Clear all local data
+            setExtractedData(null);
+            setModule4Data(null);
+            setTcoData(null);
+            setBusinessPlanData(null);
+            setPitchDeckData(null);
+            setCatalogData(null);
+            setLayoutData(null);
+            setVideoData(null);
+            
+            setArtifacts([]);
+            setCurrentModule(0);
+            setSelectedModule(0);
+            setSubStep(0);
+
+            // Construct cleaned data object
+            const cleanedData = {
+                ...projectData,
+                module1_data: null,
+                module2_data: null,
+                module3_data: null,
+                module4_data: null,
+                module6_data: null,
+                module7_business: null,
+                module7_pitch: null,
+                module9_data: null,
+                status: 'uploaded'
+            } as ProjectRecord;
+
+            setProjectData(cleanedData);
+
+            // Trigger auto-resume
+            setPendingResumeData(cleanedData);
+            setShouldAutoResume(true);
+            setStatus('processing');
+
+        } catch (e) {
+            console.error("Reset failed", e);
+            // Even if it failed, we might be in a bad state, but let's go back to finished for safety or stay in loading
+            setStatus('finished'); // Revert to finished so user can try again
+            alert("Failed to reset project. Please ensure backend is running and up to date.");
+        }
     };
 
     const handleModuleClick = (idx: number) => {

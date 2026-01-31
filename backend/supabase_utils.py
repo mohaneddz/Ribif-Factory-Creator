@@ -363,3 +363,39 @@ def delete_project(client: Client, project_id: str) -> Optional[str]:
         return None
     except Exception as e:
         return str(e)
+
+
+def reset_project_data(client: Client, project_id: str) -> Optional[str]:
+    """
+    Reset a project's data columns to NULL, effectively restarting the process.
+    Preserves the source file and project ID.
+    Returns error message if any, None on success.
+    """
+    try:
+        # Update projects table to clear module data
+        payload = {
+            "status": "uploaded",  # Reset status to uploaded so it picks up the file again
+            "module1_data": None,
+            "module2_data": None,
+            "module3_data": None,
+            "module4_data": None,
+            "module6_data": None,
+            "module7_business": None,
+            "module7_pitch": None,
+            "module9_data": None,
+            # We preserve source_file_path and source_filename
+        }
+        client.table("projects").update(payload).eq("id", project_id).execute()
+        
+        # Determine files to keep (the source file)
+        # We need to list files and delete everything EXCEPT the source file if possible.
+        # However, finding the source file path in the bucket might be tricky if we don't know the exact path here.
+        # But usually source_file_path in DB is the path.
+        
+        # For now, let's just clear the DB data. The files in storage (artifacts) result in "links" which we just broke by clearing the DB.
+        # Deleting the actual files from storage is better for hygiene but "deleting the links" (DB columns) is sufficient to "restart" the user flow.
+        # If we delete everything in the bucket, we might delete the source file if it's in the same bucket/folder which the user considers "upload".
+        
+        return None
+    except Exception as e:
+        return str(e)
