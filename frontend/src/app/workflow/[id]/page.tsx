@@ -19,7 +19,7 @@ import clsx from "clsx";
 import { BusinessPlanView } from "@/sections/BusinessPlanView";
 import { CatalogueTechniqueView } from "@/sections/CatalogueTechniqueView";
 import { CallsNegotiationView } from "@/sections/CallsNegotiationView";
-import { EmailCenterView } from "@/sections/EmailCenterView";
+import { EmailNegotiationView } from "@/sections/EmailNegotiationView";
 import { ModuleLoadingView } from "@/sections/ModuleLoadingView";
 import { Layout2DView, Model3DView } from "@/sections/PlansView";
 import { SpecsView } from "@/sections/SpecsView";
@@ -783,7 +783,7 @@ export default function FactoryCopilot() {
                                                 {selectedModuleItem.type === 'model3d' && <Model3DView pipelineModelUrl={pipelineModelUrl} />}
                                                 {selectedModuleItem.type === 'video' && <VideoView progress={selectedProgress} videoUrl={videoUrl} />}
                                                 {selectedModuleItem.type === 'sourcing' && <SourcingView progress={selectedProgress} data={extractedData} module4Data={module4Data} loading={module4Loading} />}
-                                                {selectedModuleItem.type === 'email' && <EmailCenterView />}
+                                                {selectedModuleItem.type === 'email' && <EmailNegotiationView module4Data={module4Data} loading={module4Loading} />}
                                                 {selectedModuleItem.type === 'calls' && <CallsNegotiationView />}
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}

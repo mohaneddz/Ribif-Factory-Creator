@@ -12,7 +12,7 @@ import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import HTMLFlipBook from "react-pageflip";
 import { CallsNegotiationView } from "@/sections/CallsNegotiationView";
-import { EmailCenterView } from "@/sections/EmailCenterView";
+import { EmailNegotiationView } from "@/sections/EmailNegotiationView";
 import { Layout2DView, Model3DView } from "@/sections/PlansView";
 
 // ==========================================
@@ -2771,7 +2771,7 @@ export default function FactoryCopilot() {
                                                 {selectedModuleItem.type === 'model3d' && <Model3DView pipelineModelUrl={undefined} />}
                                                 {selectedModuleItem.type === 'video' && <VideoView progress={selectedProgress} videoUrl={videoUrl} />}
                                                 {selectedModuleItem.type === 'sourcing' && <SourcingView progress={selectedProgress} data={extractedData} module4Data={module4Data} loading={module4Loading} />}
-                                                {selectedModuleItem.type === 'email' && <EmailCenterView />}
+                                                {selectedModuleItem.type === 'email' && <EmailNegotiationView module4Data={module4Data} loading={module4Loading} />}
                                                 {selectedModuleItem.type === 'calls' && <CallsNegotiationView />}
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}

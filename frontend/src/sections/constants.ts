@@ -349,7 +349,7 @@ export const MOCK_MODULE4_DATA = {
                     price_estimate: "€120k",
                     price_type: "FOB",
                     phone_number: "+33 1 23 45 67 89",
-                    email_address: "sales@example.com",
+                    email_address: "blahaibrahim2005@gmail.com",
                     customs_algeria_info: "Certificat d'origine requis",
                     relevance_score: 0.9
                 },
@@ -360,7 +360,7 @@ export const MOCK_MODULE4_DATA = {
                     price_estimate: "$105k",
                     price_type: "EXW",
                     phone_number: "+86 21 5555 3333",
-                    email_address: "export@example.com",
+                    email_address: "blahaibrahim2005@gmail.com",
                     customs_algeria_info: "HS code 8477",
                     relevance_score: 0.75
                 }
@@ -382,7 +382,7 @@ export const MOCK_MODULE4_DATA = {
                     price_estimate: "€95k",
                     price_type: "CIF",
                     phone_number: "+49 30 1234 5678",
-                    email_address: "contact@example.com",
+                    email_address: "blahaibrahim2005@gmail.com",
                     customs_algeria_info: "Inspection préalable conseillée",
                     relevance_score: 0.83
                 }
