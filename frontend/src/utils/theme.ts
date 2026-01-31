@@ -11,5 +11,9 @@ export const getTheme = (): ThemeMode => {
 
 export const setTheme = (mode: ThemeMode) => {
   setCookie(THEME_COOKIE, mode, 365);
+  // Dispatch custom event to notify ThemeProvider
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("ribif-theme-change", { detail: mode }));
+  }
 };
 

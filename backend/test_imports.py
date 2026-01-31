@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 # Add backend to path
-backend_path = Path("d:/Programming/AI/Hackathons/.Competitions/EliteHack/ribif/backend")
+backend_path = Path(__file__).parent
 sys.path.append(str(backend_path))
 
 try:

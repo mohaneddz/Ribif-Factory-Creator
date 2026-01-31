@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 from config import BASE_URL, OUTPUT_DIRS, UPLOAD_DIR, CREATE_MACHINE_IMAGES, SKIP_MODULE_1, write_json
 from supabase_utils import get_supabase, insert_module1_extraction
 from utils.module_1.core import RIBIFExtractor
+from utils.module_1.enricher import enricher
 from utils.logger import log_skip, get_logger
 from utils.app_helpers import (
     get_pipeline_settings,
@@ -180,131 +181,110 @@ def process_module_1():
 
     extraction_result = extractor.process_document(str(filepath), str(OUTPUT_DIRS["module1"]))
 
-    machines = extraction_result.get("stage_4_machines_equipements", {}).get("machines_production", []) or []
+    # --- COMPREHENSIVE ENRICHMENT (Module 1 Stages 1-6) ---
+    module1_logger = get_logger("module1")
+    module1_logger.info("Starting enrichment pipeline...")
+    try:
+        enriched_result = enricher.process(extraction_result)
+        final_result = enriched_result
 
+        # --- FIX: Reconcile Stage 5 (Production Process) for UI ---
+        stage5 = final_result.get("stage_5_processus_production", {})
+        procs = stage5.get("processus_production", [])
+        
+        if procs and isinstance(procs, list):
+            # If the enricher returned a list of products with nested steps, flatten it for the UI
+            if "etapes" in procs[0]:
+                module1_logger.info("Flattening nested Stage 5 routings for UI compatibility...")
+                all_steps = []
+                for p in procs:
+                    prod_name = p.get("produit", "Production")
+                    for i, s in enumerate(p.get("etapes", [])):
+                        # Map keys to UI expectations
+                        s["nom_etape"] = s.get("name", s.get("nom_etape", "Etape sans nom"))
+                        if prod_name != "Production":
+                            s["nom_etape"] = f"[{prod_name}] {s['nom_etape']}"
+                        
+                        s["numero_etape"] = s.get("step", s.get("numero_etape", i + 1))
+                        
+                        # Ensure parametres_process exists for Temp/Pression/Cycle labels
+                        if "parametres_process" not in s:
+                            s["parametres_process"] = {
+                                "temperature": s.get("temperature", s.get("temp", "N/A")),
+                                "pression": s.get("pression", "N/A"),
+                                "temps_cycle": s.get("cycle", s.get("duration", "N/A")),
+                                "vitesse": s.get("vitesse", s.get("speed", "N/A"))
+                            }
+                        all_steps.append(s)
+                final_result["stage_5_processus_production"]["processus_production"] = all_steps
+            else:
+                # Flat list already, but ensure keys are correct
+                for i, s in enumerate(procs):
+                    if "nom_etape" not in s and "name" in s:
+                        s["nom_etape"] = s["name"]
+                    if "numero_etape" not in s:
+                        s["numero_etape"] = s.get("step", i + 1)
+                    if "parametres_process" not in s:
+                         s["parametres_process"] = {
+                            "temperature": s.get("temperature", "N/A"),
+                            "pression": s.get("pression", "N/A"),
+                            "temps_cycle": s.get("cycle", "N/A")
+                        }
+
+    except Exception as e:
+        module1_logger.error(f"Enrichment pipeline failed: {e}")
+        final_result = extraction_result.copy()
+
+    # --- IMAGE GENERATION & FINAL ASSETS ---
+    # We still want to ensure every machine has an image, generating them if web search didn't find one.
+    machines = final_result.get("stage_4_machines_equipements", {}).get("machines_production", []) or []
     enriched_machines = []
+    
     for machine_data in machines:
         nom_machine = machine_data.get("nom_machine", "Unknown")
         machine_type = machine_data.get("type", "industrial machine")
         manufacturer = machine_data.get("fabricant_recommande", "")
-
+        
+        # Check if we already have an image from web enrichment
+        web_enrichment = machine_data.get("_web_enrichment", {})
+        web_images = web_enrichment.get("images", [])
+        
         image_result = {"image_url": None, "status": "skipped"}
         image_local_path = None
         image_download_url = None
-        
-        # New: Try web search for images first
-        from config import WEB_SEARCH_ENABLED
-
-        module1_logger = get_logger("module1")
         web_image_found = False
-        
-        if WEB_SEARCH_ENABLED and settings.get("useWebImages", True):
-            try:
-                from utils.web_search import aggregator as web_search
-                import requests
-                from urllib.parse import urlparse
-                import ipaddress
-                import socket
-                def is_safe_url(url: str) -> bool:
-                    """Validate URL is safe for fetch (no SSRF)."""
-                    try:
-                        parsed = urlparse(url)
-                        # Only allow http/https
-                        if parsed.scheme not in ("http", "https"):
-                            return False
-                        # Reject localhost
-                        hostname = parsed.hostname or ""
-                        if hostname in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
-                            return False
-                        # Resolve and check for private IPs
-                        try:
-                            resolved = socket.gethostbyname(hostname)
-                            ip = ipaddress.ip_address(resolved)
-                            if ip.is_private or ip.is_loopback or ip.is_reserved:
-                                return False
-                        except Exception:
-                            pass  # Let requests handle resolution if this fails
-                        return True
-                    except Exception:
-                        return False
-                
-                MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
-                
-                web_images = web_search.search_machine_images(nom_machine, manufacturer)
-                if web_images:
-                    best_web_image = web_images[0]
-                    image_url = best_web_image.url
-                    
-                    # SSRF check
-                    if not is_safe_url(image_url):
-                        module1_logger.warning("Rejected unsafe image URL (SSRF protection): %s", image_url)
-                        image_result["status"] = "rejected_unsafe_url"
-                    else:
-                        # Download with safety checks
-                        try:
-                            resp = requests.get(image_url, timeout=10, stream=True)
-                            if resp.status_code == 200:
-                                # Check Content-Type
-                                content_type = resp.headers.get("Content-Type", "")
-                                if not content_type.startswith("image/"):
-                                    module1_logger.warning("Rejected non-image Content-Type: %s for %s", content_type, image_url)
-                                    image_result["status"] = "rejected_invalid_content_type"
-                                else:
-                                    # Check Content-Length if available
-                                    content_length = resp.headers.get("Content-Length")
-                                    if content_length and int(content_length) > MAX_IMAGE_SIZE:
-                                        module1_logger.warning("Rejected oversized image (%s bytes): %s", content_length, image_url)
-                                        image_result["status"] = "rejected_too_large"
-                                    else:
-                                        # Read with size limit
-                                        content = b""
-                                        for chunk in resp.iter_content(chunk_size=8192):
-                                            content += chunk
-                                            if len(content) > MAX_IMAGE_SIZE:
-                                                module1_logger.warning("Image exceeded max size during download: %s", image_url)
-                                                image_result["status"] = "rejected_too_large"
-                                                content = None
-                                                break
-                                        
-                                        if content:
-                                            # Sanitize filename
-                                            safe_name = secure_filename(f"{nom_machine[:50]}_web")
-                                            if not safe_name:
-                                                safe_name = "machine_web"
-                                            image_filename = f"{safe_name}.jpg"
-                                            image_path = OUTPUT_DIRS["module1"] / image_filename
-                                            image_path.write_bytes(content)
-                                            
-                                            web_image_found = True
-                                            image_local_path = str(image_path)
-                                            
-                                            # Convert to base64 for frontend display if needed
-                                            b64 = base64.b64encode(content).decode("utf-8")
-                                            image_result = {
-                                                "image_url": f"data:image/jpeg;base64,{b64}",
-                                                "image_path": str(image_path),
-                                                "status": "web_found",
-                                                "source_url": image_url
-                                            }
-                        except Exception as e:
-                            module1_logger.warning("Web image download failed for %s: %s", image_url, e)
-                            image_result["status"] = "download_failed"
-            except ImportError:
-                pass
-            except Exception as e:
-                module1_logger.warning("Web image search failed for %s: %s", nom_machine, e)
 
-        # If no web image, try generation or cache
+        # Try to download the best web image if present
+        if web_images and settings.get("useWebImages", True):
+            try:
+                import requests
+                img_url = web_images[0]
+                resp = requests.get(img_url, timeout=5)
+                if resp.status_code == 200:
+                    safe_name = secure_filename(f"{nom_machine[:50]}_web") or "machine_web"
+                    image_filename = f"{safe_name}.jpg"
+                    image_path = OUTPUT_DIRS["module1"] / image_filename
+                    image_path.write_bytes(resp.content)
+                    
+                    web_image_found = True
+                    image_local_path = str(image_path)
+                    b64 = base64.b64encode(resp.content).decode("utf-8")
+                    image_result = {
+                        "image_url": f"data:image/jpeg;base64,{b64}",
+                        "image_path": str(image_path),
+                        "status": "web_found",
+                        "source_url": img_url
+                    }
+            except Exception as e:
+                module1_logger.warning(f"Failed to download agent-found web image for {nom_machine}: {e}")
+
+        # Fallback to generation if no image found/downloaded
         if not web_image_found:
-            if CREATE_MACHINE_IMAGES and settings.get("enableMachineImages", True):
+             if CREATE_MACHINE_IMAGES and settings.get("enableMachineImages", True):
                 image_result = generate_machine_image(nom_machine, machine_type, manufacturer)
                 image_local_path = image_result.get("image_path")
-            else:
-                # User requested random images from cache if creation is disabled
-                cached = find_best_image(nom_machine)
-                if not cached:
-                    cached = get_random_image()
-                
+             else:
+                cached = find_best_image(nom_machine) or get_random_image()
                 if cached:
                     target_path = OUTPUT_DIRS["module1"] / cached.name
                     if not target_path.exists():
@@ -314,23 +294,14 @@ def process_module_1():
         if image_local_path:
             image_download_url = f"{BASE_URL}/download/{Path(image_local_path).name}"
 
-        enriched_machine = {
-            "nom_machine": nom_machine,
-            "type": machine_type,
-            "fabricant_recommande": manufacturer,
-            "quantite_necessaire": machine_data.get("quantite_necessaire", 1),
-            "use": machine_data.get("use", ""),
-            "specifications": machine_data.get("specifications", {}),
-            "performance": machine_data.get("performance", {}),
-            "image_url": image_result.get("image_url"),
-            "image_status": image_result.get("status"),
-            "image_local_path": image_local_path,
-            "image_download_url": image_download_url,
-            "source": "vertex_extraction",
-        }
-        enriched_machines.append(enriched_machine)
+        # Update machine data
+        machine_data["image_url"] = image_result.get("image_url")
+        machine_data["image_status"] = image_result.get("status")
+        machine_data["image_local_path"] = image_local_path
+        machine_data["image_download_url"] = image_download_url
+        enriched_machines.append(machine_data)
 
-    final_result = extraction_result.copy()
+    final_result["stage_4_machines_equipements"]["machines_production"] = enriched_machines
     final_result["enriched_machines"] = enriched_machines
     successful_scrapes = sum(1 for m in enriched_machines if m.get("image_status") in ("success", "web_found", "cache_found"))
     final_result["scraping_summary"] = {

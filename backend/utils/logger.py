@@ -10,7 +10,7 @@ import sys
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Iterator, Optional
 
 _LOGGER: Optional[logging.Logger] = None
@@ -24,7 +24,7 @@ def _logs_dir() -> str:
 
 
 def _build_run_id() -> str:
-    return datetime.utcnow().strftime("%Y%m%d_%H%M%S") + f"_{os.getpid()}"
+    return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S") + f"_{os.getpid()}"
 
 
 def get_logger(name: Optional[str] = None) -> logging.Logger:

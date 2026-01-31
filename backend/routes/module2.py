@@ -44,7 +44,14 @@ def convert_dxf_to_png(dxf_path: str, png_path: str) -> bool:
         return False
 
 bp_module2 = Blueprint("module2", __name__)
-PIPELINE_LOCK = threading.Lock()
+PROJECT_LOCKS = {}
+PROJECT_LOCKS_LOCK = threading.Lock()
+
+def get_project_lock(project_id: str):
+    with PROJECT_LOCKS_LOCK:
+        if project_id not in PROJECT_LOCKS:
+            PROJECT_LOCKS[project_id] = threading.Lock()
+        return PROJECT_LOCKS[project_id]
 
 
 def _as_bool(value: Any) -> bool:
@@ -299,8 +306,8 @@ def generate_layout():
         if client and project_id and settings:
             try:
                 store_project_settings(client, project_id, settings, owner_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to store project settings: {e}")
         seed_raw = settings.get("seed") or settings.get("layout_seed") or 7
         try:
             seed = int(seed_raw)
@@ -320,8 +327,9 @@ def generate_layout():
             or CREATE_3D_MODEL
         )
 
-        if not PIPELINE_LOCK.acquire(blocking=False):
-            return jsonify({"error": "Module 2 pipeline is busy. Try again shortly."}), 429
+        lock = get_project_lock(project_id or "default")
+        if not lock.acquire(blocking=False):
+            return jsonify({"error": "Module 2 pipeline is busy for this project. Try again shortly."}), 429
         try:
             run_pipeline(
                 data_path=str(input_path),
@@ -334,7 +342,7 @@ def generate_layout():
                 create_3d_model=create_3d_model,
             )
         finally:
-            PIPELINE_LOCK.release()
+            lock.release()
 
         # Convert DXF to PNG using ezdxf
         converted_png = output_dir / "layout_square.png"

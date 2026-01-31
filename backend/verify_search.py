@@ -10,7 +10,7 @@ import time
 from pprint import pprint
 
 # Add backend to path
-sys.path.append(os.path.abspath("d:/Programming/AI/Hackathons/.Competitions/EliteHack/ribif/backend"))
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from config import WEB_SEARCH_ENABLED
 try:

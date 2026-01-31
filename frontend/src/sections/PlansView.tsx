@@ -2,6 +2,7 @@
 
 import Simple3DViewer from "@/components/Simple3DViewer";
 import SimpleDxfViewer from "@/components/SimpleDxfViewer";
+import InteractiveImageViewer from "@/components/InteractiveImageViewer";
 
 const Layout2DPanel = ({
     heightClass = "h-1/2",
@@ -19,10 +20,10 @@ const Layout2DPanel = ({
                 imageUrl.toLowerCase().endsWith(".dxf") || imageUrl.toLowerCase().endsWith(".dwg") ? (
                     <SimpleDxfViewer url={imageUrl} />
                 ) : (
-                    <img
+                    <InteractiveImageViewer
                         src={imageUrl}
                         alt="Plan 2D"
-                        className="w-full h-full object-contain p-10 dark:invert-[.1]"
+                        className="w-full h-full"
                     />
                 )
             ) : (

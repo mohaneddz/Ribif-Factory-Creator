@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, request
 from pathlib import Path
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from config import OUTPUT_DIRS, SKIP_MODULE_4, BASE_URL
 from supabase_utils import get_supabase, insert_module4_sourcing
@@ -142,7 +142,7 @@ def enrich_machines_module4():
                 # Stats
                 processing_time = int(time.time() - start_time)
                 run_id = str(uuid.uuid4())
-                enrichment_date = datetime.utcnow().isoformat()
+                enrichment_date = datetime.now(timezone.utc).isoformat()
                 
                 proj_meta = {
                     "last_run_id": run_id,
