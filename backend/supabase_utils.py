@@ -74,7 +74,7 @@ def upload_bytes(
     client.storage.from_(bucket).upload(
         object_path,
         data,
-        file_options={"content-type": content_type, "upsert": upsert},
+        file_options={"content-type": content_type, "upsert": "true" if upsert else "false"},
     )
 
 
@@ -162,20 +162,12 @@ def insert_project_file(
     label: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
 ) -> Optional[str]:
-    payload = {
-        "project_id": project_id,
-        "owner_id": owner_id,
-        "bucket": bucket,
-        "object_path": object_path,
-        "mime_type": mime_type,
-        "size_bytes": size_bytes,
-        "category": category,
-        "label": label,
-        "metadata": metadata or {},
-    }
-    res = client.table("project_files").insert(payload).execute()
-    data = getattr(res, "data", None) or []
-    return data[0]["id"] if data else None
+    """Register a file upload. Returns None since project_files table was removed in simplified schema.
+    The file is still uploaded to storage, this just skips the DB record."""
+    # Note: project_files table was removed in the simplified schema.
+    # Files are still uploaded to storage bucket, but we don't track them in a separate table.
+    # The file references are stored directly in the module data columns (module7_business, etc.)
+    return None
 
 
 def insert_module1_extraction(
@@ -274,14 +266,19 @@ def insert_business_plan(
     filename: Optional[str],
     data: Dict[str, Any],
 ) -> None:
-    payload = {
-        "project_id": project_id,
-        "tco_run_id": tco_run_id,
+    """Update projects table with business plan data."""
+    if not project_id:
+        return
+    
+    # Add file info to data for frontend access
+    enriched_data = {
+        **data,
         "file_id": file_id,
         "filename": filename,
-        "data": data,
+        "tco_run_id": tco_run_id,
     }
-    client.table("business_plans").insert(payload).execute()
+    
+    client.table("projects").update({"module7_business": enriched_data}).eq("id", project_id).execute()
 
 
 def insert_pitch_deck(
@@ -293,15 +290,20 @@ def insert_pitch_deck(
     edit_url: Optional[str],
     data: Dict[str, Any],
 ) -> None:
-    payload = {
-        "project_id": project_id,
-        "tco_run_id": tco_run_id,
+    """Update projects table with pitch deck data."""
+    if not project_id:
+        return
+    
+    # Add file info to data for frontend access
+    enriched_data = {
+        **data,
         "file_id": file_id,
         "presentation_id": presentation_id,
         "edit_url": edit_url,
-        "data": data,
+        "tco_run_id": tco_run_id,
     }
-    client.table("pitch_decks").insert(payload).execute()
+    
+    client.table("projects").update({"module7_pitch": enriched_data}).eq("id", project_id).execute()
 
 
 def insert_catalog(
@@ -312,14 +314,19 @@ def insert_catalog(
     html_file_id: Optional[str],
     data: Dict[str, Any],
 ) -> None:
-    payload = {
-        "project_id": project_id,
+    """Update projects table with catalog data."""
+    if not project_id:
+        return
+    
+    # Add file info to data for frontend access
+    enriched_data = {
+        **data,
         "module1_id": module1_id,
         "pdf_file_id": pdf_file_id,
         "html_file_id": html_file_id,
-        "data": data,
     }
-    client.table("catalogs").insert(payload).execute()
+    
+    client.table("projects").update({"module9_data": enriched_data}).eq("id", project_id).execute()
 
 
 def insert_layout(

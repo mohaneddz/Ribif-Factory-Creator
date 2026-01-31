@@ -235,7 +235,7 @@ export default function FactoryCopilot() {
             return resolveDownloadUrl(businessPlanData?.download_url) || deliverableFallbacks.businessplan;
         }
         if (moduleType === "catalogue") {
-            return resolveDownloadUrl(catalogData?.pdf_download_url || catalogData?.html_download_url) || deliverableFallbacks.catalogue;
+            return resolveDownloadUrl(catalogData?.data?.pdf_download_url || catalogData?.data?.html_download_url || catalogData?.pdf_download_url || catalogData?.html_download_url) || deliverableFallbacks.catalogue;
         }
         if (moduleType === "layout2d") {
             return resolveDownloadUrl(
@@ -814,6 +814,7 @@ export default function FactoryCopilot() {
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
                                                 {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.pdf_download_url} htmlUrl={catalogData?.html_download_url} />}
                                                 {selectedModuleItem.type === 'twin' && <DigitalTwinView pipelineModelUrl={pipelineModelUrl} />}
+                                                {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url || catalogData?.pdf_download_url} htmlUrl={catalogData?.data?.html_download_url || catalogData?.html_download_url} />}
                                             </>
                                         )}
                                     </motion.div>
