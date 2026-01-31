@@ -12,46 +12,72 @@ export function useDashboardProjects() {
     const load = async () => {
       setLoading(true);
       setError(null);
-      const { data: sessionData } = await supabase.auth.getSession();
-      const session = sessionData?.session;
-      if (!session) {
-        setSignedIn(false);
+      
+      try {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          setSignedIn(false);
+          setProjects([]);
+          setLoading(false);
+          return;
+        }
+        
+        const session = sessionData?.session;
+        if (!session) {
+          console.log("No active session");
+          setSignedIn(false);
+          setProjects([]);
+          setLoading(false);
+          return;
+        }
+        
+        setSignedIn(true);
+        const userId = session.user.id;
+        console.log("Loading projects for user:", userId);
+
+        // Query projects owned by the current user
+        // Note: Using simplified schema columns only
+        const { data, error: fetchError } = await supabase
+          .from("projects")
+          .select("id,name,status,created_at,owner_id,source_filename")
+          .eq("owner_id", userId)
+          .order("created_at", { ascending: false });
+
+        console.log("Query result:", { data, fetchError, userId });
+
+        if (fetchError) {
+          console.error("Failed to load projects:", fetchError);
+          setError(fetchError.message || "Erreur de chargement");
+          setProjects([]);
+          setLoading(false);
+          return;
+        }
+
+        const formatted = (data || []).map((row) => {
+          const date = row.created_at
+            ? new Date(row.created_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })
+            : "—";
+          return {
+            id: row.id,
+            name: row.name || row.source_filename || "Projet sans nom",
+            client: "—",
+            location: "—",
+            date,
+            status: row.status || "draft",
+            type: "Industrial",
+          } as Project;
+        });
+        setProjects(formatted);
+        setLoading(false);
+        console.log("Loaded projects:", formatted);
+      } catch (err) {
+        console.error("Unexpected error loading projects:", err);
+        setError("Erreur inattendue");
         setProjects([]);
         setLoading(false);
-        return;
       }
-      setSignedIn(true);
-
-      const { data, error: fetchError } = await supabase
-        .from("projects")
-        .select("id,name,client,location_city,location_country,status,project_type,created_at")
-        .order("created_at", { ascending: false });
-
-      if (fetchError) {
-        setError(fetchError.message);
-        setProjects([]);
-        setLoading(false);
-        return;
-      }
-
-      const formatted = (data || []).map((row) => {
-        const location = [row.location_city, row.location_country].filter(Boolean).join(", ");
-        const date = row.created_at
-          ? new Date(row.created_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })
-          : "—";
-        return {
-          id: row.id,
-          name: row.name,
-          client: row.client || "—",
-          location: location || "—",
-          date,
-          status: row.status || "draft",
-          type: row.project_type || "Industrial",
-        } as Project;
-      });
-      setProjects(formatted);
-      setLoading(false);
-      console.log("Loaded projects:", formatted);
     };
 
     load();

@@ -75,19 +75,42 @@ def process_module_1():
         response_payload = {"message": "Success", "data": payload, "status": "skipped"}
         return jsonify(response_payload)
 
-    if "file" not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
+    project_id = get_request_project_id(include_form=True, include_json=True)
+    filepath = None
+    filename = "source.pdf"
 
-    file = request.files["file"]
-    if file.filename == "":
-        return jsonify({"error": "No filename"}), 400
+    if "file" in request.files:
+        file = request.files["file"]
+        if file.filename != "":
+            filename = secure_filename(file.filename)
+            filepath = UPLOAD_DIR / filename
+            file.save(filepath)
 
-    filename = secure_filename(file.filename)
-    filepath = UPLOAD_DIR / filename
-    file.save(filepath)
+    if not filepath and project_id:
+        client = get_supabase()
+        if client:
+            try:
+                res = client.table("projects").select("source_file_path").eq("id", project_id).single().execute()
+                if res.data and res.data.get("source_file_path"):
+                    object_path = res.data.get("source_file_path")
+                    file_data = client.storage.from_("project-files").download(object_path)
+                    try:
+                        possible_name = Path(object_path).name.split("/")[-1]
+                        filename = secure_filename(possible_name)
+                    except:
+                        filename = "source.pdf"
+                    
+                    filepath = UPLOAD_DIR / filename
+                    with open(filepath, "wb") as f:
+                        f.write(file_data)
+            except Exception:
+                pass
+    
+    if not filepath:
+         return jsonify({"error": "No file uploaded and could not retrieve from project"}), 400
 
     settings = get_pipeline_settings()
-    project_id = get_request_project_id(include_form=True)
+    # project_id = get_request_project_id(include_form=True) # Already fetched
     owner_id = get_request_user_id()
     client = get_supabase()
     project_id = ensure_project_id(client, project_id, owner_id, Path(filename).stem or "Project")
@@ -100,7 +123,7 @@ def process_module_1():
     source_file_id = None
     source_file_url = None
     source_object_path = None
-    if client and project_id:
+    if client and project_id and "file" in request.files:
         try:
             source_file_id, source_file_url, source_object_path = upload_with_name_timestamp(
                 client=client,

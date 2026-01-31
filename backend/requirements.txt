@@ -17,6 +17,7 @@ python-docx
 google-cloud-documentai
 
 # PDF & Imaging
+pypdf
 reportlab
 pillow
 

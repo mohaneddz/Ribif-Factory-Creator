@@ -5,4 +5,6 @@ export const ROUTES = {
   login: "/auth/login",
   register: "/auth/register",
   createProject: "/projects/new",
+  dashboard: "/",
+  landing: "/",
 } as const;

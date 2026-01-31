@@ -1,46 +1,47 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogIn } from "lucide-react";
-
+import { supabase } from "@/lib/supabaseClient";
+import LandingPage from "@/components/landing/LandingPage";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
-import { goToCreateProject, goToLogin, goToRegister, goToSettings, goToTwin, goToWorkflowId } from "@/functions/navigation";
 import { useDashboardProjects } from "@/hooks/useDashboardProjects";
+import { goToCreateProject, goToSettings, goToTwin, goToWorkflowId } from "@/functions/navigation";
 
-export default function Dashboard() {
+export default function Home() {
   const router = useRouter();
-  const { projects, loading, signedIn, error, emptyState } = useDashboardProjects();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const { projects } = useDashboardProjects();
 
-  if (!signedIn) {
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Loading state
+  if (isAuthenticated === null) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--surface-0)] text-[var(--text-1)] px-6">
-        <div className="max-w-lg text-center space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-emerald-300">
-            <LogIn size={14} /> Authentication required
-          </div>
-          <h1 className="text-4xl font-black">RIBIF Projects</h1>
-          <p className="text-[var(--text-2)]">
-            Vos projets résident dans Supabase. Connectez-vous pour charger les données.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={() => goToLogin(router)}
-              className="rounded-full bg-emerald-500 px-6 py-3 text-sm font-bold text-slate-950 hover:bg-emerald-400"
-            >
-              Se connecter
-            </button>
-            <button
-              onClick={() => goToRegister(router)}
-              className="rounded-full border border-slate-700 px-6 py-3 text-sm font-bold text-[var(--text-1)] hover:border-emerald-400"
-            >
-              Créer un compte
-            </button>
-          </div>
-        </div>
+      <div className="min-h-screen bg-[#0b0c10] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
+  // Show landing page for unauthenticated users
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+
+  // Show dashboard for authenticated users
   return (
     <DashboardShell
       projects={projects}
