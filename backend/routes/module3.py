@@ -13,6 +13,7 @@ from utils.app_helpers import (
     get_request_user_id,
     load_template_payload,
     upload_and_register_file,
+    upload_with_name_timestamp,
 )
 from utils.logger import log_skip, get_logger
 
@@ -264,7 +265,7 @@ def generate_video_from_images():
                 merged_file_id = None
                 merged_path_obj = Path(result.get("video_url", ""))
                 if merged_path_obj.exists():
-                    merged_file_id, _ = upload_and_register_file(
+                    merged_file_id, signed_url, _ = upload_with_name_timestamp(
                         client=client,
                         project_id=project_id,
                         owner_id=owner_id,
@@ -272,6 +273,10 @@ def generate_video_from_images():
                         category="videos",
                         label=merged_path_obj.name,
                     )
+                    # CRITICAL: Use the Supabase URL for the frontend
+                    if signed_url:
+                        result["video_url"] = signed_url
+                        
                 insert_video(client, project_id, merged_file_id, result)
             except Exception:
                 pass

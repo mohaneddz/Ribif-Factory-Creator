@@ -86,28 +86,59 @@ def process_module_1():
             filepath = UPLOAD_DIR / filename
             file.save(filepath)
 
-    if not filepath and project_id:
+    if not filepath:
+        object_path = None
+        # Try to get path from payload
+        if request.is_json:
+            data = request.get_json() or {}
+            object_path = data.get("source_file_path")
+            if data.get("source_filename"):
+                filename = secure_filename(data.get("source_filename"))
+
         client = get_supabase()
-        if client:
+        # If not in payload, try from DB
+        if not object_path and project_id and client:
             try:
                 res = client.table("projects").select("source_file_path").eq("id", project_id).single().execute()
                 if res.data and res.data.get("source_file_path"):
                     object_path = res.data.get("source_file_path")
-                    file_data = client.storage.from_("project-files").download(object_path)
-                    try:
-                        possible_name = Path(object_path).name.split("/")[-1]
-                        filename = secure_filename(possible_name)
-                    except:
-                        filename = "source.pdf"
-                    
-                    filepath = UPLOAD_DIR / filename
-                    with open(filepath, "wb") as f:
-                        f.write(file_data)
             except Exception:
+                pass
+
+        # Download if we found a path
+        # Download if we found a path
+        download_error = None
+        if object_path and client:
+            try:
+                file_data = client.storage.from_("project-files").download(object_path)
+                try:
+                    if filename == "source.pdf" or not filename:
+                        raw_name = Path(object_path).name
+                        # Handle cases where path includes folders
+                        if "/" in raw_name:
+                            raw_name = raw_name.split("/")[-1]
+                        filename = secure_filename(raw_name)
+                except:
+                    filename = "source.pdf"
+                
+                filepath = UPLOAD_DIR / filename
+                with open(filepath, "wb") as f:
+                    f.write(file_data)
+            except Exception as e:
+                download_error = f"Error downloading file from {object_path}: {str(e)}"
+                print(download_error)
                 pass
     
     if not filepath:
-         return jsonify({"error": "No file uploaded and could not retrieve from project"}), 400
+         error_details = "No file uploaded and could not retrieve from project"
+         if download_error:
+             error_details += f". Download failure: {download_error}"
+         elif object_path:
+             error_details += f". object_path found ({object_path}) but download failed silently or client missing."
+         else:
+             error_details += ". No file in request and no source_file_path found in payload/DB."
+             
+         return jsonify({"error": error_details}), 400
 
     settings = get_pipeline_settings()
     # project_id = get_request_project_id(include_form=True) # Already fetched

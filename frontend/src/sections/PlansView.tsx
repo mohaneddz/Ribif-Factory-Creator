@@ -48,10 +48,10 @@ interface Model3DPanelProps {
 const Model3DPanel = ({ heightClass = "h-1/2", pipelineModelUrl }: Model3DPanelProps) => {
     // Pipeline model URL from Supabase - no local fallback since it's dynamically generated
     const modelUrl = pipelineModelUrl || undefined;
-    const modelName = pipelineModelUrl 
+    const modelName = pipelineModelUrl!
         ? pipelineModelUrl.split('/').pop() || "pipeline.glb"
         : null;
-    
+
     return (
         <div className={`${heightClass} relative rounded-4xl overflow-hidden border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900`}>
             <div className="absolute inset-0 opacity-40" style={{ backgroundImage: "radial-gradient(circle at 20% 20%, rgba(148,163,184,0.35) 0, transparent 45%), radial-gradient(circle at 80% 10%, rgba(99,102,241,0.3) 0, transparent 40%)" }} />
@@ -66,7 +66,7 @@ const Model3DPanel = ({ heightClass = "h-1/2", pipelineModelUrl }: Model3DPanelP
                     pipelineModel={modelUrl}
                 />
                 <div className="absolute bottom-6 left-6 bg-slate-900/80 text-white px-3 py-1.5 rounded-lg text-[10px] font-semibold border border-white/10">
-                    {modelName 
+                    {modelName
                         ? `factory1.glb + ${modelName}`
                         : "factory1.glb (awaiting pipeline model...)"
                     }

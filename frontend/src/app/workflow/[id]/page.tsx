@@ -145,8 +145,8 @@ export default function FactoryCopilot() {
 
         // Determine initial status based on what data exists
         const allModulesComplete = data.module1_data && data.module2_data && data.module3_data;
-        // Check both source_file_path AND source_filename since file may be uploaded but path empty
-        const hasSourceFile = !!data.source_file_path || !!data.source_filename;
+        // Strict check: only auto-resume if we have the actual storage path
+        const hasSourceFile = !!data.source_file_path;
         const hasAnyModuleData = uniqueArtifacts.length > 0;
 
         if (allModulesComplete || (hasAnyModuleData && data.status === 'complete')) {
@@ -297,7 +297,12 @@ export default function FactoryCopilot() {
                     body = fd;
                 } else {
                     headers = { ...headers, "Content-Type": "application/json" };
-                    body = JSON.stringify({ project_id: currentProjectId, settings: activeSettings });
+                    body = JSON.stringify({ 
+                        project_id: currentProjectId, 
+                        settings: activeSettings,
+                        source_file_path: currentData?.source_file_path,
+                        source_filename: currentData?.source_filename
+                    });
                 }
 
                 const res = await fetch(`${API_BASE}/api/module1/process`, { method: 'POST', headers, body });
@@ -534,12 +539,29 @@ export default function FactoryCopilot() {
         setPendingResumeData(null);
     }, [shouldAutoResume, pendingResumeData]);
 
-    const regenerateOne = (idx: number) => {
+    const regenerateOne = async (idx: number) => {
+        // Clear local state for the module to trigger UI updates
+        const moduleType = MODULES[idx]?.type;
+        const updates: Partial<ProjectRecord> = {};
+        
+        if (moduleType === 'specs') { setExtractedData(null); updates.module1_data = null; }
+        if (moduleType === 'sourcing') { setModule4Data(null); updates.module4_data = null; }
+        if (moduleType === 'tco') { setTcoData(null); updates.module6_data = null; }
+        if (moduleType === 'businessplan') { setBusinessPlanData(null); setPitchDeckData(null); updates.module7_business = null; updates.module7_pitch = null; }
+        if (moduleType === 'catalogue') { setCatalogData(null); updates.module9_data = null; }
+        if (moduleType === 'layout2d') { setLayoutData(null); updates.module2_data = null; }
+        if (moduleType === 'video') { setVideoData(null); updates.module3_data = null; }
+
+        if (projectId && Object.keys(updates).length > 0) {
+             await updateProject(projectId, updates);
+        }
+
         setArtifacts(prev => prev.filter(i => i !== idx));
         setCurrentModule(idx);
         setSelectedModule(idx);
         setSubStep(0);
         setStatus('processing');
+        runHasData.current = true; // Trigger the processing loop again
     };
 
     const regenerateAll = () => {

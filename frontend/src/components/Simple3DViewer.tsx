@@ -69,8 +69,8 @@ export default function Simple3DViewer({
         controlsRef.current = controls;
 
         // Grid
-        // const gridHelper = new THREE.GridHelper(20, 20, 0x6366f1, 0x334155);
-        // scene.add(gridHelper);
+        const gridHelper = new THREE.GridHelper(60, 60, 0x6366f1, 0x334155);
+        scene.add(gridHelper);
 
         // Lights
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -79,14 +79,15 @@ export default function Simple3DViewer({
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1.4);
         directionalLight.position.set(10, 20, 10);
         directionalLight.castShadow = true;
-        directionalLight.shadow.mapSize.width = 2048;
-        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.mapSize.width = 4096;
+        directionalLight.shadow.mapSize.height = 4096;
         directionalLight.shadow.camera.near = 0.5;
-        directionalLight.shadow.camera.far = 50;
-        directionalLight.shadow.camera.left = -10;
-        directionalLight.shadow.camera.right = 10;
-        directionalLight.shadow.camera.top = 10;
-        directionalLight.shadow.camera.bottom = -10;
+        directionalLight.shadow.camera.far = 500;
+        directionalLight.shadow.camera.left = -100;
+        directionalLight.shadow.camera.right = 100;
+        directionalLight.shadow.camera.top = 100;
+        directionalLight.shadow.camera.bottom = -100;
+        directionalLight.shadow.bias = -0.0005;
         scene.add(directionalLight);
 
         // Calculate target bounding box from props
