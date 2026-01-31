@@ -805,3 +805,210 @@ def get_negotiations_summary():
     except Exception as e:
         return jsonify({"error": str(e), "status": "error"}), 500
 
+
+# ================================
+# Voice Call Integration Endpoints
+# ================================
+
+@bp_module5.route("/api/module5/negotiations/<thread_id>/prepare-voice-call", methods=["GET"])
+def prepare_voice_call(thread_id: str):
+    """
+    Prepare data for a voice call with the supplier.
+    Returns negotiation context needed for the voice call UI.
+    """
+    try:
+        thread = load_thread(thread_id)
+        if not thread:
+            return jsonify({"error": "Thread not found"}), 404
+        
+        # Calculate price boundaries for negotiation
+        initial_price = None
+        if thread.initial_price_estimate:
+            try:
+                # Parse price estimate (e.g., "5000 EUR" -> 5000)
+                price_str = str(thread.initial_price_estimate).replace(",", "").replace(" ", "")
+                import re
+                price_match = re.search(r'(\d+(?:\.\d+)?)', price_str)
+                if price_match:
+                    initial_price = float(price_match.group(1))
+            except:
+                pass
+        
+        # Use current supplier offer price if available
+        if thread.current_supplier_offer and thread.current_supplier_offer.get("price"):
+            initial_price = thread.current_supplier_offer.get("price")
+        
+        # Default fallback
+        if not initial_price:
+            initial_price = 5000  # Default for demo
+        
+        negotiation_data = {
+            "machine_input": {
+                "id": thread.thread_id[:8].upper(),
+                "name": thread.machine_name,
+                "quantity": thread.quantity or 1
+            },
+            "suppliers": [{
+                "supplier_name": thread.supplier_name,
+                "website": thread.supplier_website or "",
+                "region": thread.supplier_region or "Unknown",
+                "price_estimate": initial_price,
+                "email": thread.supplier_email,
+                "phone_number": thread.supplier_phone or "",
+                "relevance_score": 5.0
+            }],
+            "buyer_requirements": thread.buyer_requirements,
+            "thread_id": thread.thread_id,
+            "round_number": thread.round_number,
+            "current_offer": thread.current_supplier_offer,
+        }
+        
+        return jsonify({
+            "status": "success",
+            "negotiation_data": negotiation_data,
+            "thread": thread.to_dict(),
+        })
+        
+    except Exception as e:
+        logger.exception(f"Error preparing voice call for {thread_id}")
+        return jsonify({"error": str(e), "status": "error"}), 500
+
+
+@bp_module5.route("/api/module5/get-negotiation-data/<session_id>", methods=["GET"])
+def get_negotiation_data(session_id: str):
+    """
+    Get negotiation data for a voice call session.
+    This endpoint is called by the voice call page.
+    """
+    try:
+        thread = load_thread(session_id)
+        if not thread:
+            return jsonify({"error": "Session not found"}), 404
+        
+        # Calculate price boundaries
+        initial_price = None
+        if thread.initial_price_estimate:
+            try:
+                price_str = str(thread.initial_price_estimate).replace(",", "").replace(" ", "")
+                import re
+                price_match = re.search(r'(\d+(?:\.\d+)?)', price_str)
+                if price_match:
+                    initial_price = float(price_match.group(1))
+            except:
+                pass
+        
+        if thread.current_supplier_offer and thread.current_supplier_offer.get("price"):
+            initial_price = thread.current_supplier_offer.get("price")
+        
+        if not initial_price:
+            initial_price = 5000
+        
+        negotiation_data = {
+            "machine_input": {
+                "id": thread.thread_id[:8].upper(),
+                "name": thread.machine_name,
+                "quantity": thread.quantity or 1
+            },
+            "suppliers": [{
+                "supplier_name": thread.supplier_name,
+                "website": thread.supplier_website or "",
+                "region": thread.supplier_region or "Unknown",
+                "price_estimate": initial_price,
+                "email": thread.supplier_email,
+                "phone_number": thread.supplier_phone or "",
+                "relevance_score": 5.0
+            }]
+        }
+        
+        return jsonify({
+            "status": "success",
+            "negotiation_data": negotiation_data,
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e), "status": "error"}), 500
+
+
+@bp_module5.route("/api/module5/save-negotiation", methods=["POST"])
+def save_voice_negotiation():
+    """
+    Save voice negotiation result back to the thread.
+    Called by the voice call page when a call ends.
+    """
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Expected JSON input"}), 400
+        
+        payload = request.get_json() or {}
+        
+        # Extract thread ID from machine_id (first 8 chars) or look up by supplier
+        machine_id = payload.get("machine_id", "")
+        supplier_email = payload.get("supplier_email", "")
+        
+        # Try to find the thread
+        thread = None
+        threads = list_threads()
+        
+        for t in threads:
+            if t.thread_id.upper().startswith(machine_id.upper()):
+                thread = t
+                break
+            if supplier_email and t.supplier_email.lower() == supplier_email.lower():
+                thread = t
+                break
+        
+        if not thread:
+            # Save as standalone result if no thread found
+            output_dir = OUTPUT_DIRS.get("module5")
+            if output_dir:
+                filename = f"voice_negotiation_{int(datetime.now(timezone.utc).timestamp())}.json"
+                write_json(output_dir / filename, payload)
+            
+            return jsonify({
+                "status": "success",
+                "message": "Saved as standalone result (no thread found)",
+                "saved_to": str(output_dir / filename) if output_dir else None,
+            })
+        
+        # Update thread with voice call result
+        voice_result = {
+            "final_status": payload.get("final_status"),
+            "final_price_per_unit": payload.get("final_price_per_unit"),
+            "discount_achieved": payload.get("discount_achieved"),
+            "total_value": payload.get("total_value"),
+            "negotiation_rounds": payload.get("negotiation_rounds"),
+            "rounds_history": payload.get("rounds_history"),
+            "transcript": payload.get("transcript"),
+            "timestamp": payload.get("timestamp", datetime.utcnow().isoformat()),
+        }
+        
+        # Store voice result in thread
+        thread.voice_call_result = voice_result
+        thread.voice_call_transcript = payload.get("transcript", [])
+        
+        # Update status if deal was closed
+        if payload.get("final_status") == "ACCEPTED":
+            update_thread_status(thread, NegotiationStatus.ACCEPTED)
+            thread.best_offer = {
+                "price": payload.get("final_price_per_unit"),
+                "currency": "EUR",
+                "source": "voice_negotiation",
+                "_score": 100,
+            }
+        
+        save_thread(thread)
+        
+        return jsonify({
+            "status": "success",
+            "message": "Voice negotiation result saved to thread",
+            "thread_id": thread.thread_id,
+            "thread": thread.to_dict(),
+        })
+        
+    except Exception as e:
+        logger.exception("Error saving voice negotiation")
+        return jsonify({"error": str(e), "status": "error"}), 500
+        
+    except Exception as e:
+        return jsonify({"error": str(e), "status": "error"}), 500
+

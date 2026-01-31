@@ -110,6 +110,10 @@ class NegotiationThread:
     # Evaluation history
     evaluations: List[Dict[str, Any]] = field(default_factory=list)
     
+    # Voice call tracking
+    voice_call_result: Optional[Dict[str, Any]] = None
+    voice_call_transcript: List[Dict[str, Any]] = field(default_factory=list)
+    
     # Timestamps
     created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
     updated_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
@@ -477,10 +481,10 @@ def generate_negotiation_email(
 
 
 def generate_acceptance_email(thread: NegotiationThread) -> str:
-    """Generate acceptance email"""
+    """Generate acceptance email with mention of follow-up call"""
     from utils.module_5.core import _llm_generate
     
-    system = "You are a procurement specialist writing an acceptance email. Be professional and confirm key terms."
+    system = "You are a procurement specialist writing an acceptance email. Be professional and confirm key terms. Mention that a representative will call them shortly to finalize details."
     
     offer = thread.current_supplier_offer
     prompt = f"""
@@ -497,9 +501,10 @@ Accepted offer:
 Requirements:
 1. Confirm acceptance of the offer
 2. Summarize key terms (price, incoterms, payment, delivery)
-3. Request proforma invoice
-4. Mention next steps
-5. Keep under 150 words
+3. IMPORTANT: Mention that a representative from our team will call them shortly to finalize the details and discuss any remaining questions
+4. Request proforma invoice
+5. Mention next steps
+6. Keep under 150 words
 """
     
     text = _llm_generate(prompt, system, temperature=0.3)
@@ -515,6 +520,8 @@ Confirmed terms:
 - Incoterms: {offer.get("incoterm")}
 - Payment: {offer.get("payment_terms")}
 - Delivery: {offer.get("lead_time_days")} days
+
+A representative from our team will call you shortly to finalize the details and discuss any remaining questions.
 
 Please send us the proforma invoice so we can proceed with the order.
 

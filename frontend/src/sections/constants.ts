@@ -1,4 +1,4 @@
-import { BookOpen, Box, BrainCircuit, Briefcase, Calculator, FileText, Globe, Layers, Mail, Phone, Video } from "lucide-react";
+import { BookOpen, Box, BrainCircuit, Briefcase, Calculator, FileText, Globe, Layers, Mail, Video } from "lucide-react";
 
 export const fontStyle = `
   @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
@@ -23,14 +23,13 @@ export const MODULES = [
     { id: 1, title: "Analyse Specs", icon: FileText, file: "Specs_V1.pdf", type: "specs", statusText: "Extraction des données..." },
     { id: 2, title: "Sourcing Global", icon: Globe, file: "Liste_Sourcing.xlsx", type: "sourcing", statusText: "Recherche fournisseurs..." },
     { id: 3, title: "Email Center", icon: Mail, file: "Email_Negotiations.md", type: "email", statusText: "Préparation des emails..." },
-    { id: 4, title: "Phone Calls Negotiations", icon: Phone, file: "Call_Transcripts.wav", type: "calls", statusText: "Simulation d'appels..." },
-    { id: 5, title: "Analyse TCO", icon: Calculator, file: "Rapport_TCO.json", type: "tco", statusText: "Calcul des coûts..." },
-    { id: 6, title: "Business Plan", icon: Briefcase, file: "Business_Plan.pdf", type: "businessplan", statusText: "Génération du plan..." },
-    { id: 7, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." },
-    { id: 8, title: "2D Layout Design", icon: Layers, file: "layout_square.dxf", type: "layout2d", statusText: "Génération du layout 2D..." },
-    { id: 9, title: "3D Model Generation", icon: Box, file: "factory1.glb", type: "model3d", statusText: "Modélisation 3D..." },
-    { id: 10, title: "Video Model Presentation", icon: Video, file: "Presentation_HD.mp4", type: "video", statusText: "Rendu vidéo HD..." },
-    { id: 11, title: "Digital Twin", icon: BrainCircuit, file: "Digital_Twin_Live.json", type: "twin", statusText: "Initialisation du Jumeau Numérique..." }
+    { id: 4, title: "Analyse TCO", icon: Calculator, file: "Rapport_TCO.json", type: "tco", statusText: "Calcul des coûts..." },
+    { id: 5, title: "Business Plan", icon: Briefcase, file: "Business_Plan.pdf", type: "businessplan", statusText: "Génération du plan..." },
+    { id: 6, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." },
+    { id: 7, title: "2D Layout Design", icon: Layers, file: "layout_square.dxf", type: "layout2d", statusText: "Génération du layout 2D..." },
+    { id: 8, title: "3D Model Generation", icon: Box, file: "factory1.glb", type: "model3d", statusText: "Modélisation 3D..." },
+    { id: 9, title: "Video Model Presentation", icon: Video, file: "Presentation_HD.mp4", type: "video", statusText: "Rendu vidéo HD..." },
+    { id: 10, title: "Digital Twin", icon: BrainCircuit, file: "Digital_Twin_Live.json", type: "twin", statusText: "Initialisation du Jumeau Numérique..." }
 ];
 
 export const MODULE_LOADING_META: Record<string, { kicker: string; description: string; bullets: string[]; accent: string; glow: string }> = {
@@ -68,13 +67,6 @@ export const MODULE_LOADING_META: Record<string, { kicker: string; description: 
         bullets: ["Brouillons IA", "Incoterms", "Résumé d'accord"],
         accent: "from-sky-600 via-blue-600 to-indigo-600",
         glow: "bg-blue-500",
-    },
-    calls: {
-        kicker: "Négociation vocale",
-        description: "Appels fournisseurs avec transcription et synthèse d'offres.",
-        bullets: ["Voice agent", "Transcription live", "Best offer"],
-        accent: "from-emerald-600 via-green-600 to-lime-600",
-        glow: "bg-lime-400",
     },
     sourcing: {
         kicker: "Sourcing mondial",

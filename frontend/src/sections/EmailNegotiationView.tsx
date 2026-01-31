@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Mail, Send, Sparkles, RefreshCw, Check, X, Clock,
     ChevronRight, AlertCircle, CheckCircle2, XCircle,
-    MessageSquare, User, Building2, Loader2, Play, Pause
+    MessageSquare, User, Building2, Loader2, Play, Pause, Phone
 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
@@ -131,9 +131,10 @@ const ThreadCard = ({
 };
 
 // Email viewer
-const EmailViewer = ({ thread, onAction }: {
+const EmailViewer = ({ thread, onAction, onCallSupplier }: {
     thread: NegotiationThread;
     onAction: (action: "negotiate" | "accept" | "reject") => void;
+    onCallSupplier: (threadId: string) => void;
 }) => {
     const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -142,6 +143,9 @@ const EmailViewer = ({ thread, onAction }: {
         await onAction(action);
         setActionLoading(null);
     };
+
+    // Only allow calls for pending/negotiating/initial_sent threads (not accepted or rejected)
+    const canCall = thread.status === "negotiating" || thread.status === "pending" || thread.status === "initial_sent";
 
     return (
         <div className="h-full flex flex-col bg-white dark:bg-[#13141c]">
@@ -152,7 +156,19 @@ const EmailViewer = ({ thread, onAction }: {
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white">{thread.supplier_name}</h3>
                         <p className="text-sm text-slate-500 dark:text-slate-400">{thread.supplier_email}</p>
                     </div>
-                    <StatusBadge status={thread.status} />
+                    <div className="flex items-center gap-3">
+                        {canCall && (
+                            <button
+                                onClick={() => onCallSupplier(thread.thread_id)}
+                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-bold flex items-center gap-2 transition-colors shadow-lg shadow-emerald-200 dark:shadow-none"
+                                title="Open voice call in new tab"
+                            >
+                                <Phone size={14} />
+                                Call Supplier
+                            </button>
+                        )}
+                        <StatusBadge status={thread.status} />
+                    </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-4 text-xs">
                     <span className="text-slate-600 dark:text-slate-400">
@@ -438,6 +454,12 @@ export const EmailNegotiationView = ({
         }
     }, [selectedThreadId, fetchThreads]);
 
+    // Handle call supplier - opens voice call in new tab
+    const handleCallSupplier = useCallback((threadId: string) => {
+        const voiceCallUrl = `/voice-call?session=${threadId}`;
+        window.open(voiceCallUrl, '_blank', 'noopener,noreferrer');
+    }, []);
+
     // Toggle polling
     const togglePolling = useCallback(() => {
         if (isPolling) {
@@ -632,7 +654,7 @@ export const EmailNegotiationView = ({
                 {/* Email viewer */}
                 <div className="bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm dark:shadow-none overflow-hidden transition-colors">
                     {selectedThread ? (
-                        <EmailViewer thread={selectedThread} onAction={handleThreadAction} />
+                        <EmailViewer thread={selectedThread} onAction={handleThreadAction} onCallSupplier={handleCallSupplier} />
                     ) : (
                         <div className="h-full flex items-center justify-center text-slate-300 dark:text-slate-600">
                             <div className="text-center">

@@ -22,6 +22,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.93.2
         version: 2.93.3
+      '@vapi-ai/web':
+        specifier: ^2.5.2
+        version: 2.5.2
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -169,6 +172,10 @@ packages:
   '@babel/types@7.28.6':
     resolution: {integrity: sha512-0ZrskXVEHSWIqZM/sQZ4EV3jZJXRkio/WCxaqKZP1g//CEWEPSfeZFcms4XeKBCHU0ZKnIkdJeU/kF+eRp5lBg==}
     engines: {node: '>=6.9.0'}
+
+  '@daily-co/daily-js@0.85.0':
+    resolution: {integrity: sha512-lpl111ZWNTUWDnwYcPuNi9PGJPbLCeCw6LzmEY40nG0hv1jg5JLVW8Rq3Cj/+lOCP6W6h4PXm211ss0FFnxITQ==}
+    engines: {node: '>=10.0.0'}
 
   '@emnapi/core@1.8.1':
     resolution: {integrity: sha512-AvT9QFpxK0Zd8J0jopedNm+w/2fIzvtPKPjqyw9jwvBaReTTqPBk9Hixaz7KbjimP+QNz605/XnjFcDAL2pqBg==}
@@ -917,6 +924,30 @@ packages:
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
 
+  '@sentry-internal/browser-utils@8.55.0':
+    resolution: {integrity: sha512-ROgqtQfpH/82AQIpESPqPQe0UyWywKJsmVIqi3c5Fh+zkds5LUxnssTj3yNd1x+kxaPDVB023jAP+3ibNgeNDw==}
+    engines: {node: '>=14.18'}
+
+  '@sentry-internal/feedback@8.55.0':
+    resolution: {integrity: sha512-cP3BD/Q6pquVQ+YL+rwCnorKuTXiS9KXW8HNKu4nmmBAyf7urjs+F6Hr1k9MXP5yQ8W3yK7jRWd09Yu6DHWOiw==}
+    engines: {node: '>=14.18'}
+
+  '@sentry-internal/replay-canvas@8.55.0':
+    resolution: {integrity: sha512-nIkfgRWk1091zHdu4NbocQsxZF1rv1f7bbp3tTIlZYbrH62XVZosx5iHAuZG0Zc48AETLE7K4AX9VGjvQj8i9w==}
+    engines: {node: '>=14.18'}
+
+  '@sentry-internal/replay@8.55.0':
+    resolution: {integrity: sha512-roCDEGkORwolxBn8xAKedybY+Jlefq3xYmgN2fr3BTnsXjSYOPC7D1/mYqINBat99nDtvgFvNfRcZPiwwZ1hSw==}
+    engines: {node: '>=14.18'}
+
+  '@sentry/browser@8.55.0':
+    resolution: {integrity: sha512-1A31mCEWCjaMxJt6qGUK+aDnLDcK6AwLAZnqpSchNysGni1pSn1RWSmk9TBF8qyTds5FH8B31H480uxMPUJ7Cw==}
+    engines: {node: '>=14.18'}
+
+  '@sentry/core@8.55.0':
+    resolution: {integrity: sha512-6g7jpbefjHYs821Z+EBJ8r4Z7LT5h80YSWRJaylGS4nW5W5Z2KXzpdnyFarv37O7QjauzVC2E+PABmpkw5/JGA==}
+    engines: {node: '>=14.18'}
+
   '@sinclair/typebox@0.27.8':
     resolution: {integrity: sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==}
 
@@ -1295,6 +1326,10 @@ packages:
     peerDependencies:
       react: '>= 16.8.0'
 
+  '@vapi-ai/web@2.5.2':
+    resolution: {integrity: sha512-mT4DjApi0/0+EK77h2xOLq3qVBa7rv3JNQ+gFWuhFE4YdGYxI51+fn8bQI9N535+zU/Z4jFKXotdBHQJ3filHA==}
+    engines: {node: '>=18.0.0'}
+
   '@vitest/expect@0.34.6':
     resolution: {integrity: sha512-QUzKpUQRc1qC7qdGo7rMK3AkETI7w18gTCUrsNnyjjJKYiuUB9+TQK3QnR1unhCnWRC0AbKv2omLGQDF/mIjOw==}
 
@@ -1416,6 +1451,9 @@ packages:
 
   bidi-js@1.0.3:
     resolution: {integrity: sha512-RKshQI1R3YQ+n9YJz2QQ147P66ELpa1FQEg20Dk8oW9t2KgLbpDLLp9aGZ7y8WHSshDknG0bknqGw5/tyCs5tw==}
+
+  bowser@2.13.1:
+    resolution: {integrity: sha512-OHawaAbjwx6rqICCKgSG0SAnT05bzd7ppyKLVUITZpANBaaMFBAsaNkto3LoQ31tyFP5kNujE8Cdx85G9VzOkw==}
 
   brace-expansion@1.1.12:
     resolution: {integrity: sha512-9T9UjW3r0UW5c1Q7GTwllptXwhvYmEzFhzMfZ9H7FQWt+uZePjZPjBP/W1ZEyZ1twGWom5/56TF4lPcqjnDHcg==}
@@ -1817,6 +1855,10 @@ packages:
 
   eventemitter3@4.0.7:
     resolution: {integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==}
+
+  events@3.3.0:
+    resolution: {integrity: sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==}
+    engines: {node: '>=0.8.x'}
 
   extend-shallow@2.0.1:
     resolution: {integrity: sha512-zCnTtlxNoAiDc3gqY2aYAWFx7XWWiasuF2K8Me5WbN8otHKTUKBwjPtNpRs/rbUZm7KxWAaNj7P1a/p52GbVug==}
@@ -3293,6 +3335,14 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
 
+  '@daily-co/daily-js@0.85.0':
+    dependencies:
+      '@babel/runtime': 7.28.6
+      '@sentry/browser': 8.55.0
+      bowser: 2.13.1
+      dequal: 2.0.3
+      events: 3.3.0
+
   '@emnapi/core@1.8.1':
     dependencies:
       '@emnapi/wasi-threads': 1.1.0
@@ -3942,6 +3992,34 @@ snapshots:
 
   '@rtsao/scc@1.1.0': {}
 
+  '@sentry-internal/browser-utils@8.55.0':
+    dependencies:
+      '@sentry/core': 8.55.0
+
+  '@sentry-internal/feedback@8.55.0':
+    dependencies:
+      '@sentry/core': 8.55.0
+
+  '@sentry-internal/replay-canvas@8.55.0':
+    dependencies:
+      '@sentry-internal/replay': 8.55.0
+      '@sentry/core': 8.55.0
+
+  '@sentry-internal/replay@8.55.0':
+    dependencies:
+      '@sentry-internal/browser-utils': 8.55.0
+      '@sentry/core': 8.55.0
+
+  '@sentry/browser@8.55.0':
+    dependencies:
+      '@sentry-internal/browser-utils': 8.55.0
+      '@sentry-internal/feedback': 8.55.0
+      '@sentry-internal/replay': 8.55.0
+      '@sentry-internal/replay-canvas': 8.55.0
+      '@sentry/core': 8.55.0
+
+  '@sentry/core@8.55.0': {}
+
   '@sinclair/typebox@0.27.8': {}
 
   '@stitches/react@1.2.8(react@18.3.1)':
@@ -4304,6 +4382,11 @@ snapshots:
       '@use-gesture/core': 10.3.1
       react: 18.3.1
 
+  '@vapi-ai/web@2.5.2':
+    dependencies:
+      '@daily-co/daily-js': 0.85.0
+      events: 3.3.0
+
   '@vitest/expect@0.34.6':
     dependencies:
       '@vitest/spy': 0.34.6
@@ -4453,6 +4536,8 @@ snapshots:
   bidi-js@1.0.3:
     dependencies:
       require-from-string: 2.0.2
+
+  bowser@2.13.1: {}
 
   brace-expansion@1.1.12:
     dependencies:
@@ -5023,6 +5108,8 @@ snapshots:
   esutils@2.0.3: {}
 
   eventemitter3@4.0.7: {}
+
+  events@3.3.0: {}
 
   extend-shallow@2.0.1:
     dependencies:
