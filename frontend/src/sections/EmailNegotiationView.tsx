@@ -35,7 +35,7 @@ interface NegotiationThread {
     machine_type: string;
     quantity_needed: number;
     initial_price_estimate: string;
-    status: "pending" | "negotiating" | "accepted" | "rejected" | "closed";
+    status: "pending" | "negotiating" | "accepted" | "rejected" | "closed" | "initial_sent";
     emails: EmailRecord[];
     created_at: string;
     updated_at: string;

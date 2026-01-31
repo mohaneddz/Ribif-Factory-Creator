@@ -177,25 +177,26 @@ export async function saveModule1Data(
         .from("projects")
         .update({
             module1_data: data,
-            completed_modules: supabaseAdmin.rpc ? undefined : undefined, // Will append below
             current_module: null,
         })
         .eq("id", projectId);
 
     if (!error) {
         // Append to completed_modules
-        await supabaseAdmin.rpc("array_append_unique", {
+        const { error: rpcError } = await supabaseAdmin.rpc("array_append_unique", {
             table_name: "projects",
             id: projectId,
             column_name: "completed_modules",
             value: "specs",
-        }).catch(() => {
+        });
+        
+        if (rpcError) {
             // Fallback: just update directly
-            supabaseAdmin
+            await supabaseAdmin
                 .from("projects")
                 .update({ completed_modules: ["specs"] })
                 .eq("id", projectId);
-        });
+        }
     }
 
     return { error: error ? new Error(error.message) : null };
