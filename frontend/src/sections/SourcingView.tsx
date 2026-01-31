@@ -11,6 +11,26 @@ export const SourcingView = ({ progress, data, module4Data, loading }: { progres
     const currentMachine = enrichedMachines[selectedMachine];
     const suppliers = currentMachine?.suppliers || [];
 
+    // Helper to render complex values (objects vs strings)
+    const renderValue = (val: any) => {
+        if (val === null || val === undefined) return "N/A";
+        
+        let target = val;
+        
+        // Handle stringified objects (like Python repr)
+        if (typeof val === 'string' && val.trim().startsWith('{')) {
+            try {
+                const valueMatch = val.match(/['"](?:valeur|value)['"]\s*:\s*['"]([^'"]+)['"]/);
+                if (valueMatch) return valueMatch[1];
+            } catch (e) {}
+        }
+
+        if (typeof target === 'object' && !Array.isArray(target)) {
+            return target.valeur ?? target.value ?? "N/A";
+        }
+        return target;
+    };
+
     if (loading) {
         return (
             <div className="p-8 h-full flex items-center justify-center">
@@ -58,10 +78,10 @@ export const SourcingView = ({ progress, data, module4Data, loading }: { progres
                             )}
                         >
                             <div className="font-bold text-sm text-slate-800 dark:text-white truncate">
-                                {item.machine_input?.nom_machine || `Machine ${i + 1}`}
+                                {renderValue(item.machine_input?.nom_machine) || `Machine ${i + 1}`}
                             </div>
                             <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">
-                                {item.machine_input?.fabricant_recommande || 'N/A'}
+                                {renderValue(item.machine_input?.fabricant_recommande)}
                             </div>
                             <div className="flex gap-2 mt-2">
                                 <span className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded text-[10px] font-bold">
@@ -87,14 +107,14 @@ export const SourcingView = ({ progress, data, module4Data, loading }: { progres
                                 )}
                             </div>
                             <div className="flex-1">
-                                <h2 className="text-xl font-extrabold text-slate-800 dark:text-white">{currentMachine.machine_input?.nom_machine}</h2>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">{currentMachine.machine_input?.type}</p>
+                                <h2 className="text-xl font-extrabold text-slate-800 dark:text-white">{renderValue(currentMachine.machine_input?.nom_machine)}</h2>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">{renderValue(currentMachine.machine_input?.type)}</p>
                                 <div className="flex gap-2 mt-2">
                                     <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold">
-                                        Qté: {currentMachine.machine_input?.quantite_necessaire || 1}
+                                        Qté: {renderValue(currentMachine.machine_input?.quantite_necessaire)}
                                     </span>
                                     <span className="px-2 py-1 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold">
-                                        {currentMachine.machine_input?.fabricant_recommande}
+                                        {renderValue(currentMachine.machine_input?.fabricant_recommande)}
                                     </span>
                                 </div>
                             </div>

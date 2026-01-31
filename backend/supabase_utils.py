@@ -7,8 +7,14 @@ from typing import Any, Dict, Optional, Tuple
 from supabase import create_client, Client
 
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/") + "/"
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+
+# Log normalized storage/API endpoint at startup (safe extraction of domain)
+if SUPABASE_URL and SUPABASE_URL != "/":
+    from utils.logger import get_logger
+    _logger = get_logger("supabase_utils")
+    _logger.info(f"Supabase endpoint normalized: {SUPABASE_URL}")
 
 SUPABASE_BUCKET_FILES = os.getenv("SUPABASE_BUCKET_FILES", "project-files")
 SUPABASE_BUCKET_PUBLIC = os.getenv("SUPABASE_BUCKET_PUBLIC", "public-assets")
@@ -28,10 +34,9 @@ def _safe_name(name: str) -> str:
 
 
 def get_supabase() -> Optional[Client]:
-    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or SUPABASE_URL == "/":
         return None
-    url = SUPABASE_URL.rstrip("/") + "/"
-    return create_client(url, SUPABASE_SERVICE_ROLE_KEY)
+    return create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 
 def is_enabled() -> bool:

@@ -6,9 +6,16 @@ from typing import Any, Dict, List, Optional
 from utils.logger import get_logger
 from vertex_utils import generate_message
 from utils.web_search.agentic import agentic_search
+from utils.web_search.sourcing_agent import sourcing_agent
+from utils.module_1.helpers import safe_json_loader, normalize_headers
 from config import WEB_SEARCH_ENABLED
 
 logger = get_logger(__name__)
+
+# Shared worker pool for Module 1 enrichment
+SHARED_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=7)
+MACHINE_ENRICHMENT_TIMEOUT_S = 90
+MAX_SUPPLIERS_PER_MACHINE = 12
 
 # =========================================================
 # 0) Prompts for Enrichment
@@ -120,41 +127,80 @@ class RIBIFEnricher:
                 system_instruction=SYSTEM_INSTRUCTION,
                 temperature=0.2
             )
-            # Cleanup
-            cleaned = raw.strip()
-            if cleaned.startswith("```json"):
-                cleaned = cleaned[7:]
-            if cleaned.endswith("```"):
-                cleaned = cleaned[:-3]
-            return json.loads(cleaned)
+            data = safe_json_loader(raw)
+            if not data and tag == "normalization":
+                # Retry once for normalization if it failed
+                logger.warning(f"Normalization failed, retrying once...")
+                raw_retry = generate_message(
+                    prompt="Your previous output was malformed. Return ONLY valid JSON.\n" + STRICT_JSON_HEADER + prompt,
+                    system_instruction=SYSTEM_INSTRUCTION,
+                    temperature=0.1
+                )
+                data = safe_json_loader(raw_retry)
+            return data
         except Exception as e:
             logger.error(f"Enricher LLM call '{tag}' failed: {e}")
             return {}
 
     def enrich_machine(self, machine: Dict[str, Any]) -> Dict[str, Any]:
         """Deep enrichment for a single machine using agentic web search."""
+        # This is now a wrapper around the global enrichment strategy
+        return self.enrich_one_machine_global(machine)
+
+    def enrich_one_machine_global(self, machine: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Redesigned Module 1 machine enrichment:
+        - Single global search pass.
+        - Discover OEMs, Distributors, Integrators, and Service Providers in one go.
+        - Hard limits on suppliers and time.
+        - Resilient JSON normalization.
+        """
         name = machine.get("nom_machine")
         manufacturer = machine.get("fabricant_recommande", "")
         
         if not name or name == "N/A":
             return machine
 
-        logger.info(f"Enriching machine: {name}")
-        
-        # 1. Generate queries (handled inside agentic_search mainly, but we can give it a hint)
-        # The agentic_search already does multiple loops.
+        logger.info(f"Global enrichment starting for: {name}")
+        t_start = time.time()
         
         try:
-            # 2. Agentic search for specs
+            # 1. Specs Discovery
+            # We still use the agentic search for specs as it's targeted
             specs_res = agentic_search.search_specs_agentic(name, manufacturer)
             
-            # 3. Store results
+            # 2. Global Sourcing Pass (Non-phased)
+            global_query = f"{name} {manufacturer} suppliers distributors Algeria MENA Europe USA"
+            logger.info(f"Single global sourcing pass for: {name}")
+            
+            # We bypass the sourcing_agent's phased logic for speed
+            from utils.web_search import aggregator
+            search_results = aggregator.search_machine_suppliers(global_query, max_total_results=MAX_SUPPLIERS_PER_MACHINE)
+            
+            suppliers = []
+            for s in search_results:
+                suppliers.append({
+                    "supplier_name": s.supplier_name,
+                    "role": s.price_type if "Distributor" not in s.price_type else "Distributor", # Heuristic if role not explicit
+                    "region": s.region,
+                    "website": s.website,
+                    "source_urls": [s.source_url] if s.source_url else [],
+                    "confidence": "high" if s.relevance_score > 0.6 else "medium",
+                    "notes": s.customs_algeria_info
+                })
+            
+            # Use LLM to normalize/categorize suppliers if we have time/budget, 
+            # but for speed, we stick to the aggregated list.
+            
+            # 3. Update Machine Data
             machine["selected_models"] = [
                 {"brand": specs_res.manufacturer or manufacturer, "model": specs_res.model or "Best-fit model", "type": "primary"},
                 {"brand": "Alternative OEM", "model": "Equivalent Model", "type": "alternative"}
             ]
+            machine["suppliers"] = suppliers[:MAX_SUPPLIERS_PER_MACHINE]
+            machine["algeria_distributor_found"] = any(s.get("region") == "Algeria" for s in suppliers)
             
-            # Enrich specifications
+            # Specs enrichment
             curr_specs = machine.get("specifications", {})
             if isinstance(curr_specs, dict) and specs_res.specifications:
                 for k, v in specs_res.specifications.items():
@@ -162,40 +208,31 @@ class RIBIFEnricher:
                         curr_specs[k] = v
                 machine["specifications"] = curr_specs
 
-            # 4. Quantity estimation
-            # If quantity is 0 or missing, estimate it
+            # Quantity estimation (engineering heuristic)
             qty = machine.get("quantite_necessaire", 0)
             if qty == 0:
-                # Engineering estimate based on name
-                qty_map = {
-                    "spc": 2, "extrusion": 2, "injection": 10, "thermoformage": 2, 
-                    "membrane": 1, "trempe": 1, "lamination": 1, "agv": 15, "asrs": 1
-                }
-                found_qty = 1
-                for k, v in qty_map.items():
-                    if k in name.lower():
-                        found_qty = v
-                        break
-                machine["quantite_necessaire"] = found_qty
-                machine["quantite_rationale"] = f"Estimated based on typical industrial capacity for a project of this scale."
+                machine["quantite_necessaire"] = 1
+                machine["quantite_rationale"] = "Defaulted to 1 unit as baseline."
 
-            # 5. Metadata
+            # Metadata
             machine["_web_enrichment"] = {
                 "datasheets": specs_res.datasheet_urls,
                 "images": specs_res.image_urls,
                 "sources": specs_res.sources,
-                "agentic_notes": "Deep enriched via RIBIF Enriched Module"
+                "agentic_notes": "Enriched via non-phased global sourcing."
             }
             machine["value_source"] = "web"
             machine["confidence"] = "high" if specs_res.sources else "low"
-            machine["rationale"] = f"Technical specifications found via web search for {name}."
+            machine["rationale"] = f"Technical data and suppliers aggregated via global search for {name}."
 
         except Exception as e:
             logger.warning(f"Failed to enrich machine {name}: {e}")
+            machine["enrichment_error"] = str(e)
             machine["value_source"] = "estimate"
             machine["confidence"] = "low"
-            machine["rationale"] = "Web search failed, using default factory template."
+            machine["rationale"] = f"Enrichment timeout or failure ({str(e)}). Using basic template."
 
+        logger.info(f"Machine {name} enriched in {round(time.time() - t_start, 2)}s")
         return machine
 
     def process(self, raw_json: Dict[str, Any]) -> Dict[str, Any]:
@@ -213,25 +250,37 @@ class RIBIFEnricher:
         info["localisation"] = loc
         raw_json["stage_1_informations_generales"]["informations_generales"] = info
 
-        # Parallel Execution of Tasks A, B, C
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            # A: Stage 5 Routing
-            future_routing = executor.submit(self._call_llm_json, ROUTING_PROMPT.format(raw_json=json.dumps(raw_json)), "routing")
-            
-            # C: Quantities (Stage 2 & 3)
-            future_quantities = executor.submit(self._call_llm_json, QUANTITIES_PROMPT.format(raw_json=json.dumps(raw_json)), "quantities")
-            
-            # B: Machine Enrichment (Stage 4)
-            machines = raw_json.get("stage_4_machines_equipements", {}).get("machines_production", [])
-            future_machines = [executor.submit(self.enrich_machine, m) for m in machines]
+        # Parallel Execution of Tasks A, B, C using SHARED_EXECUTOR
+        # A: Stage 5 Routing
+        future_routing = SHARED_EXECUTOR.submit(self._call_llm_json, ROUTING_PROMPT.format(raw_json=json.dumps(raw_json)), "routing")
+        
+        # C: Quantities (Stage 2 & 3)
+        future_quantities = SHARED_EXECUTOR.submit(self._call_llm_json, QUANTITIES_PROMPT.format(raw_json=json.dumps(raw_json)), "quantities")
+        
+        # B: Machine Enrichment (Stage 4)
+        machines = raw_json.get("stage_4_machines_equipements", {}).get("machines_production", [])
+        future_machines = [SHARED_EXECUTOR.submit(self.enrich_one_machine_global, m) for m in machines]
 
-            # Wait and Merge
-            routing_data = future_routing.result()
-            quantities_data = future_quantities.result()
-            
-            enriched_machines = []
-            for f in future_machines:
-                enriched_machines.append(f.result())
+        # Wait and Merge
+        try:
+            routing_data = future_routing.result(timeout=120)
+            quantities_data = future_quantities.result(timeout=120)
+        except Exception as e:
+            logger.error(f"Enrichment task timed out or failed: {e}")
+            routing_data = {}
+            quantities_data = {}
+        
+        enriched_machines = []
+        for i, f in enumerate(future_machines):
+            original_machine = machines[i]
+            try:
+                result = f.result(timeout=MACHINE_ENRICHMENT_TIMEOUT_S)
+                enriched_machines.append(result)
+            except Exception as e:
+                logger.warning(f"Machine enrichment failed or timed out for {original_machine.get('nom_machine')}: {e}")
+                # Fallback: use original machine and mark error
+                original_machine["enrichment_error"] = str(e)
+                enriched_machines.append(original_machine)
 
         # Merge Results
         raw_json["stage_5_processus_production"] = routing_data

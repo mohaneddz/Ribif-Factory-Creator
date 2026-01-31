@@ -162,7 +162,7 @@ export default function Simple3DViewer({
                     model.position.set(
                         targetCenter.x - originalCenter.x * scaleX,
                         targetCenter.y - originalCenter.y * scaleY,
-                        targetCenter.z - originalCenter.z * scaleZ
+                        targetCenter.z - originalCenter.z * scaleZ + (factoryModel ? 0 : 4)
                     );
 
                     model.rotateX(Math.PI / 2);

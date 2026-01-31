@@ -22,6 +22,18 @@ import requests
 _domain_last_request: Dict[str, float] = {}
 _RATE_LIMIT_LOCK = None  # Will use threading.Lock if needed
 
+# Import helper here (avoid circular if possible, base is leaf)
+# Actually, normalize_headers is in utils.module_1.helpers. 
+# Let's move it to a more central place if used here, or define a local shim.
+# I'll define a local shim or a more generic place.
+# Let's check where normalize_headers should really go. 
+# For now, I'll just use a local one to be safe and surgical.
+
+def _normalize_headers(headers: Dict[str, Any]) -> Dict[str, str]:
+    if not headers:
+        return {}
+    return {str(k): str(v) for k, v in headers.items()}
+
 # Default settings
 DEFAULT_TIMEOUT_S = 15
 DEFAULT_RATE_LIMIT_GAP_S = 1.0
@@ -271,7 +283,7 @@ def safe_request(
     """Make a safe HTTP request with error handling."""
     final_headers = HEADERS.copy()
     if headers:
-        final_headers.update(headers)
+        final_headers.update(_normalize_headers(headers))
     
     try:
         response = requests.request(

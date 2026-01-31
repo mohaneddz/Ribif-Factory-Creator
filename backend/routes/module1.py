@@ -194,42 +194,46 @@ def process_module_1():
         
         if procs and isinstance(procs, list):
             # If the enricher returned a list of products with nested steps, flatten it for the UI
-            if "etapes" in procs[0]:
-                module1_logger.info("Flattening nested Stage 5 routings for UI compatibility...")
+            if len(procs) > 0 and "etapes" in procs[0]:
+                module1_logger.info("Flattening nested Stage 5 routings for UI mapping...")
                 all_steps = []
                 for p in procs:
                     prod_name = p.get("produit", "Production")
                     for i, s in enumerate(p.get("etapes", [])):
                         # Map keys to UI expectations
-                        s["nom_etape"] = s.get("name", s.get("nom_etape", "Etape sans nom"))
-                        if prod_name != "Production":
-                            s["nom_etape"] = f"[{prod_name}] {s['nom_etape']}"
+                        # nom_etape is the main label
+                        name = s.get("name") or s.get("nom_etape") or "Process Step"
+                        s["nom_etape"] = f"[{prod_name}] {name}" if prod_name != "Production" else name
                         
-                        s["numero_etape"] = s.get("step", s.get("numero_etape", i + 1))
+                        s["numero_etape"] = s.get("step") or s.get("numero_etape") or (i + 1)
                         
-                        # Ensure parametres_process exists for Temp/Pression/Cycle labels
-                        if "parametres_process" not in s:
-                            s["parametres_process"] = {
-                                "temperature": s.get("temperature", s.get("temp", "N/A")),
-                                "pression": s.get("pression", "N/A"),
-                                "temps_cycle": s.get("cycle", s.get("duration", "N/A")),
-                                "vitesse": s.get("vitesse", s.get("speed", "N/A"))
-                            }
+                        # Machine display for the card header
+                        if "machine" not in s and "machine_name" in s:
+                             s["machine"] = s["machine_name"]
+                        
+                        # Fix parametres_process for Temp/Pression/Cycle labels
+                        # Ensuring no empty strings, falling back to "N/A"
+                        raw_params = s.get("parametres_process", {})
+                        s["parametres_process"] = {
+                            "temperature": str(raw_params.get("temperature") or s.get("temperature") or "N/A"),
+                            "pression": str(raw_params.get("pression") or s.get("pression") or "N/A"),
+                            "temps_cycle": str(raw_params.get("temps_cycle") or s.get("cycle") or "N/A"),
+                            "vitesse": str(raw_params.get("vitesse") or "N/A")
+                        }
                         all_steps.append(s)
                 final_result["stage_5_processus_production"]["processus_production"] = all_steps
             else:
-                # Flat list already, but ensure keys are correct
+                # Flat list already, ensure UI keys
                 for i, s in enumerate(procs):
-                    if "nom_etape" not in s and "name" in s:
-                        s["nom_etape"] = s["name"]
-                    if "numero_etape" not in s:
-                        s["numero_etape"] = s.get("step", i + 1)
-                    if "parametres_process" not in s:
-                         s["parametres_process"] = {
-                            "temperature": s.get("temperature", "N/A"),
-                            "pression": s.get("pression", "N/A"),
-                            "temps_cycle": s.get("cycle", "N/A")
-                        }
+                    s["nom_etape"] = s.get("nom_etape") or s.get("name") or "Production Step"
+                    s["numero_etape"] = s.get("numero_etape") or s.get("step") or (i + 1)
+                    
+                    raw_params = s.get("parametres_process", {})
+                    s["parametres_process"] = {
+                        "temperature": str(raw_params.get("temperature") or "N/A"),
+                        "pression": str(raw_params.get("pression") or "N/A"),
+                        "temps_cycle": str(raw_params.get("temps_cycle") or "N/A")
+                    }
 
     except Exception as e:
         module1_logger.error(f"Enrichment pipeline failed: {e}")

@@ -16,6 +16,26 @@ export const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
     const totalMaterialsTco = tcoData.total_raw_materials_tco || 0;
     const calcDate = tcoData.calculation_date || new Date().toISOString().split('T')[0];
 
+    // Helper to render complex values (objects vs strings)
+    const renderValue = (val: any) => {
+        if (val === null || val === undefined) return "N/A";
+
+        let target = val;
+
+        // Handle stringified objects (like Python repr)
+        if (typeof val === 'string' && val.trim().startsWith('{')) {
+            try {
+                const valueMatch = val.match(/['"](?:valeur|value)['"]\s*:\s*['"]([^'"]+)['"]/);
+                if (valueMatch) return valueMatch[1];
+            } catch (e) { }
+        }
+
+        if (typeof target === 'object' && !Array.isArray(target)) {
+            return target.valeur ?? target.value ?? "N/A";
+        }
+        return target;
+    };
+
     if (loading) {
         return (
             <div className="h-full flex items-center justify-center">
@@ -130,7 +150,7 @@ export const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
                                 <div className="space-y-3">
                                     {rawMaterialsTco.slice(0, 3).map((mat: any, i: number) => (
                                         <div key={i} className="flex justify-between items-center">
-                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate max-w-[120px]">{mat.nom_materiau}</div>
+                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate max-w-[120px]">{renderValue(mat.nom_materiau)}</div>
                                             <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{((mat.total_tco || 0) / 1000000).toFixed(0)}M</div>
                                         </div>
                                     ))}
@@ -144,7 +164,7 @@ export const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
                                 <div className="space-y-3">
                                     {productTco.slice(0, 3).map((prod: any, i: number) => (
                                         <div key={i} className="flex justify-between items-center">
-                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate max-w-[120px]">{prod.nom_produit}</div>
+                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate max-w-[120px]">{renderValue(prod.nom_produit)}</div>
                                             <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{((prod.total_tco || 0) / 1000000).toFixed(0)}M</div>
                                         </div>
                                     ))}
@@ -158,7 +178,7 @@ export const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
                                 <div className="space-y-3">
                                     {machineTco.map((mac: any, i: number) => (
                                         <div key={i} className="space-y-2">
-                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{mac.machine_name}</div>
+                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{renderValue(mac.machine_name)}</div>
                                             {mac.cost_breakdown && (
                                                 <>
                                                     <div className="flex h-2 w-full rounded-full overflow-hidden gap-0.5">

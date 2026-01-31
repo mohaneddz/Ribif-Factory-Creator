@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import time
 import os
+import re
 from typing import Any, Dict, List, Optional, Union
 from dataclasses import dataclass, field
 
@@ -107,25 +108,46 @@ class AgenticSearch:
         self.model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
     
     def _call_llm(self, prompt: str, tag: str) -> Dict[str, Any]:
-        """Helper to call LLM and parse JSON."""
+        """Helper to call LLM and parse JSON robustly."""
+        raw = ""
         try:
             # Using vertex_utils.generate_message directly
-            response = generate_message(
+            raw = generate_message(
                 prompt=prompt,
                 temperature=TEMPERATURE,
                 system_instruction="You are a helpful industrial research assistant. meaningful/valid JSON only.",
             )
             
-            # Simple cleanup
-            cleaned = response.strip()
-            if cleaned.startswith("```json"):
-                cleaned = cleaned[7:]
-            if cleaned.endswith("```"):
-                cleaned = cleaned[:-3]
+            # 1. Robust cleanup
+            cleaned = (raw or "").strip()
             
-            return json.loads(cleaned)
+            # Remove Markdown code fences if present
+            if "```" in cleaned:
+                # Find the content between first and last triple backticks
+                m = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", cleaned)
+                if m:
+                    cleaned = m.group(1).strip()
+            
+            # 2. Try direct parse
+            try:
+                return json.loads(cleaned)
+            except json.JSONDecodeError:
+                pass
+                
+            # 3. Extract first valid JSON object or array
+            m = re.search(r"(\{[\s\S]*\}|\[[\s\S]*\])", cleaned)
+            if m:
+                try:
+                    return json.loads(m.group(0))
+                except json.JSONDecodeError:
+                    pass
+            
+            logger.error(f"Agentic LLM call '{tag}' failed to parse JSON. Raw (truncated): {cleaned[:1000]}")
+            return {}
         except Exception as e:
             logger.error(f"Agentic LLM call '{tag}' failed: {e}")
+            if raw:
+                logger.error(f"Raw output (truncated): {raw[:1000]}")
             return {}
 
     def _execute_search(self, queries: List[str], search_type: str) -> str:
@@ -279,7 +301,24 @@ class AgenticSearch:
             )
             plan = self._call_llm(prompt, f"plan_supp_step_{step}")
             
-            action = plan.get("action", "FINISH")
+            # --- Robust Fallback Logic ---
+            action = plan.get("action")
+            queries = plan.get("search_queries", [])
+            
+            if not plan or not action:
+                if step == 0:
+                    logger.warning(f"Plan failed for {machine_name}, using fallback search strategy.")
+                    action = "SEARCH"
+                    queries = [
+                        f"{machine_name} manufacturer",
+                        f"{machine_name} OEM",
+                        f"{machine_name} distributor Algeria",
+                        f"{machine_name} distributor MENA",
+                        f"{machine_name} supplier France"
+                    ]
+                else:
+                    action = "FINISH"
+            
             if action == "FINISH":
                 break
                 
@@ -291,21 +330,24 @@ class AgenticSearch:
             
             # 2. ACT: We need structured SupplierResults
             # We will try to map the agent's query to our aggregator
-            for q in queries:
+            for q in queries[:5]: # Hard limit to top 5 candidates
                 # We use the query as the 'machine_name' param to the aggregator to force it to search that string
                 # This leverages the existing multi-provider logic
                 try:
                     res = aggregator.search_machine_suppliers(q, region=region, max_total_results=5)
+                    logger.info(f"Query '{q}' returned {len(res)} results.")
                     suppliers_found.extend(res)
                 except Exception as e:
                     logger.warning(f"Supplier search query '{q}' failed: {e}")
             
             # Dedupe
             unique = {}
+            seen_count = len(suppliers_found)
             for s in suppliers_found:
                 if s.supplier_name not in unique:
                     unique[s.supplier_name] = s
             suppliers_found = list(unique.values())
+            logger.info(f"Total suppliers collected: {seen_count}, Unique after dedup: {len(suppliers_found)}")
             
             # 3. OBSERVE
             # We update knowledge with count of suppliers found

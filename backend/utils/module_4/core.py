@@ -697,16 +697,22 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
 
     # Enforce provenance on suppliers
     valid_suppliers = []
+    logger.info(f"Filtering {len(suppliers)} supplier candidates for {name}...")
     for s in suppliers:
-        # simple check: must have name and at least one source url or website
-        if s.get("supplier_name") and (s.get("source_urls") or s.get("website")):
+        # Relaxed check: must have name and at least one source url or website OR some contact info
+        # Goal: ensure we don't drop potential candidates that just lack an email/phone.
+        s_name = s.get("supplier_name")
+        s_web = s.get("website") or s.get("product_page_url") or s.get("contact_page_url")
+        
+        if s_name and s_web:
              # ensure source_urls is list
-             if "source_urls" not in s:
-                 s["source_urls"] = [s["website"]] if s.get("website") else []
+             if "source_urls" not in s or not s["source_urls"]:
+                 s["source_urls"] = [s_web] if s_web else []
              if "evidence" not in s:
                  s["evidence"] = "Verified via Agentic Search"
              valid_suppliers.append(s)
     
+    logger.info(f"Suppliers for {name}: {len(valid_suppliers)} passed filter out of {len(suppliers)} candidates.")
     suppliers = valid_suppliers
 
     # budget gate

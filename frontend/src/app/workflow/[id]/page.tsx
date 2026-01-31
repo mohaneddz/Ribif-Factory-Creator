@@ -26,6 +26,7 @@ import { SpecsView } from "@/sections/SpecsView";
 import { SourcingView } from "@/sections/SourcingView";
 import { TcoView } from "@/sections/TcoView";
 import { VideoView } from "@/sections/VideoView";
+import { DigitalTwinView } from "@/sections/DigitalTwinView";
 import { API_BASE, MODULES, fontStyle } from "@/sections/constants";
 import { supabase } from "@/lib/supabaseClient";
 import { loadPipelineSettings } from "@/utils/pipelineSettings";
@@ -271,7 +272,18 @@ export default function FactoryCopilot() {
             await new Promise(r => setTimeout(r, 800));
             setArtifacts(prev => [...new Set([...prev, idx])]);
         };
-        const markArtifact = (idx: number) => setArtifacts(prev => [...new Set([...prev, idx])]);
+        const markArtifact = async (idx: number) => {
+            const moduleType = MODULES[idx]?.type;
+            setArtifacts(prev => {
+                const next = [...new Set([...prev, idx])];
+                // Persist to Supabase if project exists
+                if (currentProjectId && moduleType) {
+                    const completedTypes = next.map(i => MODULES[i]?.type).filter(Boolean);
+                    updateProject(currentProjectId, { completed_modules: completedTypes });
+                }
+                return next;
+            });
+        };
 
         try {
             // STEP 1: Upload (if new file)
@@ -308,8 +320,8 @@ export default function FactoryCopilot() {
                     body = fd;
                 } else {
                     headers = { ...headers, "Content-Type": "application/json" };
-                    body = JSON.stringify({ 
-                        project_id: currentProjectId, 
+                    body = JSON.stringify({
+                        project_id: currentProjectId,
                         settings: activeSettings,
                         source_file_path: currentData?.source_file_path,
                         source_filename: currentData?.source_filename
@@ -496,6 +508,18 @@ export default function FactoryCopilot() {
                 markArtifact(idxVideo);
             }
 
+            // =====================================================
+            // MODULE: DIGITAL TWIN
+            // =====================================================
+            const idxTwin = getModuleIndex("twin");
+            if (idxTwin >= 0 && layoutJson) {
+                setCurrentModule(idxTwin);
+                setSelectedModule(idxTwin);
+                setSubStep(0);
+                await new Promise(r => setTimeout(r, 1500)); // Simulaton de l'initialisation
+                markArtifact(idxTwin);
+            }
+
             console.log("🎉 Workflow complete / synced");
             setStatus('finished');
 
@@ -538,7 +562,7 @@ export default function FactoryCopilot() {
         // Clear local state for the module to trigger UI updates
         const moduleType = MODULES[idx]?.type;
         const updates: Partial<ProjectRecord> = {};
-        
+
         if (moduleType === 'specs') { setExtractedData(null); updates.module1_data = null; }
         if (moduleType === 'sourcing') { setModule4Data(null); updates.module4_data = null; }
         if (moduleType === 'tco') { setTcoData(null); updates.module6_data = null; }
@@ -546,9 +570,10 @@ export default function FactoryCopilot() {
         if (moduleType === 'catalogue') { setCatalogData(null); updates.module9_data = null; }
         if (moduleType === 'layout2d') { setLayoutData(null); updates.module2_data = null; }
         if (moduleType === 'video') { setVideoData(null); updates.module3_data = null; }
+        if (moduleType === 'twin') { updates.status = "layout_complete"; } // Digital twin is real-time, no persistent data but needs a status
 
         if (projectId && Object.keys(updates).length > 0) {
-             await updateProject(projectId, updates);
+            await updateProject(projectId, updates);
         }
 
         setArtifacts(prev => prev.filter(i => i !== idx));
@@ -565,7 +590,7 @@ export default function FactoryCopilot() {
         try {
             console.log("🔄 Resetting project data...");
             setStatus('loading');
-            
+
             const res = await fetch(`${API_BASE}/api/projects/${projectId}/reset`, { method: 'POST' });
             if (!res.ok) {
                 const errText = await res.text();
@@ -584,7 +609,7 @@ export default function FactoryCopilot() {
             setCatalogData(null);
             setLayoutData(null);
             setVideoData(null);
-            
+
             setArtifacts([]);
             setCurrentModule(0);
             setSelectedModule(0);
@@ -665,7 +690,7 @@ export default function FactoryCopilot() {
     const isSelectedDone = artifacts.includes(selectedModule) || status === 'finished' || selectedModule < currentModule;
     const selectedProgress = isSelectedProcessing ? subStep : isSelectedDone ? 100 : 0;
     const displayArtifacts = status === 'finished' ? MODULES.map((_, idx) => idx) : artifacts;
-    const deliverableTypes = new Set(["specs", "sourcing", "tco", "businessplan", "catalogue", "layout2d", "model3d", "video"]);
+    const deliverableTypes = new Set(["specs", "sourcing", "tco", "businessplan", "catalogue", "layout2d", "model3d", "video", "twin"]);
     const downloadableArtifacts = displayArtifacts.filter(idx => deliverableTypes.has(MODULES[idx]?.type));
 
     return (
@@ -788,6 +813,7 @@ export default function FactoryCopilot() {
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
                                                 {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.pdf_download_url} htmlUrl={catalogData?.html_download_url} />}
+                                                {selectedModuleItem.type === 'twin' && <DigitalTwinView pipelineModelUrl={pipelineModelUrl} />}
                                             </>
                                         )}
                                     </motion.div>

@@ -15,6 +15,46 @@ export const SpecsView = ({ data }: any) => {
     const recommendations = data?.stage_6_informations_complementaires?.recommandations || [];
     const metadata = data?.ribif_metadata || {};
 
+    // Helper to render complex values (objects vs strings)
+    const renderValue = (val: any, showUnit = false) => {
+        if (val === null || val === undefined) return "N/A";
+        
+        let target = val;
+        
+        // Handle stringified objects (like Python repr)
+        if (typeof val === 'string' && val.trim().startsWith('{')) {
+            try {
+                // Try simple string parsing for common patterns rather than full eval/json
+                const valueMatch = val.match(/['"](?:valeur|value)['"]\s*:\s*['"]([^'"]+)['"]/);
+                const unitMatch = val.match(/['"](?:unite|unit)['"]\s*:\s*['"]([^'"]+)['"]/);
+                
+                if (valueMatch) {
+                    const v = valueMatch[1];
+                    const u = unitMatch ? unitMatch[1] : null;
+                    return showUnit && u ? `${v} ${u}` : v;
+                }
+            } catch (e) {
+                console.warn("Could not parse stringified value:", val);
+            }
+        }
+
+        if (typeof target === 'object' && !Array.isArray(target)) {
+            const v = target.valeur ?? target.value;
+            const u = target.unite ?? target.unit;
+            if (v !== undefined && v !== null) {
+                return showUnit && u ? `${v} ${u}` : v;
+            }
+            // If it's an object but no standard value key, check if it's just a simple K/V pair we can show
+            const keys = Object.keys(target);
+            if (keys.length > 0 && typeof target[keys[0]] !== 'object') {
+                return target[keys[0]];
+            }
+            return "N/A";
+        }
+        
+        return target;
+    };
+
     // Enrichment data (from web scraping)
     const enrichedMachines = data?.enriched_machines || [];
     const scrapingSummary = data?.scraping_summary || null;
@@ -95,9 +135,9 @@ export const SpecsView = ({ data }: any) => {
                     <div className="bg-white dark:bg-[#13141c] p-6 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none">
                         <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Localisation</div>
                         <div className="space-y-2">
-                            <div className="flex justify-between"><span className="text-sm text-slate-500 dark:text-slate-400">Zone</span><span className="text-sm font-bold text-slate-800 dark:text-white">{location.zone || "N/A"}</span></div>
-                            <div className="flex justify-between"><span className="text-sm text-slate-500 dark:text-slate-400">Pays</span><span className="text-sm font-bold text-slate-800 dark:text-white">{location.pays || "N/A"}</span></div>
-                            <div className="flex justify-between"><span className="text-sm text-slate-500 dark:text-slate-400">Échelle</span><span className="text-sm font-bold text-slate-800 dark:text-white">{info.taille_projet?.echelle || "N/A"}</span></div>
+                            <div className="flex justify-between"><span className="text-sm text-slate-500 dark:text-slate-400">Zone</span><span className="text-sm font-bold text-slate-800 dark:text-white">{renderValue(location.zone)}</span></div>
+                            <div className="flex justify-between"><span className="text-sm text-slate-500 dark:text-slate-400">Pays</span><span className="text-sm font-bold text-slate-800 dark:text-white">{renderValue(location.pays)}</span></div>
+                            <div className="flex justify-between"><span className="text-sm text-slate-500 dark:text-slate-400">Échelle</span><span className="text-sm font-bold text-slate-800 dark:text-white">{renderValue(info.taille_projet?.echelle)}</span></div>
                         </div>
                     </div>
                     <div className="bg-white dark:bg-[#13141c] p-6 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none">
@@ -110,8 +150,8 @@ export const SpecsView = ({ data }: any) => {
                             )}>{dangerClass.niveau_danger || "N/A"}</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            {(dangerClass.type_dangers || []).map((d: string, i: number) => (
-                                <span key={i} className="px-2 py-1 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 rounded-lg text-xs font-medium">{d}</span>
+                            {(dangerClass.type_dangers || []).map((d: any, i: number) => (
+                                <span key={i} className="px-2 py-1 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 rounded-lg text-xs font-medium">{renderValue(d)}</span>
                             ))}
                         </div>
                     </div>
@@ -133,7 +173,7 @@ export const SpecsView = ({ data }: any) => {
                                     </div>
                                     <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">{mat.type}</div>
                                     <div className="flex gap-4 text-xs">
-                                        <span className="text-slate-600 dark:text-slate-300"><strong>Quantité:</strong> {mat.quantite_estimee?.valeur} {mat.quantite_estimee?.unite}/{mat.quantite_estimee?.periode}</span>
+                                        <span className="text-slate-600 dark:text-slate-300"><strong>Quantité:</strong> {renderValue(mat.quantite_estimee, true)}/{mat.quantite_estimee?.periode || "N/A"}</span>
                                     </div>
                                 </div>
                             ))}
@@ -164,7 +204,7 @@ export const SpecsView = ({ data }: any) => {
                                         ))}
                                     </div>
                                     <div className="text-xs text-slate-600 dark:text-slate-400">
-                                        <strong>Capacité:</strong> {prod.volume_production?.capacite} {prod.volume_production?.unite}/{prod.volume_production?.periode}
+                                        <strong>Capacité:</strong> {renderValue(prod.volume_production?.capacite, true)}/{prod.volume_production?.periode || "N/A"}
                                     </div>
                                 </div>
                             ))}
@@ -258,22 +298,22 @@ export const SpecsView = ({ data }: any) => {
                                                 <div className="grid grid-cols-2 gap-1 text-[11px]">
                                                     {machine.specifications?.capacite && (
                                                         <div className="text-slate-600 dark:text-slate-400">
-                                                            <span className="text-slate-400 dark:text-slate-600">Cap:</span> {typeof machine.specifications.capacite === 'object' ? machine.specifications.capacite.value : machine.specifications.capacite}
+                                                            <span className="text-slate-400 dark:text-slate-600">Cap:</span> {renderValue(machine.specifications.capacite, true)}
                                                         </div>
                                                     )}
                                                     {machine.specifications?.puissance && (
                                                         <div className="text-slate-600 dark:text-slate-400">
-                                                            <span className="text-slate-400 dark:text-slate-600">Puis:</span> {typeof machine.specifications.puissance === 'object' ? machine.specifications.puissance.value : machine.specifications.puissance}
+                                                            <span className="text-slate-400 dark:text-slate-600">Puis:</span> {renderValue(machine.specifications.puissance, true)}
                                                         </div>
                                                     )}
                                                     {machine.performance?.rendement && (
                                                         <div className="text-slate-600 dark:text-slate-400">
-                                                            <span className="text-slate-400 dark:text-slate-600">Rend:</span> {typeof machine.performance.rendement === 'object' ? `${(machine.performance.rendement.value * 100).toFixed(0)}%` : machine.performance.rendement}
+                                                            <span className="text-slate-400 dark:text-slate-600">Rend:</span> {typeof machine.performance.rendement === 'object' ? `${((machine.performance.rendement.valeur ?? machine.performance.rendement.value) * 100).toFixed(0)}%` : machine.performance.rendement}
                                                         </div>
                                                     )}
                                                     {machine.performance?.cadence && (
                                                         <div className="text-slate-600 dark:text-slate-400">
-                                                            <span className="text-slate-400 dark:text-slate-600">Cad:</span> {typeof machine.performance.cadence === 'object' ? machine.performance.cadence.value : machine.performance.cadence}
+                                                            <span className="text-slate-400 dark:text-slate-600">Cad:</span> {renderValue(machine.performance.cadence, true)}
                                                         </div>
                                                     )}
                                                 </div>
@@ -309,9 +349,9 @@ export const SpecsView = ({ data }: any) => {
                                         ))}
                                     </div>
                                     <div className="grid grid-cols-3 gap-2 text-xs text-slate-600 dark:text-slate-400">
-                                        <span><strong>Temp:</strong> {step.parametres_process?.temperature}</span>
-                                        <span><strong>Pression:</strong> {step.parametres_process?.pression}</span>
-                                        <span><strong>Cycle:</strong> {step.parametres_process?.temps_cycle}</span>
+                                        <span><strong>Temp:</strong> {renderValue(step.parametres_process?.temperature, true)}</span>
+                                        <span><strong>Pression:</strong> {renderValue(step.parametres_process?.pression, true)}</span>
+                                        <span><strong>Cycle:</strong> {renderValue(step.parametres_process?.temps_cycle, true)}</span>
                                     </div>
                                 </div>
                             ))}
@@ -326,19 +366,19 @@ export const SpecsView = ({ data }: any) => {
                         <div className="grid grid-cols-4 gap-4">
                             <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
                                 <div className="text-white/60 text-xs font-medium mb-1">OEE Cible</div>
-                                <div className="text-2xl font-black">{kpis.oee_cible}</div>
+                                <div className="text-2xl font-black">{renderValue(kpis.oee_cible)}</div>
                             </div>
                             <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
                                 <div className="text-white/60 text-xs font-medium mb-1">TRS Cible</div>
-                                <div className="text-2xl font-black">{kpis.trs_cible}</div>
+                                <div className="text-2xl font-black">{renderValue(kpis.trs_cible)}</div>
                             </div>
                             <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
                                 <div className="text-white/60 text-xs font-medium mb-1">Taux Rebut</div>
-                                <div className="text-2xl font-black">{kpis.taux_rebut_acceptable}</div>
+                                <div className="text-2xl font-black">{renderValue(kpis.taux_rebut_acceptable)}</div>
                             </div>
                             <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
                                 <div className="text-white/60 text-xs font-medium mb-1">Changement Série</div>
-                                <div className="text-2xl font-black">{kpis.temps_changement_serie}</div>
+                                <div className="text-2xl font-black">{renderValue(kpis.temps_changement_serie, true)}</div>
                             </div>
                         </div>
                     </div>
@@ -421,19 +461,19 @@ export const SpecsView = ({ data }: any) => {
                         <div className="grid grid-cols-4 gap-4">
                             <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
                                 <div className="text-white/60 text-xs font-medium mb-1">Innovation</div>
-                                <div className="text-sm font-bold">{opportunities.innovation || "N/A"}</div>
+                                <div className="text-sm font-bold">{renderValue(opportunities.innovation)}</div>
                             </div>
                             <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
                                 <div className="text-white/60 text-xs font-medium mb-1">Marché</div>
-                                <div className="text-sm font-bold">{opportunities.marche || "N/A"}</div>
+                                <div className="text-sm font-bold">{renderValue(opportunities.marche)}</div>
                             </div>
                             <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
                                 <div className="text-white/60 text-xs font-medium mb-1">Partenariats</div>
-                                <div className="text-sm font-bold">{opportunities.partenariats || "N/A"}</div>
+                                <div className="text-sm font-bold">{renderValue(opportunities.partenariats)}</div>
                             </div>
                             <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
                                 <div className="text-white/60 text-xs font-medium mb-1">Subventions</div>
-                                <div className="text-sm font-bold">{opportunities.subventions || "N/A"}</div>
+                                <div className="text-sm font-bold">{renderValue(opportunities.subventions)}</div>
                             </div>
                         </div>
                     </div>
@@ -444,10 +484,10 @@ export const SpecsView = ({ data }: any) => {
                     <div className="bg-white dark:bg-[#13141c] p-6 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none">
                         <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Recommandations</div>
                         <div className="space-y-2">
-                            {recommendations.map((rec: string, i: number) => (
+                            {recommendations.map((rec: any, i: number) => (
                                 <div key={i} className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-white/5 rounded-xl">
                                     <span className="w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
-                                    <span className="text-sm text-slate-600 dark:text-slate-300">{rec}</span>
+                                    <span className="text-sm text-slate-600 dark:text-slate-300">{renderValue(rec)}</span>
                                 </div>
                             ))}
                         </div>

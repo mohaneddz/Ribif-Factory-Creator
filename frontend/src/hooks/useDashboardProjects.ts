@@ -12,10 +12,10 @@ export function useDashboardProjects() {
     const load = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        
+
         if (sessionError) {
           console.error("Session error:", sessionError);
           setSignedIn(false);
@@ -23,7 +23,7 @@ export function useDashboardProjects() {
           setLoading(false);
           return;
         }
-        
+
         const session = sessionData?.session;
         if (!session) {
           console.log("No active session");
@@ -32,7 +32,7 @@ export function useDashboardProjects() {
           setLoading(false);
           return;
         }
-        
+
         setSignedIn(true);
         const userId = session.user.id;
         console.log("Loading projects for user:", userId);
@@ -58,10 +58,11 @@ export function useDashboardProjects() {
           const date = row.created_at
             ? new Date(row.created_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })
             : "—";
-            
-          // Simple progress calculation (assuming approx 10 steps max for now)
+
+          // Simple progress calculation
           const completedCount = Array.isArray(row.completed_modules) ? row.completed_modules.length : 0;
-          const progress = Math.min(Math.round((completedCount / 9) * 100), 100);
+          const totalModules = 11; // Based on constants.ts MODULES.length
+          const progress = row.status === 'complete' ? 100 : Math.min(Math.round((completedCount / totalModules) * 100), 99);
 
           return {
             id: row.id,

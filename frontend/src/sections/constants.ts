@@ -1,4 +1,4 @@
-import { BookOpen, Box, Briefcase, Calculator, FileText, Globe, Layers, Mail, Phone, Video } from "lucide-react";
+import { BookOpen, Box, BrainCircuit, Briefcase, Calculator, FileText, Globe, Layers, Mail, Phone, Video } from "lucide-react";
 
 export const fontStyle = `
   @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
@@ -29,7 +29,8 @@ export const MODULES = [
     { id: 7, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." },
     { id: 8, title: "2D Layout Design", icon: Layers, file: "layout_square.dxf", type: "layout2d", statusText: "Génération du layout 2D..." },
     { id: 9, title: "3D Model Generation", icon: Box, file: "factory1.glb", type: "model3d", statusText: "Modélisation 3D..." },
-    { id: 10, title: "Video Model Presentation", icon: Video, file: "Presentation_HD.mp4", type: "video", statusText: "Rendu vidéo HD..." }
+    { id: 10, title: "Video Model Presentation", icon: Video, file: "Presentation_HD.mp4", type: "video", statusText: "Rendu vidéo HD..." },
+    { id: 11, title: "Digital Twin", icon: BrainCircuit, file: "Digital_Twin_Live.json", type: "twin", statusText: "Initialisation du Jumeau Numérique..." }
 ];
 
 export const MODULE_LOADING_META: Record<string, { kicker: string; description: string; bullets: string[]; accent: string; glow: string }> = {
@@ -102,6 +103,13 @@ export const MODULE_LOADING_META: Record<string, { kicker: string; description: 
         bullets: ["Fiches produits", "Mise en page", "Export PDF"],
         accent: "from-indigo-700 via-blue-700 to-slate-900",
         glow: "bg-indigo-300",
+    },
+    twin: {
+        kicker: "Simulation & Monitoring",
+        description: "Jumeau numérique dynamique avec simulation de télémétrie et IA prédictive.",
+        bullets: ["Telemetry Simulation", "Predictive Analytics", "Real-time Charts"],
+        accent: "from-indigo-600 via-violet-600 to-fuchsia-600",
+        glow: "bg-fuchsia-500",
     },
 };
 
