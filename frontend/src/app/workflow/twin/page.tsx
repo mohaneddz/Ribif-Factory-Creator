@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
     Box, FileText, Layers, Mail, Phone, Video, Globe, Check,
     Upload, Loader2, Download, RefreshCw, Sparkles, Building2,
@@ -1794,15 +1794,23 @@ const Page = React.forwardRef<HTMLDivElement, { pageNum: number; pdfDoc: any; sc
 );
 Page.displayName = 'Page';
 
-const CatalogueTechniqueView = ({ pdfUrl }: { pdfUrl?: string }) => {
+const CatalogueTechniqueView = ({ pdfUrl, loading = false }: { pdfUrl?: string; loading?: boolean }) => {
     const bookRef = useRef<any>(null);
     const [pdfDoc, setPdfDoc] = useState<any>(null);
     const [numPages, setNumPages] = useState(0);
     const [currentPage, setCurrentPage] = useState(0);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingPdf, setIsLoadingPdf] = useState(false);
     const [pdfJsLoaded, setPdfJsLoaded] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
-    const resolvedPdfUrl = pdfUrl;
+    
+    // Resolve URL - handle relative paths
+    const resolvedPdfUrl = useMemo(() => {
+        if (!pdfUrl) return null;
+        if (pdfUrl.startsWith("http://") || pdfUrl.startsWith("https://")) return pdfUrl;
+        if (pdfUrl.startsWith("/")) return `${API_BASE}${pdfUrl}`;
+        const filename = pdfUrl.split(/[/\\]/).pop();
+        return filename ? `${API_BASE}/download/${filename}` : null;
+    }, [pdfUrl]);
 
     // Load PDF.js from CDN
     useEffect(() => {
@@ -1822,29 +1830,22 @@ const CatalogueTechniqueView = ({ pdfUrl }: { pdfUrl?: string }) => {
 
     // Load PDF document
     useEffect(() => {
-        if (!pdfJsLoaded) return;
+        if (!pdfJsLoaded || !resolvedPdfUrl) return;
 
         const loadPdf = async () => {
             try {
-                if (!resolvedPdfUrl) {
-                    setPdfDoc(null);
-                    setNumPages(0);
-                    setLoadError('Catalogue non disponible');
-                    setIsLoading(false);
-                    return;
-                }
                 setLoadError(null);
-                setIsLoading(true);
+                setIsLoadingPdf(true);
                 const pdfjsLib = (window as any).pdfjsLib;
                 const loadingTask = pdfjsLib.getDocument(resolvedPdfUrl);
                 const doc = await loadingTask.promise;
                 setPdfDoc(doc);
                 setNumPages(doc.numPages);
-                setIsLoading(false);
+                setIsLoadingPdf(false);
             } catch (err) {
                 console.error('Error loading PDF:', err);
                 setLoadError('Impossible de charger le catalogue');
-                setIsLoading(false);
+                setIsLoadingPdf(false);
             }
         };
 
@@ -1877,12 +1878,39 @@ const CatalogueTechniqueView = ({ pdfUrl }: { pdfUrl?: string }) => {
         document.body.removeChild(link);
     };
 
-    if (isLoading) {
+    // Show generating state when backend is still working
+    if (loading) {
         return (
             <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900">
                 <div className="text-center">
-                    <Loader2 className="animate-spin text-indigo-400 mx-auto mb-4\" size={48} />
+                    <Loader2 className="animate-spin text-indigo-400 mx-auto mb-4" size={48} />
+                    <p className="text-white font-bold">Génération du catalogue en cours...</p>
+                    <p className="text-indigo-300 text-sm mt-2">Compilation LaTeX du document PDF</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show loading PDF state
+    if (isLoadingPdf || (!pdfDoc && resolvedPdfUrl && pdfJsLoaded)) {
+        return (
+            <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900">
+                <div className="text-center">
+                    <Loader2 className="animate-spin text-indigo-400 mx-auto mb-4" size={48} />
                     <p className="text-white font-bold">Chargement du catalogue...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // No PDF URL available
+    if (!resolvedPdfUrl) {
+        return (
+            <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900">
+                <div className="text-center">
+                    <BookOpen className="text-indigo-400 mx-auto mb-4" size={48} />
+                    <p className="text-white font-bold">Catalogue non disponible</p>
+                    <p className="text-indigo-300 text-sm mt-2">Le catalogue sera généré automatiquement</p>
                 </div>
             </div>
         );
@@ -2664,7 +2692,7 @@ export default function FactoryCopilot() {
                                                 {selectedModuleItem.type === 'calls' && <CallsNegotiationView />}
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
-                                                {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url} />}
+                                                {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url} loading={catalogLoading} />}
                                             </>
                                         )}
                                     </motion.div>

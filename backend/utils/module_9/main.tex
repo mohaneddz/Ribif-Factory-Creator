@@ -76,6 +76,7 @@
 % --- MACRO: ASSET CARD ---
 \newtcolorbox{assetcard}[2]{
     enhanced,
+    breakable,
     colback=BrandWhite,
     colframe=BrandDark,
     coltext=BrandText,
@@ -331,25 +332,27 @@
 \indheader{05}{LOGISTICS \& SUPPLY CHAIN}
 
 \begin{multicols}{2}
-    \section*{INBOUND FLOW}
-    \lipsum[10][1-3]
-    \begin{itemize}
-        \item Metric A: 0000 Units
-        \item Metric B: 00\% Efficiency
-    \end{itemize}
+\noindent\textbf{\large INBOUND FLOW}
 
-    \columnbreak
-    
-    \section*{OUTBOUND FLOW}
-    \lipsum[11][1-3]
-    \begin{itemize}
-        \item Metric C: 0000 Pallets
-        \item Metric D: 00h Lead Time
-    \end{itemize}
+\lipsum[10][1-3]
+\begin{itemize}
+    \item Metric A: 0000 Units
+    \item Metric B: 00\% Efficiency
+\end{itemize}
+
+\columnbreak
+
+\noindent\textbf{\large OUTBOUND FLOW}
+
+\lipsum[11][1-3]
+\begin{itemize}
+    \item Metric C: 0000 Pallets
+    \item Metric D: 00h Lead Time
+\end{itemize}
 \end{multicols}
 
-\vspace{0.5cm}
-\placeholder{14cm}{5cm}{LOGISTICS MAP}
+\vspace{0.3cm}
+\placeholder{12cm}{3.5cm}{LOGISTICS MAP}
 
 % ==============================================================================
 % 06. DIGITAL TWIN (SPECIFIC TO REACT CODE)

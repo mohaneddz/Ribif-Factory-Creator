@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
     Box, FileText, Layers, Mail, Phone, Video, Globe, Check,
     Upload, Loader2, Download, RefreshCw, Sparkles, Building2,
@@ -611,25 +611,78 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
     const [activeTab, setActiveTab] = useState<string | null>(null);
     const [showOverlay, setShowOverlay] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
-    const pitchDeckDownloadRef = useRef<string | null>(null);
-    const totalPages = pitchDeckData?.data?.slides?.length || 10; // Use real slide count if available
+    const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+    const [pdfLoading, setPdfLoading] = useState(false);
+    const [pdfError, setPdfError] = useState<string | null>(null);
+    const lastFetchedRef = useRef<string | null>(null);
+    const totalPages = pitchDeckData?.data?.n_slides || pitchDeckData?.data?.slides?.length || 10;
 
-    // Get pitch deck file info
-    const fallbackPdfUrl = "";
-    const pitchDeckPdfUrl = pitchDeckData?.pdf_download_url || fallbackPdfUrl;
-    const businessPlanDownloadUrl = businessPlanData?.download_url || fallbackPdfUrl;
+    // Create a unique key from pitchDeckData to detect when it changes
+    const pitchDeckKey = pitchDeckData ? `${pitchDeckData.pdf_download_url || ''}_${pitchDeckData.pdf_filename || ''}_${pitchDeckData.data?.created_at || ''}` : null;
 
+    // Get pitch deck file info - resolve relative URLs to full URLs
+    const resolvePdfUrl = (url: string | undefined): string => {
+        if (!url) return "";
+        if (url.startsWith("http://") || url.startsWith("https://")) return url;
+        if (url.startsWith("/")) return `${API_BASE}${url}`;
+        return url;
+    };
+    
+    const pitchDeckPdfUrl = resolvePdfUrl(pitchDeckData?.pdf_download_url);
+    const businessPlanDownloadUrl = resolvePdfUrl(businessPlanData?.download_url);
+
+    // Fetch PDF as blob and create object URL for iframe display
+    const fetchPdfAsBlob = useCallback(async (url: string) => {
+        setPdfLoading(true);
+        setPdfError(null);
+        try {
+            // Add cache-busting parameter to ensure fresh download
+            const cacheBustUrl = url.includes('?') ? `${url}&_t=${Date.now()}` : `${url}?_t=${Date.now()}`;
+            const response = await fetch(cacheBustUrl, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`Failed to fetch PDF: ${response.status}`);
+            }
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            setPdfBlobUrl(blobUrl);
+        } catch (err) {
+            console.error("Error fetching PDF:", err);
+            setPdfError(err instanceof Error ? err.message : "Failed to load PDF");
+        } finally {
+            setPdfLoading(false);
+        }
+    }, []);
+
+    // Fetch PDF when pitchDeckData changes (not just URL)
     useEffect(() => {
-        if (!pitchDeckPdfUrl || pitchDeckDownloadRef.current === pitchDeckPdfUrl) return;
-        pitchDeckDownloadRef.current = pitchDeckPdfUrl;
-        const link = document.createElement('a');
-        link.href = pitchDeckPdfUrl;
-        link.download = 'Pitch_Deck.pdf';
-        link.rel = 'noopener noreferrer';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }, [pitchDeckPdfUrl]);
+        if (!pitchDeckPdfUrl || !pitchDeckKey) return;
+        
+        // Skip if we already fetched this exact data
+        if (lastFetchedRef.current === pitchDeckKey) return;
+        lastFetchedRef.current = pitchDeckKey;
+        
+        // Revoke previous blob URL to prevent memory leaks
+        if (pdfBlobUrl) {
+            URL.revokeObjectURL(pdfBlobUrl);
+            setPdfBlobUrl(null);
+        }
+        
+        fetchPdfAsBlob(pitchDeckPdfUrl);
+    }, [pitchDeckPdfUrl, pitchDeckKey, fetchPdfAsBlob]);
+
+    // Cleanup blob URL on unmount
+    useEffect(() => {
+        return () => {
+            if (pdfBlobUrl) {
+                URL.revokeObjectURL(pdfBlobUrl);
+            }
+        };
+    }, [pdfBlobUrl]);
 
     const handleTabClick = (tabId: string) => {
         setActiveTab(tabId);
@@ -853,6 +906,16 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
                                 Business Plan XLSX
                             </a>
                         )}
+                        {pdfBlobUrl && (
+                            <a
+                                href={pdfBlobUrl}
+                                download={pitchDeckData?.pdf_filename || 'Pitch_Deck.pdf'}
+                                className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all"
+                            >
+                                <Download size={14} />
+                                Pitch Deck PDF
+                            </a>
+                        )}
                     </div>
                 </div>
                 <div className="flex gap-2">
@@ -921,9 +984,29 @@ const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { busine
 
                 {/* PDF Preview or Placeholder */}
                 <div className="w-full h-full flex items-center justify-center">
-                    {pitchDeckPdfUrl ? (
+                    {pdfLoading ? (
+                        <div className="text-center text-white/80">
+                            <Loader2 size={64} className="mx-auto mb-4 animate-spin" />
+                            <p className="text-lg font-bold">Chargement du Pitch Deck...</p>
+                            <p className="text-sm text-white/60">Téléchargement et préparation du PDF</p>
+                        </div>
+                    ) : pdfError ? (
+                        <div className="text-center text-white/60">
+                            <FileSpreadsheet size={64} className="mx-auto mb-4 text-red-400" />
+                            <p className="text-lg font-bold text-red-400">Erreur de chargement</p>
+                            <p className="text-sm">{pdfError}</p>
+                            {pitchDeckPdfUrl && (
+                                <button
+                                    onClick={() => fetchPdfAsBlob(pitchDeckPdfUrl)}
+                                    className="mt-4 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    Réessayer
+                                </button>
+                            )}
+                        </div>
+                    ) : pdfBlobUrl ? (
                         <iframe
-                            src={`${pitchDeckPdfUrl}#page=${currentPage}&toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                            src={`${pdfBlobUrl}#page=${currentPage}&toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
                             className="w-full h-full border-0"
                             title="Pitch Deck Preview"
                         />
@@ -1794,15 +1877,23 @@ const Page = React.forwardRef<HTMLDivElement, { pageNum: number; pdfDoc: any; sc
 );
 Page.displayName = 'Page';
 
-const CatalogueTechniqueView = ({ pdfUrl }: { pdfUrl?: string }) => {
+const CatalogueTechniqueView = ({ pdfUrl, loading = false }: { pdfUrl?: string; loading?: boolean }) => {
     const bookRef = useRef<any>(null);
     const [pdfDoc, setPdfDoc] = useState<any>(null);
     const [numPages, setNumPages] = useState(0);
     const [currentPage, setCurrentPage] = useState(0);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingPdf, setIsLoadingPdf] = useState(false);
     const [pdfJsLoaded, setPdfJsLoaded] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
-    const resolvedPdfUrl = pdfUrl;
+    
+    // Resolve URL - handle relative paths
+    const resolvedPdfUrl = useMemo(() => {
+        if (!pdfUrl) return null;
+        if (pdfUrl.startsWith("http://") || pdfUrl.startsWith("https://")) return pdfUrl;
+        if (pdfUrl.startsWith("/")) return `${API_BASE}${pdfUrl}`;
+        const filename = pdfUrl.split(/[/\\]/).pop();
+        return filename ? `${API_BASE}/download/${filename}` : null;
+    }, [pdfUrl]);
 
     // Load PDF.js from CDN
     useEffect(() => {
@@ -1822,29 +1913,22 @@ const CatalogueTechniqueView = ({ pdfUrl }: { pdfUrl?: string }) => {
 
     // Load PDF document
     useEffect(() => {
-        if (!pdfJsLoaded) return;
+        if (!pdfJsLoaded || !resolvedPdfUrl) return;
 
         const loadPdf = async () => {
             try {
-                if (!resolvedPdfUrl) {
-                    setPdfDoc(null);
-                    setNumPages(0);
-                    setLoadError('Catalogue non disponible');
-                    setIsLoading(false);
-                    return;
-                }
                 setLoadError(null);
-                setIsLoading(true);
+                setIsLoadingPdf(true);
                 const pdfjsLib = (window as any).pdfjsLib;
                 const loadingTask = pdfjsLib.getDocument(resolvedPdfUrl);
                 const doc = await loadingTask.promise;
                 setPdfDoc(doc);
                 setNumPages(doc.numPages);
-                setIsLoading(false);
+                setIsLoadingPdf(false);
             } catch (err) {
                 console.error('Error loading PDF:', err);
                 setLoadError('Impossible de charger le catalogue');
-                setIsLoading(false);
+                setIsLoadingPdf(false);
             }
         };
 
@@ -1877,12 +1961,39 @@ const CatalogueTechniqueView = ({ pdfUrl }: { pdfUrl?: string }) => {
         document.body.removeChild(link);
     };
 
-    if (isLoading) {
+    // Show generating state when backend is still working
+    if (loading) {
         return (
             <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900">
                 <div className="text-center">
-                    <Loader2 className="animate-spin text-indigo-400 mx-auto mb-4\" size={48} />
+                    <Loader2 className="animate-spin text-indigo-400 mx-auto mb-4" size={48} />
+                    <p className="text-white font-bold">Génération du catalogue en cours...</p>
+                    <p className="text-indigo-300 text-sm mt-2">Compilation LaTeX du document PDF</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show loading PDF state
+    if (isLoadingPdf || (!pdfDoc && resolvedPdfUrl && pdfJsLoaded)) {
+        return (
+            <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900">
+                <div className="text-center">
+                    <Loader2 className="animate-spin text-indigo-400 mx-auto mb-4" size={48} />
                     <p className="text-white font-bold">Chargement du catalogue...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // No PDF URL available
+    if (!resolvedPdfUrl) {
+        return (
+            <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900">
+                <div className="text-center">
+                    <BookOpen className="text-indigo-400 mx-auto mb-4" size={48} />
+                    <p className="text-white font-bold">Catalogue non disponible</p>
+                    <p className="text-indigo-300 text-sm mt-2">Le catalogue sera généré automatiquement</p>
                 </div>
             </div>
         );
@@ -2664,7 +2775,7 @@ export default function FactoryCopilot() {
                                                 {selectedModuleItem.type === 'calls' && <CallsNegotiationView />}
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
-                                                {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url} />}
+                                                {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url} loading={catalogLoading} />}
                                             </>
                                         )}
                                     </motion.div>

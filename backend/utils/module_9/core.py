@@ -357,15 +357,18 @@ class RIBIFModule9Catalog:
     {image_latex}
     \\tcblower
     \\begin{{tblr}}{{colspec={{X[l] X[r]}}, rowsep=3pt, coltext=BrandText}}
-        \\textbf{{Count}} & {count} \\
-        \\textbf{{Dimensions}} & {width}m x {height}m \\
-        \\textbf{{Status}} & \\textbf{{Operational}} \\
+        \\textbf{{Count}} & {count} \\\\
+        \\textbf{{Dimensions}} & {width}m x {height}m \\\\
+        \\textbf{{Status}} & \\textbf{{Operational}} \\\\
     \\end{{tblr}}
     \\vspace{{0.3cm}}
     {use}
 \\end{{assetcard}}
 """
             cards.append(card)
+            # Add page break after every 2 machines to prevent overflow
+            if idx % 2 == 0 and idx < len(machines):
+                cards.append("\\clearpage")
         return "\n".join(cards)
 
     def _generate_product_table_latex(self, product: Dict, ribif_products: List[Dict]) -> str:
@@ -374,13 +377,13 @@ class RIBIFModule9Catalog:
             name = self._escape_latex(str(product.get("name", "N/A")))
             unit = self._escape_latex(str(product.get("output_unit", "units")))
             target = self._escape_latex(str(product.get("target_output_per_hour", "N/A")))
-            rows.append(f"    \\textbf{{P-001}} & \\textbf{{{name}}} & {target} {unit}/hr & Primary \\")
+            rows.append(f"    \\textbf{{P-001}} & \\textbf{{{name}}} & {target} {unit}/hr & Primary \\\\")
         for idx, prod in enumerate(ribif_products[:5], 2):
             name = self._escape_latex(prod.get("nom_produit", "N/A")[:40])
             cat = self._escape_latex(prod.get("categorie", "N/A"))
             vol = prod.get("volume_production", {})
             cap = self._escape_latex(str(vol.get("capacite", "N/A")))
-            rows.append(f"    \\textbf{{P-{idx:03d}}} & \\textbf{{{name}}} & {cap} & {cat.title()} \\")
+            rows.append(f"    \\textbf{{P-{idx:03d}}} & \\textbf{{{name}}} & {cap} & {cat.title()} \\\\")
         return "\n".join(rows)
 
     def _generate_objectives_latex(self, objectives: List[str]) -> str:
@@ -469,6 +472,9 @@ class RIBIFModule9Catalog:
 
         with open(template_path, "r", encoding="utf-8") as f:
             template = f.read()
+        
+        # Normalize line endings to Unix-style (LF only)
+        template = template.replace("\r\n", "\n").replace("\r", "\n")
 
         product_rows = self._generate_product_table_latex(product, ribif_products)
         objectives_items = self._generate_objectives_latex(objectives)
@@ -519,11 +525,13 @@ class RIBIFModule9Catalog:
             "    \\lipsum[8][1-2]\n" \
             "\\end{assetcard}"
 
-        old_products = "    \\textbf{A-001} & \\textbf{Product Name Alpha} & Lorem Ipsum Material & Type A \\\\\n" \
-            "    \\textbf{B-002} & \\textbf{Product Name Beta} & Dolor Sit Amet & Type B \\\\\n" \
-            "    \\textbf{C-003} & \\textbf{Product Name Gamma} & Consectetur Adipiscing & Type C \\\\\n" \
-            "    \\textbf{D-004} & \\textbf{Product Name Delta} & Elit Sed Do & Type D \\\\\n"
-        template = template.replace(old_products, product_rows)
+        # Replace product table rows
+        old_products = """    \\textbf{A-001} & \\textbf{Product Name Alpha} & Lorem Ipsum Material & Type A \\\\
+    \\textbf{B-002} & \\textbf{Product Name Beta} & Dolor Sit Amet & Type B \\\\
+    \\textbf{C-003} & \\textbf{Product Name Gamma} & Consectetur Adipiscing & Type C \\\\
+    \\textbf{D-004} & \\textbf{Product Name Delta} & Elit Sed Do & Type D \\\\"""
+        if product_rows:
+            template = template.replace(old_products, product_rows.rstrip())
 
         lipsum_replacements = [
             (r"\lipsum[3][1-2]", "Automated systems ensure consistent quality and reduced cycle times."),
@@ -532,9 +540,8 @@ class RIBIFModule9Catalog:
             (r"\lipsum[4][1-4]", "The production workflow follows a sequential process flow optimized for throughput and quality control."),
             (r"\lipsum[5][1-3]", "Each stage is monitored for quality assurance and process optimization."),
             (r"\lipsum[6][1-2]", f"This facility operates {len(machines)} primary production assets."),
-            (r"\lipsum[9][1-3]", f"Primary product: {self._escape_latex(str(product.get('name', 'Industrial Product')))} with target output of {self._escape_latex(str(product.get('target_output_per_hour', 'N/A')))} {self._escape_latex(str(product.get('output_unit', 'units')))}\/hour."),
-            (r"\lipsum[10][1-3]", "Raw materials are sourced from certified suppliers following quality protocols."),
-            (r"\lipsum[11][1-3]", "Finished products are dispatched through optimized logistics channels."),
+            (r"\lipsum[9][1-3]", f"Primary product: {self._escape_latex(str(product.get('name', 'Industrial Product')))} with target output of {self._escape_latex(str(product.get('target_output_per_hour', 'N/A')))} {self._escape_latex(str(product.get('output_unit', 'units')))}/hour."),
+            # NOTE: lipsum[10] and lipsum[11] are intentionally NOT replaced to preserve the multicols layout
         ]
         for old, new in lipsum_replacements:
             template = template.replace(old, new)
