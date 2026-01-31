@@ -2,6 +2,8 @@
   "message": "Catalog generated successfully",
   "data": {
     "catalog_title": "ALLO MAISON - Matériaux avancés & solutions industrielles",
+    "pdf_download_url": "/download/catalogue_technique.pdf",
+    "html_download_url": "/download/catalogue_technique.html",
     "sections": [
       {
         "title": "Machines clés",
