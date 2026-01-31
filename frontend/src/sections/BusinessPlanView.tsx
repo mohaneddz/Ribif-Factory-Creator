@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     Check,
@@ -11,31 +11,84 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 
-import { BUSINESS_PLAN_TABS } from "./constants";
+import { BUSINESS_PLAN_TABS, API_BASE } from "./constants";
 
 export const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: { businessPlanData: any, pitchDeckData: any, loading: boolean }) => {
     const [activeTab, setActiveTab] = useState<string | null>(null);
     const [showOverlay, setShowOverlay] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
-    const pitchDeckDownloadRef = useRef<string | null>(null);
-    const totalPages = pitchDeckData?.data?.slides?.length || 10; // Use real slide count if available
+    const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+    const [pdfLoading, setPdfLoading] = useState(false);
+    const [pdfError, setPdfError] = useState<string | null>(null);
+    const lastFetchedRef = useRef<string | null>(null);
+    const totalPages = pitchDeckData?.data?.n_slides || pitchDeckData?.data?.slides?.length || 10;
 
-    // Get pitch deck file info
-    const fallbackPdfUrl = "";
-    const pitchDeckPdfUrl = pitchDeckData?.pdf_download_url || fallbackPdfUrl;
-    const businessPlanDownloadUrl = businessPlanData?.download_url || fallbackPdfUrl;
+    // Create a unique key from pitchDeckData to detect when it changes
+    const pitchDeckKey = pitchDeckData ? `${pitchDeckData.pdf_download_url || ''}_${pitchDeckData.pdf_filename || ''}_${pitchDeckData.data?.created_at || ''}` : null;
 
+    // Get pitch deck file info - resolve relative URLs to full URLs
+    const resolvePdfUrl = (url: string | undefined): string => {
+        if (!url) return "";
+        if (url.startsWith("http://") || url.startsWith("https://")) return url;
+        if (url.startsWith("/")) return `${API_BASE}${url}`;
+        return url;
+    };
+    
+    const pitchDeckPdfUrl = resolvePdfUrl(pitchDeckData?.pdf_download_url);
+    const businessPlanDownloadUrl = resolvePdfUrl(businessPlanData?.download_url);
+
+    // Fetch PDF as blob and create object URL for iframe display
+    const fetchPdfAsBlob = useCallback(async (url: string) => {
+        setPdfLoading(true);
+        setPdfError(null);
+        try {
+            // Add cache-busting parameter to ensure fresh download
+            const cacheBustUrl = url.includes('?') ? `${url}&_t=${Date.now()}` : `${url}?_t=${Date.now()}`;
+            const response = await fetch(cacheBustUrl, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`Failed to fetch PDF: ${response.status}`);
+            }
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            setPdfBlobUrl(blobUrl);
+        } catch (err) {
+            console.error("Error fetching PDF:", err);
+            setPdfError(err instanceof Error ? err.message : "Failed to load PDF");
+        } finally {
+            setPdfLoading(false);
+        }
+    }, []);
+
+    // Fetch PDF when pitchDeckData changes (not just URL)
     useEffect(() => {
-        if (!pitchDeckPdfUrl || pitchDeckDownloadRef.current === pitchDeckPdfUrl) return;
-        pitchDeckDownloadRef.current = pitchDeckPdfUrl;
-        const link = document.createElement('a');
-        link.href = pitchDeckPdfUrl;
-        link.download = 'Pitch_Deck.pdf';
-        link.rel = 'noopener noreferrer';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }, [pitchDeckPdfUrl]);
+        if (!pitchDeckPdfUrl || !pitchDeckKey) return;
+        
+        // Skip if we already fetched this exact data
+        if (lastFetchedRef.current === pitchDeckKey) return;
+        lastFetchedRef.current = pitchDeckKey;
+        
+        // Revoke previous blob URL to prevent memory leaks
+        if (pdfBlobUrl) {
+            URL.revokeObjectURL(pdfBlobUrl);
+            setPdfBlobUrl(null);
+        }
+        
+        fetchPdfAsBlob(pitchDeckPdfUrl);
+    }, [pitchDeckPdfUrl, pitchDeckKey, fetchPdfAsBlob]);
+
+    // Cleanup blob URL on unmount
+    useEffect(() => {
+        return () => {
+            if (pdfBlobUrl) {
+                URL.revokeObjectURL(pdfBlobUrl);
+            }
+        };
+    }, [pdfBlobUrl]);
 
     const handleTabClick = (tabId: string) => {
         setActiveTab(tabId);
@@ -259,6 +312,16 @@ export const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: {
                                 Business Plan XLSX
                             </a>
                         )}
+                        {pdfBlobUrl && (
+                            <a
+                                href={pdfBlobUrl}
+                                download={pitchDeckData?.pdf_filename || 'Pitch_Deck.pdf'}
+                                className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all"
+                            >
+                                <Download size={14} />
+                                Pitch Deck PDF
+                            </a>
+                        )}
                     </div>
                 </div>
                 <div className="flex gap-2">
@@ -327,9 +390,29 @@ export const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: {
 
                 {/* PDF Preview or Placeholder */}
                 <div className="w-full h-full flex items-center justify-center">
-                    {pitchDeckPdfUrl ? (
+                    {pdfLoading ? (
+                        <div className="text-center text-white/80">
+                            <Loader2 size={64} className="mx-auto mb-4 animate-spin" />
+                            <p className="text-lg font-bold">Chargement du Pitch Deck...</p>
+                            <p className="text-sm text-white/60">Téléchargement et préparation du PDF</p>
+                        </div>
+                    ) : pdfError ? (
+                        <div className="text-center text-white/60">
+                            <FileSpreadsheet size={64} className="mx-auto mb-4 text-red-400" />
+                            <p className="text-lg font-bold text-red-400">Erreur de chargement</p>
+                            <p className="text-sm">{pdfError}</p>
+                            {pitchDeckPdfUrl && (
+                                <button
+                                    onClick={() => fetchPdfAsBlob(pitchDeckPdfUrl)}
+                                    className="mt-4 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    Réessayer
+                                </button>
+                            )}
+                        </div>
+                    ) : pdfBlobUrl ? (
                         <iframe
-                            src={`${pitchDeckPdfUrl}#page=${currentPage}&toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                            src={`${pdfBlobUrl}#page=${currentPage}&toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
                             className="w-full h-full border-0"
                             title="Pitch Deck Preview"
                         />

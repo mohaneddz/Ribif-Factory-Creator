@@ -385,6 +385,10 @@ class RIBIFModule8PitchDeck:
                     with open(filepath, "wb") as f:
                         f.write(download_response.content)
                     logger.info("Saved to: %s", filepath)
+                else:
+                    logger.error("Failed to download PDF from Presenton: status=%s, body=%s", download_response.status_code, download_response.text[:500])
+            else:
+                logger.warning("Presenton API returned empty 'path' - no PDF to download. Full response: %s", result)
             
             # Get PDF file stats
             size_bytes = 0
