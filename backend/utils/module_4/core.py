@@ -596,8 +596,6 @@ def _generate_best_image_url_green_bg(llm: VertexJSON, machine_final: Dict[str, 
                 if k in img and isinstance(img[k], str):
                     return safe_s(img[k], "generated://invalid_image_url")
 
-        return "generated://unknown_image_return"
-
     except Exception:
         return "generated://image_generation_failed"
 
@@ -632,6 +630,23 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
         cfg=cfg,
     )
 
+    # NEW: Web search for specs/assets if enabled
+    if WEB_SEARCH_ENABLED:
+        try:
+            specs_result = web_search.search_machine_specs(name, raw.get("fabricant_recommande") or "")
+            if specs_result:
+                # Merge found assets
+                scraped["datasheet_urls"].extend(specs_result.datasheet_urls)
+                scraped["image_urls"].extend(specs_result.image_urls)
+                if specs_result.manufacturer_website:
+                    scraped["manufacturer_website"] = specs_result.manufacturer_website
+                
+                # Deduplicate
+                scraped["datasheet_urls"] = list(set(scraped["datasheet_urls"]))
+                scraped["image_urls"] = list(set(scraped["image_urls"]))
+        except Exception as e:
+            logger.warning("Web search specs failed for %s: %s", name, e)
+
     raw_machine = json.dumps(raw, ensure_ascii=False)
     scraped_assets = json.dumps(scraped, ensure_ascii=False)
 
@@ -644,6 +659,26 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
     )
     if machine_final is None:
         machine_final = default_machine_final(name)
+    
+    # Ensure scraped assets are included if LLM missed them
+    try:
+        current_assets = machine_final.get("assets", {})
+        
+        # Merge images
+        existing_imgs = set(current_assets.get("image_urls", []))
+        for img in scraped.get("image_urls", []):
+            if img not in existing_imgs:
+                current_assets.setdefault("image_urls", []).append(img)
+        
+        # Merge datasheets
+        existing_pdfs = set(current_assets.get("datasheet_urls", []))
+        for pdf in scraped.get("datasheet_urls", []):
+            if pdf not in existing_pdfs:
+                current_assets.setdefault("datasheet_urls", []).append(pdf)
+                
+        machine_final["assets"] = current_assets
+    except Exception:
+        pass
 
     # budget gate
     if not _budget_check(t_start, cfg.total_machine_budget_s):
@@ -651,14 +686,35 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
         return {"machine_input": machine_final, "suppliers": default_suppliers(name), "skipped_reason": "budget>50s"}
 
     # 2) Suppliers
-    suppliers = llm.generate_json(
-        LLM_SUPPLIERS_PROMPT.format(machine_final=json.dumps(machine_final, ensure_ascii=False)),
-        temperature=cfg.llm_temperature_suppliers,
-        tag=f"suppliers:{name}",
-        timeout_s=cfg.llm_call_timeout_s,
-    )
-    if suppliers is None:
-        suppliers = default_suppliers(name)
+    suppliers = []
+    web_suppliers_found = False
+    
+    if WEB_SEARCH_ENABLED:
+        try:
+            # Search for real suppliers
+            web_results = web_search.search_machine_suppliers(
+                machine_name=name,
+                machine_type=machine_final.get("type", ""),
+                region="Algeria"
+            )
+            
+            if web_results:
+                suppliers = [s.to_dict() for s in web_results]
+                web_suppliers_found = True
+                logger.info("Found %d real suppliers for %s", len(suppliers), name)
+        except Exception as e:
+            logger.warning("Web search suppliers failed for %s: %s", name, e)
+
+    # Fallback to LLM if no web suppliers found or web search disabled
+    if not web_suppliers_found:
+        suppliers = llm.generate_json(
+            LLM_SUPPLIERS_PROMPT.format(machine_final=json.dumps(machine_final, ensure_ascii=False)),
+            temperature=cfg.llm_temperature_suppliers,
+            tag=f"suppliers:{name}",
+            timeout_s=cfg.llm_call_timeout_s,
+        )
+        if suppliers is None:
+            suppliers = default_suppliers(name)
 
     # budget gate
     if not _budget_check(t_start, cfg.total_machine_budget_s):
@@ -684,11 +740,6 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
         pass
 
     return {"machine_input": machine_final, "suppliers": suppliers}
-
-
-# =========================================================
-# 8) Parallel runner (correct timing + per-machine timeout)
-# =========================================================
 
 def load_machines_from_module1(input_path: str) -> List[Dict[str, Any]]:
     data = json.load(open(input_path, "r", encoding="utf-8"))

@@ -48,6 +48,19 @@ CREATE_3D_MODEL = _env_bool("CREATE_3D_MODEL", True)
 
 PIPLEINE_3D_CAP = _env_int("PIPLEINE_3D_CAP", 6)
 
+# Web Search Configuration
+SERPER_API_KEY = os.getenv("SERPER_API_KEY")
+BING_API_KEY = os.getenv("BING_API_KEY")
+GOOGLE_CSE_KEY = os.getenv("GOOGLE_CSE_KEY")
+GOOGLE_CSE_CX = os.getenv("GOOGLE_CSE_CX")
+
+SEARCH_CACHE_DIR = CACHE_DIR / "search"
+SEARCH_CACHE_TTL_HOURS = _env_int("SEARCH_CACHE_TTL_HOURS", 24)
+SEARCH_RATE_LIMIT_PER_MINUTE = _env_int("SEARCH_RATE_LIMIT_PER_MINUTE", 30)
+
+WEB_SEARCH_ENABLED = _env_bool("WEB_SEARCH_ENABLED", True)
+PREFER_WEB_DATA = _env_bool("PREFER_WEB_DATA", True)
+
 OUTPUT_DIRS = {
     "module1": DATA_DIR / "module_1",
     "module2": DATA_DIR / "module_2",
@@ -72,6 +85,7 @@ def ensure_dirs() -> None:
     CACHE_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     EMAIL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     EMAIL_ATTACHMENTS_DIR.mkdir(parents=True, exist_ok=True)
+    SEARCH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
     for path in OUTPUT_DIRS.values():
         path.mkdir(parents=True, exist_ok=True)

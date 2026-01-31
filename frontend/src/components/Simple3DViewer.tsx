@@ -23,7 +23,7 @@ export default function Simple3DViewer({
     boundingboxStart,
     boundingboxEnd,
     factoryModel,
-    pipelineModel = "/models/pipeline.glb",
+    pipelineModel,
     className = ""
 }: Simple3DViewerProps) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -76,7 +76,7 @@ export default function Simple3DViewer({
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.4);
         directionalLight.position.set(10, 20, 10);
         directionalLight.castShadow = true;
         directionalLight.shadow.mapSize.width = 2048;
@@ -137,46 +137,48 @@ export default function Simple3DViewer({
             );
         }
 
-        // Load Pipeline (Stretched Content)
-        loader.load(
-            pipelineModel,
-            (gltf) => {
-                const model = gltf.scene;
+        // Load Pipeline (Stretched Content) - only if URL is provided
+        if (pipelineModel) {
+            loader.load(
+                pipelineModel,
+                (gltf) => {
+                    const model = gltf.scene;
 
-                // Get original model bounding box
-                const originalBox = new THREE.Box3().setFromObject(model);
-                const originalSize = originalBox.getSize(new THREE.Vector3());
-                const originalCenter = originalBox.getCenter(new THREE.Vector3());
+                    // Get original model bounding box
+                    const originalBox = new THREE.Box3().setFromObject(model);
+                    const originalSize = originalBox.getSize(new THREE.Vector3());
+                    const originalCenter = originalBox.getCenter(new THREE.Vector3());
 
-                // Calculate scale factors to stretch model to fit target bounding box
-                const scaleX = targetSize.x / (originalSize.x || 1);
-                const scaleY = targetSize.y / (originalSize.y || 1);
-                const scaleZ = targetSize.z / (originalSize.z || 1);
+                    // Calculate scale factors to stretch model to fit target bounding box
+                    const scaleX = targetSize.x / (originalSize.x || 1);
+                    const scaleY = targetSize.y / (originalSize.y || 1);
+                    const scaleZ = targetSize.z / (originalSize.z || 1);
 
-                // Apply non-uniform scale
-                model.scale.set(scaleX, scaleY, scaleZ);
+                    // Apply non-uniform scale
+                    model.scale.set(scaleX, scaleY, scaleZ);
 
-                // Position the model
-                model.position.set(
-                    targetCenter.x - originalCenter.x * scaleX,
-                    targetCenter.y - originalCenter.y * scaleY,
-                    targetCenter.z - originalCenter.z * scaleZ
-                );
+                    // Position the model
+                    model.position.set(
+                        targetCenter.x - originalCenter.x * scaleX,
+                        targetCenter.y - originalCenter.y * scaleY,
+                        targetCenter.z - originalCenter.z * scaleZ
+                    );
 
-                model.rotateX(Math.PI / 2);
+                    model.rotateX(Math.PI / 2);
 
-                model.traverse((child) => {
-                    if ((child as THREE.Mesh).isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-                    }
-                });
+                    model.traverse((child) => {
+                        if ((child as THREE.Mesh).isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
 
-                scene.add(model);
-            },
-            undefined,
-            (error) => console.error("Error loading pipeline model:", error)
-        );
+                    scene.add(model);
+                },
+                undefined,
+                (error) => console.error("Error loading pipeline model:", error)
+            );
+        }
 
         // Animation loop
         const animate = () => {

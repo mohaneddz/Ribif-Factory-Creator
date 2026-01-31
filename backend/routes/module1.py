@@ -149,17 +149,57 @@ def process_module_1():
         image_result = {"image_url": None, "status": "skipped"}
         image_local_path = None
         image_download_url = None
+        
+        # New: Try web search for images first
+        from config import WEB_SEARCH_ENABLED
+        web_image_found = False
+        
+        if WEB_SEARCH_ENABLED and settings.get("useWebImages", True):
+            try:
+                from utils.web_search import aggregator as web_search
+                import requests
+                
+                web_images = web_search.search_machine_images(nom_machine, manufacturer)
+                if web_images:
+                    best_web_image = web_images[0]
+                    # Download it
+                    try:
+                        resp = requests.get(best_web_image.url, timeout=10)
+                        if resp.status_code == 200:
+                            image_filename = f"{nom_machine.replace(' ', '_').replace('/', '_')[:50]}_web.jpg"
+                            image_path = OUTPUT_DIRS["module1"] / image_filename
+                            image_path.write_bytes(resp.content)
+                            
+                            web_image_found = True
+                            image_local_path = str(image_path)
+                            
+                            # Convert to base64 for frontend display if needed
+                            b64 = base64.b64encode(resp.content).decode("utf-8")
+                            image_result = {
+                                "image_url": f"data:image/jpeg;base64,{b64}",
+                                "image_path": str(image_path),
+                                "status": "web_found",
+                                "source_url": best_web_image.url
+                            }
+                    except Exception:
+                        pass
+            except ImportError:
+                pass
+            except Exception as e:
+                print(f"Web image search failed: {e}")
 
-        if CREATE_IMAGES and settings.get("enableMachineImages", True):
-            image_result = generate_machine_image(nom_machine, machine_type, manufacturer)
-            image_local_path = image_result.get("image_path")
-        else:
-            cached = find_best_image(nom_machine)
-            if cached:
-                target_path = OUTPUT_DIRS["module1"] / cached.name
-                if not target_path.exists():
-                    shutil.copyfile(cached, target_path)
-                image_local_path = str(target_path)
+        # If no web image, try generation or cache
+        if not web_image_found:
+            if CREATE_IMAGES and settings.get("enableMachineImages", True):
+                image_result = generate_machine_image(nom_machine, machine_type, manufacturer)
+                image_local_path = image_result.get("image_path")
+            else:
+                cached = find_best_image(nom_machine)
+                if cached:
+                    target_path = OUTPUT_DIRS["module1"] / cached.name
+                    if not target_path.exists():
+                        shutil.copyfile(cached, target_path)
+                    image_local_path = str(target_path)
 
         if image_local_path:
             image_download_url = f"{BASE_URL}/download/{Path(image_local_path).name}"

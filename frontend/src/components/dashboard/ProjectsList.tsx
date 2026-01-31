@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, SlidersHorizontal, ChevronDown, FolderOpen } from "lucide-react";
+import { Search, SlidersHorizontal, FolderOpen, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Project } from "@/types/dashboard";
@@ -32,13 +32,34 @@ const filterOptions: { value: FilterStatus; label: string; color: string }[] = [
   { value: "archived", label: "Archivé", color: "bg-slate-100" },
 ];
 
+
+
 export const ProjectsList = ({ projects, onOpenTwin, onOpenProject, onDeleteProject }: ProjectsListProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Delete modal state
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!projectToDelete || !onDeleteProject) return;
+    
+    setIsDeleting(true);
+    try {
+      await onDeleteProject(projectToDelete.id);
+      setProjectToDelete(null); // Close modal on success
+    } catch (error) {
+      alert("Échec de la suppression du projet. Veuillez réessayer.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const filteredAndSortedProjects = useMemo(() => {
+    // ... existing filtering logic (unchanged)
     let result = [...projects];
 
     // Filter by search query
@@ -198,12 +219,75 @@ export const ProjectsList = ({ projects, onOpenTwin, onOpenProject, onDeleteProj
                 index={index}
                 onOpenTwin={onOpenTwin}
                 onOpenProject={onOpenProject}
-                onDeleteProject={onDeleteProject}
+                onRequestDelete={(p) => setProjectToDelete(p)}
               />
             ))}
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal - Rendered outside the list/cards */}
+      <AnimatePresence>
+        {projectToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100]"
+            onClick={() => !isDeleting && setProjectToDelete(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl relative"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <Trash2 size={24} className="text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Supprimer le projet</h3>
+                  <p className="text-sm text-slate-500">Cette action est irréversible</p>
+                </div>
+              </div>
+              
+              <p className="text-slate-600 mb-6">
+                Êtes-vous sûr de vouloir supprimer <strong>{projectToDelete.name}</strong> ? 
+                Tous les fichiers associés seront également supprimés.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setProjectToDelete(null)}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2.5 rounded-xl border-2 border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Suppression...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      Supprimer
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

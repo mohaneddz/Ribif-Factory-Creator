@@ -11,7 +11,7 @@ import { goToCreateProject, goToSettings, goToTwin, goToWorkflowId } from "@/fun
 export default function Home() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const { projects } = useDashboardProjects();
+  const { projects, deleteProject } = useDashboardProjects();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -45,10 +45,11 @@ export default function Home() {
   return (
     <DashboardShell
       projects={projects}
-      onOpenTwin={(id) => goToTwin(router)}
+      onOpenTwin={(id) => goToTwin(router, id)}
       onOpenProject={(id) => goToWorkflowId(router, id)}
       onCreateProject={() => goToCreateProject(router)}
       onOpenSettings={() => goToSettings(router)}
+      onDeleteProject={deleteProject}
     />
   );
 }

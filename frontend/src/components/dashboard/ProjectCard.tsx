@@ -7,12 +7,14 @@ import { Project } from "@/types/dashboard";
 import { StatusBadge } from "./StatusBadge";
 import { getProjectIcon } from "@/utils/projectIcons";
 
+// ... imports remain the same
+
 interface ProjectCardProps {
   project: Project;
   index: number;
   onOpenTwin: (id: string) => void;
   onOpenProject: (id: string) => void;
-  onDeleteProject?: (id: string) => void;
+  onRequestDelete?: (project: Project) => void;
 }
 
 const statusGradients: Record<string, string> = {
@@ -22,7 +24,7 @@ const statusGradients: Record<string, string> = {
   archived: "from-slate-700/20 via-transparent to-transparent",
 };
 
-export const ProjectCard = ({ project, index, onOpenTwin, onOpenProject, onDeleteProject }: ProjectCardProps) => {
+export const ProjectCard = ({ project, index, onOpenTwin, onOpenProject, onRequestDelete }: ProjectCardProps) => {
   const [showMenu, setShowMenu] = useState(false);
 
   const gradientClass = statusGradients[project.status] || statusGradients.draft;
@@ -88,7 +90,7 @@ export const ProjectCard = ({ project, index, onOpenTwin, onOpenProject, onDelet
                 >
                   <button
                     onClick={() => {
-                      onDeleteProject?.(project.id);
+                      onRequestDelete?.(project);
                       setShowMenu(false);
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"

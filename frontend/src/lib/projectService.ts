@@ -89,6 +89,45 @@ export async function deleteProject(
 }
 
 // ============================================================
+// DELETE PROJECT WITH FILES (via backend API)
+// ============================================================
+
+export async function deleteProjectWithFiles(
+    projectId: string
+): Promise<{ success: boolean; error: Error | null; filesDeleted?: number }> {
+    try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+        const response = await fetch(`${backendUrl}/api/projects/${projectId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                error: new Error(data.error || "Failed to delete project"),
+            };
+        }
+
+        return {
+            success: true,
+            error: null,
+            filesDeleted: data.files_deleted,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error : new Error("Unknown error occurred"),
+        };
+    }
+}
+
+
+// ============================================================
 // FILE UPLOAD TO STORAGE BUCKET
 // ============================================================
 
