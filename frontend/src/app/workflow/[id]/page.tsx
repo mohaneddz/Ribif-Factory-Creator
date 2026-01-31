@@ -192,12 +192,23 @@ export default function FactoryCopilot() {
 
     useEffect(() => {
         if (status === 'processing' && !artifacts.includes(currentModule)) {
-            const timer = setTimeout(() => {
-                setSubStep(s => (s + 1) % 5);
-            }, 800);
-            return () => clearTimeout(timer);
+            // Reset progress when module changes (implied by dependency on currentModule)
+            // But we need to handle the increment logic
+            const interval = setInterval(() => {
+                setSubStep(prev => {
+                    if (prev >= 90) return prev; // Hold at 90% until complete
+                    // Increment to reach 90% in ~15 seconds (15000ms)
+                    // limit per 200ms step: 90 / (15000/200) = 90 / 75 = 1.2
+                    return prev + 1.2;
+                });
+            }, 200);
+            return () => clearInterval(interval);
+        } else if (artifacts.includes(currentModule)) {
+            setSubStep(100);
+        } else {
+            setSubStep(0);
         }
-    }, [status, currentModule, subStep, artifacts]);
+    }, [status, currentModule, artifacts]);
 
     const resolveDownloadUrl = (value?: string | null) => {
         if (!value) return null;
@@ -446,24 +457,8 @@ export default function FactoryCopilot() {
                     });
                     layoutJson = await res.json();
 
-                    // Upload layout files to Supabase from frontend
-                    if (layoutJson && currentProjectId) {
-                        const { uploadLayoutFilesToSupabase } = await import("@/lib/supabaseStorageUpload");
-                        try {
-                            const supabaseUrls = await uploadLayoutFilesToSupabase(currentProjectId, {
-                                layout_2d_url: layoutJson.layout_2d_url as string | undefined,
-                                layout_3d_url: layoutJson.layout_3d_url as string | undefined,
-                                layout_dxf_url: layoutJson.layout_dxf_url as string | undefined,
-                                layout_realistic_url: layoutJson.layout_realistic_url as string | undefined,
-                                layout_realistic_clean_url: layoutJson.layout_realistic_clean_url as string | undefined,
-                            });
-                            // Merge Supabase URLs into layoutJson
-                            layoutJson = { ...layoutJson, ...supabaseUrls };
-                            console.log("✅ Layout files uploaded to Supabase:", supabaseUrls);
-                        } catch (uploadError) {
-                            console.warn("⚠️ Failed to upload layout files to Supabase:", uploadError);
-                        }
-                    }
+                    // Backend now handles Supabase upload and returns the URLs in layoutJson
+                    console.log("✅ Layout generated and uploaded by backend:", layoutJson);
 
                     await updateProject(currentProjectId, { module2_data: layoutJson, status: "layout_complete" });
                     setLayoutLoading(false);
@@ -668,7 +663,7 @@ export default function FactoryCopilot() {
     const overallProgress = Math.round((completedPhases / MODULES.length) * 100);
     const isSelectedProcessing = status === 'processing' && selectedModule === currentModule && !artifacts.includes(currentModule);
     const isSelectedDone = artifacts.includes(selectedModule) || status === 'finished' || selectedModule < currentModule;
-    const selectedProgress = isSelectedProcessing ? (subStep / 4) * 100 : isSelectedDone ? 100 : 0;
+    const selectedProgress = isSelectedProcessing ? subStep : isSelectedDone ? 100 : 0;
     const displayArtifacts = status === 'finished' ? MODULES.map((_, idx) => idx) : artifacts;
     const deliverableTypes = new Set(["specs", "sourcing", "tco", "businessplan", "catalogue", "layout2d", "model3d", "video"]);
     const downloadableArtifacts = displayArtifacts.filter(idx => deliverableTypes.has(MODULES[idx]?.type));

@@ -13,9 +13,6 @@ EMAIL_CACHE_DIR = CACHE_DIR / "email"
 EMAIL_ATTACHMENTS_DIR = EMAIL_CACHE_DIR / "attachments"
 TEMPLATE_DIR = BASE_DIR / "template"
 
-# CREATE_IMAGES = os.getenv("RIBIF_CREATE_IMAGES", "1") in ("1", "true", "True")
-CREATE_IMAGES = True
-
 
 def _env_bool(name: str, default: bool = False) -> bool:
     raw = os.getenv(name)
@@ -31,6 +28,9 @@ def _env_int(name: str, default: int) -> int:
         return int(str(raw).strip())
     except ValueError:
         return default
+
+# CREATE_IMAGES = os.getenv("RIBIF_CREATE_IMAGES", "1") in ("1", "true", "True")
+CREATE_MACHINE_IMAGES = _env_bool("CREATE_MACHINE_IMAGES", True)
 
 
 SKIP_MODULE_1 = _env_bool("SKIP_MODULE_1", False)

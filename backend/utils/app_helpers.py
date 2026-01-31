@@ -17,6 +17,7 @@ from supabase_utils import (
     upsert_project_settings,
 )
 from config import TEMPLATE_DIR
+from utils.logger import get_logger
 
 
 def get_request_user_id() -> Optional[str]:
@@ -91,7 +92,8 @@ def upload_and_register_file(
         label=label,
         metadata={},
     )
-    signed_url = create_signed_url(client, bucket_id, object_path)
+    logger = get_logger("app_helpers")
+    logger.info("Uploaded %s to Supabase: %s (file_id=%s) category=%s", label or os.path.basename(local_path), signed_url, file_id, category)
     return file_id, signed_url
 
 

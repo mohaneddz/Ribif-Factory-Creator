@@ -6,7 +6,7 @@ from pathlib import Path
 from flask import Blueprint, jsonify, request
 from werkzeug.utils import secure_filename
 
-from config import BASE_URL, OUTPUT_DIRS, UPLOAD_DIR, CREATE_IMAGES, SKIP_MODULE_1, write_json
+from config import BASE_URL, OUTPUT_DIRS, UPLOAD_DIR, CREATE_MACHINE_IMAGES, SKIP_MODULE_1, write_json
 from supabase_utils import get_supabase, insert_module1_extraction
 from utils.module_1.core import RIBIFExtractor
 from utils.logger import log_skip
@@ -22,7 +22,7 @@ from utils.app_helpers import (
     upload_and_register_file,
     upload_with_name_timestamp,
 )
-from utils.image_selector import find_best_image
+from utils.image_selector import find_best_image, get_random_image
 from vertex_utils import generate_image
 
 bp_module1 = Blueprint("module1", __name__)
@@ -221,11 +221,15 @@ def process_module_1():
 
         # If no web image, try generation or cache
         if not web_image_found:
-            if CREATE_IMAGES and settings.get("enableMachineImages", True):
+            if CREATE_MACHINE_IMAGES and settings.get("enableMachineImages", True):
                 image_result = generate_machine_image(nom_machine, machine_type, manufacturer)
                 image_local_path = image_result.get("image_path")
             else:
+                # User requested random images from cache if creation is disabled
                 cached = find_best_image(nom_machine)
+                if not cached:
+                    cached = get_random_image()
+                
                 if cached:
                     target_path = OUTPUT_DIRS["module1"] / cached.name
                     if not target_path.exists():

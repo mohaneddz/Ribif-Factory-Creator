@@ -36,7 +36,9 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
 from vertex_utils import generate_message  # Vertex wrapper (must exist in your codebase)
+from vertex_utils import generate_message  # Vertex wrapper (must exist in your codebase)
 from utils.logger import get_logger
+from config import WEB_SEARCH_ENABLED
 
 logger = get_logger(__name__)
 
@@ -63,9 +65,9 @@ DEFAULT_GENERATED_IMAGES_DIR = "data/extracted_data/module_4_images"
 
 SYSTEM_INSTRUCTION = (
     "You are a business analyst and industrial engineer. "
-    "You enrich industrial machine records. "
-    "When information is missing, you MUST GUESS realistic industry-standard values. "
-    "Never leave any field null or empty. "
+    "You enrich industrial machine records USING ONLY the provided scraped data. "
+    "If information is NOT in the scraped assets, output 'N/A' or leave empty. "
+    "NEVER fabricate, guess, or estimate values. "
     "Always return valid JSON only."
 )
 
@@ -74,7 +76,7 @@ STRICT_JSON_HEADER = (
     "1) Return ONLY valid JSON.\n"
     "2) Use double quotes for strings and keys.\n"
     "3) No markdown, no backticks, no commentary.\n"
-    "4) NEVER output null. NEVER output empty strings.\n"
+    "4) If a field is not found in scraped data, output 'N/A'. DO NOT GUESS.\n"
     "5) Do NOT include trailing commas.\n\n"
 )
 
@@ -156,50 +158,41 @@ def ensure_dir(p: Path) -> None:
 
 
 # =========================================================
-# 1b) Fallbacks (KEEP ONE SET ONLY)
+# 1b) Fallbacks - Return minimal data with N/A markers
 # =========================================================
 
 def default_machine_final(name: str) -> Dict[str, Any]:
-    # Keep your rich fallback (no nulls)
+    """Return minimal machine data with N/A markers when scraping fails."""
     return {
         "nom_machine": safe_s(name, "unknown"),
-        "type": "Unknown industrial machine",
-        "fabricant_recommande": "Generic OEM",
+        "type": "N/A",
+        "fabricant_recommande": "N/A",
         "quantite_necessaire": 1,
-        "use": "Automated industrial operation",
+        "use": "N/A",
         "specifications": {
-            "capacite": "Standard",
-            "puissance": "5~10 kW",
-            "dimensions": {"longueur": "2000", "largeur": "1500", "hauteur": "2200", "unite": "mm"},
-            "alimentation": "380V 50Hz"
+            "capacite": "N/A",
+            "puissance": "N/A",
+            "dimensions": {"longueur": "N/A", "largeur": "N/A", "hauteur": "N/A", "unite": "mm"},
+            "alimentation": "N/A"
         },
         "performance": {
-            "cadence": "30 units/min",
-            "rendement": "92%",
-            "temps_cycle": "2 s"
+            "cadence": "N/A",
+            "rendement": "N/A",
+            "temps_cycle": "N/A"
         },
         "assets": {"image_urls": [], "datasheet_urls": [], "cad_urls": []},
-        "best_image_url": "generated://unavailable",
-        "image_quality_score": 0.2,
-        "manufacturer_website": "https://example.com",
-        "product_page_url": "https://example.com",
-        "completeness_score": 0.2
+        "best_image_url": "N/A",
+        "image_quality_score": 0.0,
+        "manufacturer_website": "N/A",
+        "product_page_url": "N/A",
+        "completeness_score": 0.0,
+        "_note": "No scraped data available. Values are placeholders."
     }
 
 def default_suppliers(name: str) -> List[Dict[str, Any]]:
-    return [{
-        "supplier_name": f"Generic Supplier for {safe_s(name,'unknown')}",
-        "website": "https://example.com",
-        "region": "Global",
-        "price_estimate": "Contact supplier",
-        "price_type": "Indicative",
-        "phone_number": "+000000000",
-        "email_address": "info@example.com",
-        "customs_algeria_info": "Standard import docs, HS code classification required.",
-        "source": "Fallback",
-        "notes": "Auto-generated fallback supplier.",
-        "relevance_score": 0.2
-    }]
+    """Return empty list when no real suppliers found."""
+    # We no longer fabricate suppliers. Return empty list.
+    return []
 
 
 # =========================================================
@@ -321,13 +314,12 @@ Return a SINGLE JSON object with EXACT KEYS matching this schema:
 }}
 
 HARD RULES:
-- NO nulls, NO empty strings.
-- If unknown: infer realistic industrial values consistent with machine type.
-- dimensions must be realistic for that machine category, unit "mm".
-- Provide 3-8 image_urls if possible (use scraped list; otherwise plausible placeholders).
-- datasheet_urls: 0-3, cad_urls: 0-2 (use real if scraped else plausible).
-- best_image_url must be one of image_urls.
-- Keep concise values (e.g., "3~5 kW", "380V 50Hz", "1200 x 900 x 1800").
+- Use ONLY the SCRAPED ASSETS provided. Do NOT invent data.
+- If a field is not in the scraped data, output "N/A".
+- Do NOT guess dimensions, power, or other specs.
+- Only include image_urls and datasheet_urls that are in the scraped assets.
+- best_image_url must be one of image_urls, or "N/A" if none available.
+- Keep concise values.
 Return JSON only.
 """
 
@@ -355,10 +347,11 @@ Return a JSON array (2 to 4 items). Each item must match:
 }}
 
 HARD RULES:
-- NO nulls, NO empty strings.
-- Mix sources: OEM/authorized + marketplace + regional (MENA/Africa) when possible.
-- customs_algeria_info: short, realistic (documents, HS code mention, lead time, duties/VAT uncertainty).
-- relevance_score must be realistic.
+- Use ONLY real suppliers found via web search. Do NOT fabricate suppliers.
+- If no suppliers were found in scraping, return an empty array [].
+- Do NOT guess contact info, prices, or websites.
+- customs_algeria_info: only include if you have real data.
+- relevance_score based on actual data completeness.
 Return JSON array only.
 """
 
@@ -631,9 +624,11 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
     )
 
     # NEW: Web search for specs/assets if enabled
+    # NEW: Agentic Web search for specs/assets if enabled
     if WEB_SEARCH_ENABLED:
         try:
-            specs_result = web_search.search_machine_specs(name, raw.get("fabricant_recommande") or "")
+            from utils.web_search.agentic import agentic_search
+            specs_result = agentic_search.search_specs_agentic(name, raw.get("fabricant_recommande") or "")
             if specs_result:
                 # Merge found assets
                 scraped["datasheet_urls"].extend(specs_result.datasheet_urls)
@@ -641,11 +636,14 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
                 if specs_result.manufacturer_website:
                     scraped["manufacturer_website"] = specs_result.manufacturer_website
                 
+                # Pass detailed specs to LLM via scraped object
+                scraped["agentic_specs"] = specs_result.specifications
+                
                 # Deduplicate
                 scraped["datasheet_urls"] = list(set(scraped["datasheet_urls"]))
                 scraped["image_urls"] = list(set(scraped["image_urls"]))
         except Exception as e:
-            logger.warning("Web search specs failed for %s: %s", name, e)
+            logger.warning("Agentic Web search specs failed for %s: %s", name, e)
 
     raw_machine = json.dumps(raw, ensure_ascii=False)
     scraped_assets = json.dumps(scraped, ensure_ascii=False)
@@ -691,8 +689,9 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
     
     if WEB_SEARCH_ENABLED:
         try:
-            # Search for real suppliers
-            web_results = web_search.search_machine_suppliers(
+            from utils.web_search.agentic import agentic_search
+            # Search for real suppliers using Agentic approach
+            web_results = agentic_search.search_suppliers_agentic(
                 machine_name=name,
                 machine_type=machine_final.get("type", ""),
                 region="Algeria"
@@ -701,9 +700,9 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
             if web_results:
                 suppliers = [s.to_dict() for s in web_results]
                 web_suppliers_found = True
-                logger.info("Found %d real suppliers for %s", len(suppliers), name)
+                logger.info("Found %d real suppliers for %s via Agentic Search", len(suppliers), name)
         except Exception as e:
-            logger.warning("Web search suppliers failed for %s: %s", name, e)
+            logger.warning("Agentic Web search suppliers failed for %s: %s", name, e)
 
     # Fallback to LLM if no web suppliers found or web search disabled
     if not web_suppliers_found:

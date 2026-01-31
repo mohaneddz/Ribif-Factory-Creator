@@ -14,6 +14,13 @@ export const ModuleLoadingView = ({ module, progress }: { module: any; progress:
     const Icon = module.icon;
     const safeProgress = Math.min(100, Math.max(0, progress));
 
+    const activeBulletIndex = meta.bullets.findIndex((_, index) => {
+        const stepThreshold = ((index + 1) / meta.bullets.length) * 100;
+        const prevThreshold = (index / meta.bullets.length) * 100;
+        return safeProgress >= prevThreshold && safeProgress < stepThreshold;
+    });
+    const currentStatusText = activeBulletIndex !== -1 ? meta.bullets[activeBulletIndex] + "..." : module.statusText;
+
     return (
         <div className="h-full w-full flex items-center justify-center p-10 bg-slate-50">
             <div className="w-full max-w-3xl bg-white border border-slate-200 rounded-4xl overflow-hidden shadow-xl shadow-slate-200/50">
@@ -33,17 +40,30 @@ export const ModuleLoadingView = ({ module, progress }: { module: any; progress:
                 <div className="p-8">
                     <div className="flex items-center gap-3 mb-6">
                         <Loader2 className="animate-spin text-indigo-600" size={20} />
-                        <span className="text-sm font-bold text-slate-700">{module.statusText}</span>
+                        <span className="text-sm font-bold text-slate-700">{currentStatusText}</span>
                     </div>
                     <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-6">
-                        <div className="h-full bg-indigo-600 animate-[progress_1.2s_ease-in-out_infinite]" style={{ width: "35%" }} />
+                        <div className="h-full bg-indigo-600 transition-all duration-700 ease-out" style={{ width: `${safeProgress}%` }} />
                     </div>
                     <div className="grid grid-cols-3 gap-3">
-                        {meta.bullets.map((item) => (
-                            <div key={item} className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-xs font-bold text-slate-600 text-center">
-                                {item}
-                            </div>
-                        ))}
+                        {meta.bullets.map((item, index) => {
+                            const stepThreshold = ((index + 1) / meta.bullets.length) * 100;
+                            const prevThreshold = (index / meta.bullets.length) * 100;
+                            const isActive = safeProgress >= prevThreshold && safeProgress < stepThreshold;
+                            const isCompleted = safeProgress >= stepThreshold;
+
+                            return (
+                                <div key={item} className={clsx(
+                                    "border rounded-xl px-4 py-3 text-xs font-bold text-center transition-all duration-300",
+                                    isActive ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm scale-105" :
+                                    isCompleted ? "bg-emerald-50 border-emerald-200 text-emerald-700 opacity-80" :
+                                    "bg-slate-50 border-slate-100 text-slate-400"
+                                )}>
+                                    {isCompleted && <span className="mr-1">✓</span>}
+                                    {item}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>

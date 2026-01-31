@@ -59,6 +59,8 @@ create table if not exists public.projects (
     module9_data jsonb,     -- Catalog
     module2_data jsonb,     -- Layout
     module3_data jsonb,     -- Video
+
+    pipelines jsonb,
     
     -- Workflow state
     completed_modules text[] default '{}',  -- Array of completed module names

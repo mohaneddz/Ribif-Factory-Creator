@@ -33,9 +33,9 @@ logger = get_logger(__name__)
 SYSTEM_INSTRUCTION = (
     "You are a business analyst and industrial engineer. "
     "Extract information from industrial project documents. "
-    "When information is missing, you MUST GUESS realistic industry-standard values "
-    "(e.g., machine dimensions, power, capacity). "
-    "Never leave any field null. "
+    "ONLY output values that are EXPLICITLY stated in the document. "
+    "If a value is not found, output 'N/A' for strings or 0 for numbers. "
+    "NEVER fabricate, guess, or estimate values. "
     "Always return valid JSON only. "
     "DO NOT include any pricing/cost/budget/financial estimates."
 )
@@ -45,7 +45,7 @@ STRICT_JSON_HEADER = (
     "1) Return ONLY a single valid JSON object.\n"
     "2) Use double quotes for all strings and keys.\n"
     "3) No markdown, no backticks, no commentary.\n"
-    "4) NEVER output null. If missing, GUESS a realistic value.\n"
+    "4) If a field is NOT explicitly in the document, output 'N/A' for strings or 0 for numbers. DO NOT GUESS.\n"
     "5) Do NOT include trailing commas.\n"
     "6) Do NOT include empty/template items (no fully-empty objects in lists).\n\n"
 )
@@ -326,7 +326,7 @@ def build_stage_prompt(stage_key: str, schema_example: Dict[str, Any], excerpt: 
         "- If the document is in English -> respond in English\n"
         "- Match the document language exactly\n\n"
         "ABSOLUTE RULES:\n"
-        "- NEVER output null. Guess realistic values if missing.\n"
+        "- If information is NOT in the document, output 'N/A'. DO NOT GUESS OR FABRICATE.\n"
         "- Do NOT output empty/template objects in lists.\n"
         "- Do NOT include any pricing/cost/budget.\n\n"
         "REQUIRED JSON STRUCTURE (must match exactly):\n"
@@ -339,15 +339,15 @@ def build_stage_prompt(stage_key: str, schema_example: Dict[str, Any], excerpt: 
     if stage_key == "stage_4_machines_equipements":
         return (
             "You are an industrial engineer.\n"
-            "Task: list machines/equipment and fill missing specs with realistic industry-standard guesses.\n"
-            "You MUST include: dimensions (LxWxH), power, capacity, electrical supply, and typical cadence.\n"
-            "Never return empty machine rows.\n\n"
+            "Task: Extract ONLY machines explicitly mentioned in the document.\n"
+            "If specs (dimensions, power, etc.) are NOT in the document, output 'N/A'.\n"
+            "Do NOT guess or fabricate specifications.\n\n"
             + base
         )
 
     return (
-        "Task: extract and infer missing details with realistic industry assumptions.\n"
-        "Never return null values.\n\n"
+        "Task: extract information from the document. Use ONLY data explicitly stated.\n"
+        "If a field is missing, output 'N/A'. Do NOT guess.\n\n"
         + base
     )
 
@@ -559,37 +559,33 @@ class RIBIFExtractor:
 
         # Final cleanup: remove empty template list rows
         final_json = _drop_empty_items(final_json)
-        # Global null fill (should be rare, but guarantees "no nulls")
-        context_excerpt = build_excerpt(pages, list(range(min(4, len(pages)))), max_chars=18000)
-        final_json = self._global_fill_no_nulls(final_json, context_excerpt)
-
-        # Hard assert: if still nulls, one more forced fix
-        if _contains_null(final_json):
-            logger.warning("Nulls still detected after global fill. Forcing final repair pass...")
-            final_json = self._global_fill_no_nulls(final_json, context_excerpt)
+        # NOTE: We no longer call _global_fill_no_nulls because we want to preserve
+        # "N/A" and missing values rather than fabricating data.
 
         # NEW: Web Search Post-Processing Enumeration
         # If enabled, verify machines and enrichment specifications from the web
         from config import WEB_SEARCH_ENABLED
         if WEB_SEARCH_ENABLED:
             try:
-                from utils.web_search import aggregator as web_search
+                from utils.web_search.agentic import agentic_search
                 machines_stage = final_json.get("stage_4_machines_equipements", {})
                 machine_list = machines_stage.get("machines_production", [])
                 
                 if isinstance(machine_list, list) and machine_list:
-                    logger.info("Enriching %d machines with web search...", len(machine_list))
+                    logger.info("Enriching %d machines with Agentic Web Search...", len(machine_list))
                     
-                    for m in machine_list:
-                         if not isinstance(m, dict): continue
+                if isinstance(machine_list, list) and machine_list:
+                    logger.info("Enriching %d machines with Agentic Web Search (Parallel 7 workers)...", len(machine_list))
+                    
+                    def _enrich_one(m):
+                         if not isinstance(m, dict): return
                          name = m.get("nom_machine")
-                         if not name: continue
+                         if not name: return
                          
                          manufacturer = m.get("fabricant_recommande", "")
-                         
                          try:
-                             # Search specs
-                             specs = web_search.search_machine_specs(name, manufacturer)
+                             # Search specs Agentically
+                             specs = agentic_search.search_specs_agentic(name, manufacturer)
                              
                              # Update manufacturer if missing or generic
                              if specs.manufacturer and (not manufacturer or len(manufacturer) < 3):
@@ -605,20 +601,24 @@ class RIBIFExtractor:
                                          curr_specs[k] = v
                                  m["specifications"] = curr_specs
                                  
-                             # Add datasheet/image links to a new field if possible (though schema is strict-ish, we can try adding non-breaking fields)
-                             # Module 4 is the main consumer, but adding here helps downstream
+                             # Add datasheet/image links
                              m["_web_enrichment"] = {
                                  "datasheets": specs.datasheet_urls,
                                  "images": specs.image_urls,
-                                 "sources": specs.sources
+                                 "sources": specs.sources,
+                                 "agentic_notes": "Enriched via Agentic Loop"
                              }
-                             
                          except Exception as e:
-                             logger.warning("Web enrichment failed for %s: %s", name, e)
+                             logger.warning("Agentic Web enrichment failed for %s: %s", name, e)
+
+                    with ThreadPoolExecutor(max_workers=7) as executor:
+                        futures = [executor.submit(_enrich_one, m) for m in machine_list]
+                        for _ in as_completed(futures):
+                            pass
                              
-                    logger.info("Web enrichment complete.")
+                    logger.info("Agentic Web enrichment complete.")
             except ImportError:
-                logger.warning("Could not import web_search utils")
+                logger.warning("Could not import agentic_search utils")
             except Exception as e:
                 logger.warning("Web search enrichment stage failed: %s", e)
 

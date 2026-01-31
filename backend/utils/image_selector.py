@@ -29,3 +29,14 @@ def find_best_image(machine_name: str) -> Optional[Path]:
             best_score = score
             best = path
     return best
+
+
+def get_random_image() -> Optional[Path]:
+    import random
+    if not CACHE_IMAGES_DIR.exists():
+        return None
+    candidates = list(CACHE_IMAGES_DIR.glob("*"))
+    valid = [p for p in candidates if p.is_file()]
+    if not valid:
+        return None
+    return random.choice(valid)

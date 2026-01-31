@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 from flask import Blueprint, jsonify, request
 
 from config import BASE_URL, OUTPUT_DIRS, SKIP_MODULE_2, PIPLEINE_3D_CAP, CREATE_REALISTIC_RENDER, CREATE_3D_MODEL, TEMPLATE_DIR
-from supabase_utils import get_supabase, insert_layout, insert_pipeline, update_project_current_pipeline
+from supabase_utils import get_supabase, insert_layout, insert_pipeline, update_project_current_pipeline, upload_file, insert_project_file, build_object_path, get_public_url
 from utils.app_helpers import (
     get_pipeline_settings,
     get_request_project_id,
@@ -19,8 +19,10 @@ from utils.app_helpers import (
     upload_and_register_file,
 )
 from utils.module_2.main import run_pipeline
-from utils.logger import log_skip
+from utils.logger import log_skip, get_logger
 from utils.module_2 import config as module2_config
+
+logger = get_logger("module2")
 
 def convert_dxf_to_png(dxf_path: str, png_path: str) -> bool:
     """Convert DXF file to PNG using ezdxf and matplotlib."""
@@ -387,17 +389,75 @@ def generate_layout():
         owner_id = owner_id or get_request_user_id()
         if client and project_id:
             try:
-                layout_2d_file_id = None
-                layout_3d_file_id = None
-                layout_dxf_file_id = None
-                layout_realistic_file_id = None
-                layout_realistic_clean_file_id = None
+                # Upload files to Supabase and get IDs and URLs
+                layout_files_to_upload = [
+                    ("layout_2d", layout_2d, "layout-2d", "image/png"),
+                    ("layout_3d", layout_3d, "layout-3d", "model/gltf-binary"),
+                    ("layout_dxf", layout_dxf, "layout-dxf", "application/dxf"),
+                    ("layout_realistic", layout_realistic, "layout-realistic", "image/png"),
+                    ("layout_realistic_clean", layout_realistic_clean, "layout-realistic-clean", "image/png"),
+                ]
+
+                file_ids = {}
+                for key, file_path, category, mime in layout_files_to_upload:
+                    if file_path and os.path.exists(file_path):
+                        try:
+                            object_path = build_object_path(project_id, category, Path(file_path).name)
+                            upload_file(client, "project-files", object_path, file_path, content_type=mime)
+                            file_id = insert_project_file(
+                                client,
+                                project_id,
+                                owner_id,
+                                "project-files",
+                                object_path,
+                                mime,
+                                os.path.getsize(file_path),
+                                category,
+                                label=key,
+                            )
+                            file_ids[f"{key}_file_id"] = file_id
+                            
+                            # Get public URL and add to result
+                            public_url = get_public_url(client, "project-files", object_path)
+                            result[f"{key}_supabase_url"] = public_url
+
+                            logger.info("Uploaded %s to Supabase: %s", key, public_url)
+                        except Exception as e:
+                            logger.error("Failed to upload %s to Supabase: %s", key, e)
+                            file_ids[f"{key}_file_id"] = None
+                    else:
+                        file_ids[f"{key}_file_id"] = None
+
+                layout_2d_file_id = file_ids.get("layout_2d_file_id")
+                layout_3d_file_id = file_ids.get("layout_3d_file_id")
+                layout_dxf_file_id = file_ids.get("layout_dxf_file_id")
+                layout_realistic_file_id = file_ids.get("layout_realistic_file_id")
+                layout_realistic_clean_file_id = file_ids.get("layout_realistic_clean_file_id")
+                
                 pipeline_links_file_id = None
                 pipeline_id = None
                 pipeline_payload = None
                 if pipeline_links and Path(pipeline_links).exists():
                     try:
                         pipeline_payload = json.loads(Path(pipeline_links).read_text(encoding="utf-8"))
+                        # Also upload links file
+                        try:
+                            object_path = build_object_path(project_id, "pipeline-links", Path(pipeline_links).name)
+                            upload_file(client, "project-files", object_path, pipeline_links, content_type="application/json")
+                            pipeline_links_file_id = insert_project_file(
+                                client,
+                                project_id,
+                                owner_id,
+                                "project-files",
+                                object_path,
+                                "application/json",
+                                os.path.getsize(pipeline_links),
+                                "pipeline-links",
+                                label="pipeline_links"
+                            )
+                        except Exception as e:
+                             logger.error("Failed to upload pipeline_links to Supabase: %s", e)
+
                     except Exception:
                         pipeline_payload = None
                 if pipeline_payload is not None:
@@ -425,7 +485,8 @@ def generate_layout():
                 result["layout_realistic_file_id"] = layout_realistic_file_id
                 result["layout_realistic_clean_file_id"] = layout_realistic_clean_file_id
                 result["pipeline_links_file_id"] = pipeline_links_file_id
-            except Exception:
+            except Exception as e:
+                logger.error("Supabase integration error: %s", e)
                 pass
 
         return jsonify(result)
