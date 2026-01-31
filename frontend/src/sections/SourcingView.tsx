@@ -23,6 +23,8 @@ export const SourcingView = ({ progress, data, module4Data, loading }: { progres
         );
     }
 
+    // If we have data but it's empty, show the "waiting" state.
+    // However, if we are loading, the loader above takes precedence.
     if (enrichedMachines.length === 0) {
         return (
             <div className="p-8 h-full flex items-center justify-center">

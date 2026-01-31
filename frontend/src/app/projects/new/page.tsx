@@ -24,6 +24,7 @@ import {
   deleteProjectRecord,
   validateWithLlm,
 } from "@/lib/fileValidation";
+import { updateProject } from "@/lib/projectService";
 import { UploadProgress } from "@/components/upload/UploadProgress";
 import { VALIDATION_CONFIG } from "@/config/validation";
 
@@ -180,9 +181,12 @@ export default function CreateProjectPage() {
         }));
       });
 
-      if (uploadResult.error) {
-        throw new Error(uploadResult.error);
+      if (uploadResult.error || !uploadResult.path) {
+        throw new Error(uploadResult.error || "Upload failed");
       }
+
+      // CRITICAL FIX: Save the storage path to the project record
+      await updateProject(createdProjectId, { source_file_path: uploadResult.path });
 
       // Step 5: Validate with LLM
       setWorkflow({

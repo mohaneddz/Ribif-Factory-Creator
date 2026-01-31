@@ -4,7 +4,7 @@ from flask_cors import cross_origin
 
 from config import OUTPUT_DIRS
 from utils.app_helpers import load_template_payload, get_request_project_id
-from supabase_utils import get_supabase, delete_project_files, delete_project
+from supabase_utils import get_supabase, delete_project_files, delete_project, reset_project_data
 
 bp_common = Blueprint("common", __name__)
 
@@ -90,6 +90,34 @@ def delete_project_endpoint(project_id: str):
             "success": True,
             "message": "Project deleted successfully",
             "files_deleted": files_deleted
+        }), 200
+        
+    except Exception as e:
+        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+
+
+@bp_common.route("/api/projects/<string:project_id>/reset", methods=["POST"])
+@cross_origin()
+def reset_project_endpoint(project_id: str):
+    """
+    Reset a project's data to restart processing, keeping the source file.
+    """
+    if not project_id:
+        return jsonify({"error": "Project ID is required"}), 400
+    
+    client = get_supabase()
+    if not client:
+        return jsonify({"error": "Supabase client not available"}), 500
+    
+    try:
+        error = reset_project_data(client, project_id)
+        
+        if error:
+            return jsonify({"error": f"Failed to reset project: {error}"}), 500
+        
+        return jsonify({
+            "success": True,
+            "message": "Project reset successfully"
         }), 200
         
     except Exception as e:
