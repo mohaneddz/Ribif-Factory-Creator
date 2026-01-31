@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request
 
-from config import BASE_URL, OUTPUT_DIRS, SKIP_MODULE_2, PIPLEINE_3D_CAP, CREATE_REALISTIC_RENDER, CREATE_3D_MODEL
+from config import BASE_URL, OUTPUT_DIRS, SKIP_MODULE_2, PIPLEINE_3D_CAP, CREATE_REALISTIC_RENDER, CREATE_3D_MODEL, TEMPLATE_DIR
 from supabase_utils import get_supabase, insert_layout, insert_pipeline, update_project_current_pipeline
 from utils.app_helpers import (
     get_pipeline_settings,
@@ -217,6 +217,16 @@ def generate_layout():
         if SKIP_MODULE_2:
             log_skip("module2.generate_layout", reason="SKIP_MODULE_2")
             payload = load_template_payload("module2") or {}
+            
+            template_img = TEMPLATE_DIR / "layout_square.png"
+            if template_img.exists():
+                output_dir = OUTPUT_DIRS["module2"]
+                output_dir.mkdir(parents=True, exist_ok=True)
+                target_img = output_dir / "layout_square.png"
+                shutil.copy2(template_img, target_img)
+                payload["layout_2d"] = str(target_img)
+                payload["layout_2d_url"] = _download_url_for(str(target_img))
+
             project_id = get_request_project_id(include_json=True)
             if isinstance(payload, dict) and project_id:
                 payload["project_id"] = payload.get("project_id") or project_id

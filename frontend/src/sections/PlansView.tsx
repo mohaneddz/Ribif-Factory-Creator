@@ -47,9 +47,13 @@ const Model3DPanel = ({ heightClass = "h-1/2" }: { heightClass?: string }) => (
             VUE 3D ISOMÉTRIQUE (GLB)
         </div>
         <div className="h-full w-full relative">
-            <Simple3DViewer modelUrl="/models/factory1.glb" />
+            <Simple3DViewer
+                boundingboxStart={{ x: -5, y: 0, z: -5 }}
+                boundingboxEnd={{ x: 5, y: 5, z: 0 }}
+                factoryModel="/models/factory1.glb"
+            />
             <div className="absolute bottom-6 left-6 bg-slate-900/80 text-white px-3 py-1.5 rounded-lg text-[10px] font-semibold border border-white/10">
-                factory1.glb • Scene 1
+                factory1.glb + pipeline.glb
             </div>
         </div>
     </div>
