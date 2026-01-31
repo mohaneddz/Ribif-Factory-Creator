@@ -18,21 +18,16 @@
 }
 
 body {
-  background-color: var(--bg-dark);
-  color: var(--text-gray);
-}
-
-.theme-light body {
   background-color: var(--bg-light);
   color: var(--text-dark);
 }
 
-.theme-dark body {
+.dark body {
   background-color: var(--bg-dark);
   color: var(--text-gray);
 }
 
-.theme-dark {
+.dark {
   --surface-0: #0b0c10;
   --surface-1: #111827;
   --surface-2: #0f172a;

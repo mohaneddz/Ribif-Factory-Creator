@@ -38,10 +38,9 @@ export function useDashboardProjects() {
         console.log("Loading projects for user:", userId);
 
         // Query projects owned by the current user
-        // Note: Using simplified schema columns only
         const { data, error: fetchError } = await supabase
           .from("projects")
-          .select("id,name,status,created_at,owner_id,source_filename")
+          .select("id,name,status,created_at,owner_id,source_filename,completed_modules")
           .eq("owner_id", userId)
           .order("created_at", { ascending: false });
 
@@ -59,14 +58,19 @@ export function useDashboardProjects() {
           const date = row.created_at
             ? new Date(row.created_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })
             : "—";
+            
+          // Simple progress calculation (assuming approx 10 steps max for now)
+          const completedCount = Array.isArray(row.completed_modules) ? row.completed_modules.length : 0;
+          const progress = Math.min(Math.round((completedCount / 9) * 100), 100);
+
           return {
             id: row.id,
             name: row.name || row.source_filename || "Projet sans nom",
-            client: "—",
-            location: "—",
+            source_filename: row.source_filename,
             date,
             status: row.status || "draft",
-            type: "Industrial",
+            progress,
+            completed_modules: row.completed_modules || [],
           } as Project;
         });
         setProjects(formatted);

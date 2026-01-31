@@ -75,6 +75,28 @@ export default function SimpleDxfViewer({ url, className = "" }: SimpleDxfViewer
     const containerRef = useRef<HTMLDivElement>(null);
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
     const frameIdRef = useRef<number>(0);
+    const sceneRef = useRef<THREE.Scene | null>(null);
+    const groupRef = useRef<THREE.Group | null>(null);
+
+    // Helper to update colors based on theme
+    const updateThemeColors = (isDark: boolean) => {
+        if (!groupRef.current) return;
+        
+        groupRef.current.traverse((child) => {
+            if ((child as THREE.Line).isLine) {
+                const line = child as THREE.Line;
+                const mat = line.material as THREE.LineBasicMaterial;
+                const color = mat.color.getHex();
+                
+                // If it's black or white (or close to it), flip it
+                if (isDark) {
+                    if (color === 0x000000) mat.color.setHex(0xffffff); // Black -> White
+                } else {
+                    if (color === 0xffffff) mat.color.setHex(0x000000); // White -> Black
+                }
+            }
+        });
+    };
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -85,7 +107,8 @@ export default function SimpleDxfViewer({ url, className = "" }: SimpleDxfViewer
 
         // Scene
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xf8fafc);
+        scene.background = null; // Transparent
+        sceneRef.current = scene;
 
         // Orthographic Camera for 2D view
         const aspect = width / height;
@@ -102,8 +125,8 @@ export default function SimpleDxfViewer({ url, className = "" }: SimpleDxfViewer
         camera.zoom = 1;
         camera.updateProjectionMatrix();
 
-        // Renderer
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        // Renderer (Alpha enabled)
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(width, height);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
@@ -139,6 +162,12 @@ export default function SimpleDxfViewer({ url, className = "" }: SimpleDxfViewer
                     const text = typeof data === "string" ? data : new TextDecoder().decode(data as ArrayBuffer);
                     const dxf = parser.parseSync(text);
                     const dxfGroup = buildGroupFromDxf(dxf);
+                    
+                    groupRef.current = dxfGroup;
+
+                    // Apply initial theme
+                    const isDark = document.documentElement.classList.contains("dark");
+                    updateThemeColors(isDark);
                     
                     // Center the DXF
                     const box = new THREE.Box3().setFromObject(dxfGroup);
@@ -183,8 +212,20 @@ export default function SimpleDxfViewer({ url, className = "" }: SimpleDxfViewer
         };
         window.addEventListener("resize", handleResize);
 
+        // Observe theme changes
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === "attributes" && mutation.attributeName === "class") {
+                    const isDark = document.documentElement.classList.contains("dark");
+                    updateThemeColors(isDark);
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true });
+
         // Cleanup
         return () => {
+            observer.disconnect();
             window.removeEventListener("resize", handleResize);
             cancelAnimationFrame(frameIdRef.current);
             controls.dispose();

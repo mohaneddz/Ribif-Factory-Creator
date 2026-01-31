@@ -66,11 +66,11 @@ interface MachineEnriched {
 // Status badge component
 const StatusBadge = ({ status }: { status: string }) => {
     const config: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
-        pending: { bg: "bg-amber-50 border-amber-200", text: "text-amber-700", icon: <Clock size={12} /> },
-        negotiating: { bg: "bg-blue-50 border-blue-200", text: "text-blue-700", icon: <MessageSquare size={12} /> },
-        accepted: { bg: "bg-emerald-50 border-emerald-200", text: "text-emerald-700", icon: <CheckCircle2 size={12} /> },
-        rejected: { bg: "bg-red-50 border-red-200", text: "text-red-700", icon: <XCircle size={12} /> },
-        closed: { bg: "bg-slate-50 border-slate-200", text: "text-slate-700", icon: <X size={12} /> },
+        pending: { bg: "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20", text: "text-amber-700 dark:text-amber-400", icon: <Clock size={12} /> },
+        negotiating: { bg: "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20", text: "text-blue-700 dark:text-blue-400", icon: <MessageSquare size={12} /> },
+        accepted: { bg: "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20", text: "text-emerald-700 dark:text-emerald-400", icon: <CheckCircle2 size={12} /> },
+        rejected: { bg: "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20", text: "text-red-700 dark:text-red-400", icon: <XCircle size={12} /> },
+        closed: { bg: "bg-slate-50 dark:bg-slate-500/10 border-slate-200 dark:border-slate-500/20", text: "text-slate-700 dark:text-slate-400", icon: <X size={12} /> },
     };
     const c = config[status] || config.pending;
     return (
@@ -97,29 +97,31 @@ const ThreadCard = ({
     return (
         <motion.div
             onClick={onClick}
-            className={`p-4 border-b border-slate-100 cursor-pointer transition-all ${isSelected ? "bg-indigo-50/50 border-l-4 border-l-indigo-500" : "hover:bg-slate-50"
+            className={`p-4 border-b border-slate-100 dark:border-white/5 cursor-pointer transition-all ${isSelected
+                ? "bg-indigo-50/50 dark:bg-indigo-500/10 border-l-4 border-l-indigo-500 dark:border-l-indigo-400"
+                : "hover:bg-slate-50 dark:hover:bg-white/5"
                 }`}
             whileHover={{ x: 2 }}
         >
             <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                        <Building2 size={14} className="text-slate-400" />
-                        <span className="font-bold text-slate-800 text-sm truncate">{thread.supplier_name}</span>
+                        <Building2 size={14} className="text-slate-400 dark:text-slate-500" />
+                        <span className="font-bold text-slate-800 dark:text-white text-sm truncate">{thread.supplier_name}</span>
                     </div>
-                    <p className="text-xs text-slate-600 font-medium truncate">{thread.machine_name}</p>
-                    <p className="text-[11px] text-slate-400 mt-1 truncate">
+                    <p className="text-xs text-slate-600 dark:text-slate-300 font-medium truncate">{thread.machine_name}</p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">
                         {lastEmail?.subject || "Awaiting first email..."}
                     </p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
                     <StatusBadge status={thread.status} />
-                    <span className="text-[10px] text-slate-400">{timeAgo}</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">{timeAgo}</span>
                 </div>
             </div>
             {thread.current_offer?.price && (
-                <div className="mt-2 pt-2 border-t border-slate-100">
-                    <span className="text-xs font-bold text-emerald-600">
+                <div className="mt-2 pt-2 border-t border-slate-100 dark:border-white/5">
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         Current: {thread.current_offer.price} {thread.current_offer.currency}
                     </span>
                 </div>
@@ -142,34 +144,34 @@ const EmailViewer = ({ thread, onAction }: {
     };
 
     return (
-        <div className="h-full flex flex-col">
+        <div className="h-full flex flex-col bg-white dark:bg-[#13141c]">
             {/* Header */}
-            <div className="p-5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+            <div className="p-5 border-b border-slate-100 dark:border-white/10 bg-gradient-to-r from-slate-50 to-white dark:from-white/5 dark:to-transparent">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h3 className="text-lg font-bold text-slate-800">{thread.supplier_name}</h3>
-                        <p className="text-sm text-slate-500">{thread.supplier_email}</p>
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white">{thread.supplier_name}</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{thread.supplier_email}</p>
                     </div>
                     <StatusBadge status={thread.status} />
                 </div>
                 <div className="mt-3 flex flex-wrap gap-4 text-xs">
-                    <span className="text-slate-600">
-                        <strong>Machine:</strong> {thread.machine_name}
+                    <span className="text-slate-600 dark:text-slate-400">
+                        <strong className="text-slate-800 dark:text-slate-200">Machine:</strong> {thread.machine_name}
                     </span>
-                    <span className="text-slate-600">
-                        <strong>Qty:</strong> {thread.quantity_needed}
+                    <span className="text-slate-600 dark:text-slate-400">
+                        <strong className="text-slate-800 dark:text-slate-200">Qty:</strong> {thread.quantity_needed}
                     </span>
-                    <span className="text-slate-600">
-                        <strong>Initial:</strong> {thread.initial_price_estimate}
+                    <span className="text-slate-600 dark:text-slate-400">
+                        <strong className="text-slate-800 dark:text-slate-200">Initial:</strong> {thread.initial_price_estimate}
                     </span>
-                    <span className="text-slate-600">
-                        <strong>Rounds:</strong> {thread.rounds_completed}
+                    <span className="text-slate-600 dark:text-slate-400">
+                        <strong className="text-slate-800 dark:text-slate-200">Rounds:</strong> {thread.rounds_completed}
                     </span>
                 </div>
             </div>
 
             {/* Email thread */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/30">
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/30 dark:bg-[#0b0c10]/30 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">
                 <AnimatePresence>
                     {thread.emails.map((email, idx) => (
                         <motion.div
@@ -180,55 +182,55 @@ const EmailViewer = ({ thread, onAction }: {
                         >
                             <div
                                 className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${email.direction === "outbound"
-                                    ? "bg-indigo-600 text-white rounded-br-sm"
-                                    : "bg-white border border-slate-200 rounded-bl-sm"
+                                    ? "bg-indigo-600 dark:bg-indigo-600 text-white rounded-br-sm"
+                                    : "bg-white dark:bg-[#1a1c25] border border-slate-200 dark:border-white/10 rounded-bl-sm"
                                     }`}
                             >
                                 <div className="flex items-center gap-2 mb-2">
                                     {email.direction === "outbound" ? (
                                         <User size={14} className="text-indigo-200" />
                                     ) : (
-                                        <Building2 size={14} className="text-slate-400" />
+                                        <Building2 size={14} className="text-slate-400 dark:text-slate-500" />
                                     )}
-                                    <span className={`text-[10px] font-bold ${email.direction === "outbound" ? "text-indigo-200" : "text-slate-400"
+                                    <span className={`text-[10px] font-bold ${email.direction === "outbound" ? "text-indigo-200" : "text-slate-400 dark:text-slate-500"
                                         }`}>
                                         {email.direction === "outbound" ? "You" : thread.supplier_name}
                                     </span>
-                                    <span className={`text-[10px] ${email.direction === "outbound" ? "text-indigo-300" : "text-slate-400"
+                                    <span className={`text-[10px] ${email.direction === "outbound" ? "text-indigo-300" : "text-slate-400 dark:text-slate-500"
                                         }`}>
                                         {new Date(email.timestamp).toLocaleString()}
                                     </span>
                                 </div>
-                                <p className={`text-xs font-semibold mb-2 ${email.direction === "outbound" ? "text-white" : "text-slate-700"
+                                <p className={`text-xs font-semibold mb-2 ${email.direction === "outbound" ? "text-white" : "text-slate-700 dark:text-white"
                                     }`}>
                                     {email.subject}
                                 </p>
-                                <p className={`text-sm whitespace-pre-wrap ${email.direction === "outbound" ? "text-indigo-100" : "text-slate-600"
+                                <p className={`text-sm whitespace-pre-wrap ${email.direction === "outbound" ? "text-indigo-100" : "text-slate-600 dark:text-slate-300"
                                     }`}>
                                     {email.body}
                                 </p>
                                 {email.parsed_offer && (
-                                    <div className={`mt-3 pt-3 border-t ${email.direction === "outbound" ? "border-indigo-500" : "border-slate-200"
+                                    <div className={`mt-3 pt-3 border-t ${email.direction === "outbound" ? "border-indigo-500" : "border-slate-200 dark:border-white/10"
                                         }`}>
-                                        <p className={`text-[10px] font-bold mb-1 ${email.direction === "outbound" ? "text-indigo-200" : "text-slate-500"
+                                        <p className={`text-[10px] font-bold mb-1 ${email.direction === "outbound" ? "text-indigo-200" : "text-slate-500 dark:text-slate-400"
                                             }`}>
                                             PARSED OFFER
                                         </p>
                                         <div className="flex flex-wrap gap-2">
                                             {email.parsed_offer.price && (
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${email.direction === "outbound" ? "bg-indigo-500 text-white" : "bg-emerald-100 text-emerald-700"
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${email.direction === "outbound" ? "bg-indigo-500 text-white" : "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
                                                     }`}>
                                                     {email.parsed_offer.price} {email.parsed_offer.currency}
                                                 </span>
                                             )}
                                             {email.parsed_offer.incoterm && (
-                                                <span className={`px-2 py-0.5 rounded text-[10px] ${email.direction === "outbound" ? "bg-indigo-500 text-white" : "bg-slate-100 text-slate-600"
+                                                <span className={`px-2 py-0.5 rounded text-[10px] ${email.direction === "outbound" ? "bg-indigo-500 text-white" : "bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300"
                                                     }`}>
                                                     {email.parsed_offer.incoterm}
                                                 </span>
                                             )}
                                             {email.parsed_offer.lead_time_days && (
-                                                <span className={`px-2 py-0.5 rounded text-[10px] ${email.direction === "outbound" ? "bg-indigo-500 text-white" : "bg-slate-100 text-slate-600"
+                                                <span className={`px-2 py-0.5 rounded text-[10px] ${email.direction === "outbound" ? "bg-indigo-500 text-white" : "bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300"
                                                     }`}>
                                                     {email.parsed_offer.lead_time_days} days
                                                 </span>
@@ -244,9 +246,9 @@ const EmailViewer = ({ thread, onAction }: {
                 {thread.emails.length === 0 && (
                     <div className="h-full flex items-center justify-center">
                         <div className="text-center">
-                            <Mail size={48} className="mx-auto text-slate-300 mb-3" />
-                            <p className="text-slate-500 text-sm">No emails yet</p>
-                            <p className="text-slate-400 text-xs">First RFQ email will be sent automatically</p>
+                            <Mail size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+                            <p className="text-slate-500 dark:text-slate-400 text-sm">No emails yet</p>
+                            <p className="text-slate-400 dark:text-slate-500 text-xs">First RFQ email will be sent automatically</p>
                         </div>
                     </div>
                 )}
@@ -254,7 +256,7 @@ const EmailViewer = ({ thread, onAction }: {
 
             {/* Actions */}
             {thread.status === "negotiating" && (
-                <div className="p-4 border-t border-slate-200 bg-white">
+                <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-[#13141c]">
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => handleAction("negotiate")}
@@ -500,13 +502,13 @@ export const EmailNegotiationView = ({
     // Loading state
     if (parentLoading || isStarting) {
         return (
-            <div className="h-full flex items-center justify-center">
+            <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-[#0b0c10] transition-colors">
                 <div className="text-center">
-                    <Loader2 size={48} className="mx-auto text-indigo-600 animate-spin mb-4" />
-                    <h3 className="text-lg font-bold text-slate-800">
+                    <Loader2 size={48} className="mx-auto text-indigo-600 dark:text-indigo-400 animate-spin mb-4" />
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-white">
                         {isStarting ? "Starting Negotiations..." : "Loading supplier data..."}
                     </h3>
-                    <p className="text-sm text-slate-500 mt-1">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                         {isStarting ? "Sending initial RFQ emails to suppliers" : "Please wait while we prepare your data"}
                     </p>
                 </div>
@@ -517,11 +519,11 @@ export const EmailNegotiationView = ({
     // No module4 data
     if (!module4Data?.machines_enriched) {
         return (
-            <div className="h-full flex items-center justify-center">
+            <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-[#0b0c10] transition-colors">
                 <div className="text-center max-w-md">
                     <AlertCircle size={48} className="mx-auto text-amber-500 mb-4" />
-                    <h3 className="text-lg font-bold text-slate-800">No Supplier Data</h3>
-                    <p className="text-sm text-slate-500 mt-2">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-white">No Supplier Data</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                         Complete the Sourcing module first to get supplier information for negotiations.
                     </p>
                 </div>
@@ -530,17 +532,17 @@ export const EmailNegotiationView = ({
     }
 
     return (
-        <div className="h-full p-6 flex flex-col gap-6">
+        <div className="h-full p-6 flex flex-col gap-6 bg-slate-50 dark:bg-[#0b0c10] transition-colors">
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-500">
                         AI Email Negotiations
                     </div>
-                    <h2 className="text-2xl font-black text-slate-800 mt-2">
+                    <h2 className="text-2xl font-black text-slate-800 dark:text-white mt-2">
                         Supplier Negotiations
                     </h2>
-                    <p className="text-sm text-slate-500 mt-1">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                         Automated RFQ and counter-offer negotiations with AI assistance
                     </p>
                 </div>
@@ -548,8 +550,8 @@ export const EmailNegotiationView = ({
                     <button
                         onClick={togglePolling}
                         className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-colors ${isPolling
-                            ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                            : "bg-slate-100 text-slate-600 border border-slate-200"
+                            ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30"
+                            : "bg-white dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/20"
                             }`}
                     >
                         {isPolling ? <Pause size={14} /> : <Play size={14} />}
@@ -557,7 +559,7 @@ export const EmailNegotiationView = ({
                     </button>
                     <button
                         onClick={checkReplies}
-                        className="px-4 py-2 bg-slate-100 text-slate-600 rounded-full text-xs font-bold flex items-center gap-2 hover:bg-slate-200 transition-colors"
+                        className="px-4 py-2 bg-white dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10 rounded-full text-xs font-bold flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-white/20 transition-colors"
                     >
                         <RefreshCw size={14} />
                         Check Inbox
@@ -570,10 +572,10 @@ export const EmailNegotiationView = ({
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3"
+                    className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl p-4 flex items-center gap-3"
                 >
                     <AlertCircle size={20} className="text-red-500" />
-                    <span className="text-sm text-red-700">{error}</span>
+                    <span className="text-sm text-red-700 dark:text-red-400">{error}</span>
                     <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-600">
                         <X size={16} />
                     </button>
@@ -583,17 +585,17 @@ export const EmailNegotiationView = ({
             {/* Main content */}
             <div className="grid lg:grid-cols-[350px_1fr] gap-6 flex-1 min-h-0">
                 {/* Thread list */}
-                <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden flex flex-col">
-                    <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div className="bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm dark:shadow-none overflow-hidden flex flex-col transition-colors">
+                    <div className="p-5 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
+                            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-100 dark:border-indigo-500/20">
                                 <Mail size={18} />
                             </div>
                             <div>
-                                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
                                     Negotiations
                                 </div>
-                                <div className="text-sm font-extrabold text-slate-800">
+                                <div className="text-sm font-extrabold text-slate-800 dark:text-white">
                                     {threads.length} active threads
                                 </div>
                             </div>
@@ -601,7 +603,7 @@ export const EmailNegotiationView = ({
                         {isPolling && (
                             <div className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                                <span className="text-[10px] text-emerald-600 font-medium">Live</span>
+                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Live</span>
                             </div>
                         )}
                     </div>
@@ -609,9 +611,9 @@ export const EmailNegotiationView = ({
                         {threads.length === 0 ? (
                             <div className="h-full flex items-center justify-center p-6">
                                 <div className="text-center">
-                                    <Mail size={32} className="mx-auto text-slate-300 mb-2" />
-                                    <p className="text-sm text-slate-500">No negotiations yet</p>
-                                    <p className="text-xs text-slate-400">Starting automatically...</p>
+                                    <Mail size={32} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">No negotiations yet</p>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500">Starting automatically...</p>
                                 </div>
                             </div>
                         ) : (
@@ -628,14 +630,14 @@ export const EmailNegotiationView = ({
                 </div>
 
                 {/* Email viewer */}
-                <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+                <div className="bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm dark:shadow-none overflow-hidden transition-colors">
                     {selectedThread ? (
                         <EmailViewer thread={selectedThread} onAction={handleThreadAction} />
                     ) : (
-                        <div className="h-full flex items-center justify-center">
+                        <div className="h-full flex items-center justify-center text-slate-300 dark:text-slate-600">
                             <div className="text-center">
-                                <ChevronRight size={48} className="mx-auto text-slate-300 mb-3" />
-                                <p className="text-slate-500 text-sm">Select a thread to view</p>
+                                <ChevronRight size={48} className="mx-auto mb-3" />
+                                <p className="text-slate-500 dark:text-slate-400 text-sm">Select a thread to view</p>
                             </div>
                         </div>
                     )}
@@ -645,14 +647,14 @@ export const EmailNegotiationView = ({
             {/* Summary stats */}
             <div className="grid grid-cols-4 gap-4">
                 {[
-                    { label: "Total Threads", value: threads.length, color: "text-slate-700" },
-                    { label: "Negotiating", value: threads.filter(t => t.status === "negotiating").length, color: "text-blue-600" },
-                    { label: "Accepted", value: threads.filter(t => t.status === "accepted").length, color: "text-emerald-600" },
-                    { label: "Pending", value: threads.filter(t => t.status === "pending").length, color: "text-amber-600" }
+                    { label: "Total Threads", value: threads.length, color: "text-slate-700 dark:text-white" },
+                    { label: "Negotiating", value: threads.filter(t => t.status === "negotiating").length, color: "text-blue-600 dark:text-blue-400" },
+                    { label: "Accepted", value: threads.filter(t => t.status === "accepted").length, color: "text-emerald-600 dark:text-emerald-400" },
+                    { label: "Pending", value: threads.filter(t => t.status === "pending").length, color: "text-amber-600 dark:text-amber-400" }
                 ].map((stat, idx) => (
-                    <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-4 text-center">
+                    <div key={idx} className="bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-center transition-colors">
                         <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
-                        <p className="text-xs text-slate-500 font-medium">{stat.label}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{stat.label}</p>
                     </div>
                 ))}
             </div>

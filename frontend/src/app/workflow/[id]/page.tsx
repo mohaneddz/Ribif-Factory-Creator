@@ -671,22 +671,22 @@ export default function FactoryCopilot() {
     return (
         <>
             <style>{fontStyle}</style>
-            <div className="flex h-screen bg-[#F8FAFC] overflow-hidden font-sans text-slate-900 selection:bg-indigo-100">
+            <div className="flex h-screen bg-slate-50 dark:bg-[#0b0c10] overflow-hidden font-sans text-slate-900 dark:text-slate-100 selection:bg-indigo-100 transition-colors">
                 {/* LEFT SIDEBAR */}
-                <aside className="w-80 bg-white border-r border-slate-200 flex flex-col z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-                    <div className="p-8 h-24 border-b border-slate-100 flex items-center gap-4 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => router.push('/')}>
-                        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                <aside className="w-80 bg-white dark:bg-[#0b0c10] border-r border-slate-200 dark:border-white/5 flex flex-col z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-colors">
+                    <div className="p-8 h-24 border-b border-slate-100 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 transition-colors" onClick={() => router.push('/')}>
+                        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/20">
                             <Building2 size={20} />
                         </div>
                         <div>
-                            <span className="font-extrabold text-lg text-slate-900 tracking-tight block">RIBIF IA</span>
-                            <div className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider">Manager v5.0</div>
+                            <span className="font-extrabold text-lg text-slate-900 dark:text-white tracking-tight block">RIBIF IA</span>
+                            <div className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider">Manager v5.0</div>
                         </div>
                     </div>
                     <div className="flex-1 overflow-y-auto p-6 space-y-2">
-                        <div className="px-2 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest flex justify-between">
+                        <div className="px-2 py-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex justify-between">
                             Étapes du Workflow
-                            {status === 'finished' && <RefreshCw size={12} className="cursor-pointer hover:text-indigo-600 transition-colors" onClick={regenerateAll} />}
+                            {status === 'finished' && <RefreshCw size={12} className="cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" onClick={regenerateAll} />}
                         </div>
                         {MODULES.map((m, idx) => {
                             const isDone = displayArtifacts.includes(idx);
@@ -699,26 +699,26 @@ export default function FactoryCopilot() {
                                     disabled={!isAvailable}
                                     className={clsx(
                                         "w-full flex items-center gap-4 p-4 rounded-[16px] transition-all text-left relative overflow-hidden group",
-                                        isActive ? "bg-indigo-50 border border-indigo-100" : "hover:bg-slate-50 border border-transparent",
+                                        isActive ? "bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20" : "hover:bg-slate-50 dark:hover:bg-white/5 border border-transparent",
                                         isAvailable ? "cursor-pointer" : "cursor-not-allowed opacity-50"
                                     )}
                                 >
-                                    {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600" />}
+                                    {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600 dark:bg-indigo-500" />}
                                     <div className={clsx("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border",
-                                        isDone ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-                                            isActive ? "bg-indigo-600 text-white border-indigo-600" :
-                                                "bg-white text-slate-400 border-slate-200"
+                                        isDone ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20" :
+                                            isActive ? "bg-indigo-600 dark:bg-indigo-500 text-white border-indigo-600 dark:border-indigo-500" :
+                                                "bg-white dark:bg-white/5 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-white/10"
                                     )}>
                                         {isDone ? <Check size={16} strokeWidth={3} /> : <m.icon size={16} />}
                                     </div>
-                                    <div className={clsx("text-sm font-bold truncate", isActive ? "text-indigo-900" : "text-slate-600 group-hover:text-slate-900")}>{m.title}</div>
+                                    <div className={clsx("text-sm font-bold truncate", isActive ? "text-indigo-900 dark:text-indigo-100" : "text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white")}>{m.title}</div>
                                 </button>
                             );
                         })}
                     </div>
                     {status === 'processing' && (
-                        <div className="p-6 border-t border-slate-100 bg-white">
-                            <motion.div initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-slate-900 text-white px-5 py-4 rounded-2xl flex items-center gap-4 shadow-lg shadow-slate-300/40">
+                        <div className="p-6 border-t border-slate-100 dark:border-white/5 bg-white dark:bg-[#0b0c10]">
+                            <motion.div initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-slate-900 dark:bg-[#1f2937] text-white px-5 py-4 rounded-2xl flex items-center gap-4 shadow-lg shadow-slate-300/40 dark:shadow-none">
                                 <div className="relative">
                                     <div className="absolute inset-0 bg-indigo-500 rounded-full animate-ping opacity-75" />
                                     <div className="relative w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center text-white border border-indigo-400">
@@ -739,22 +739,22 @@ export default function FactoryCopilot() {
                 </aside>
 
                 {/* CENTER PANEL */}
-                <main className="flex-1 flex flex-col relative overflow-hidden bg-[#F8FAFC]">
-                    <header className="h-24 border-b border-slate-200 flex items-center justify-between px-10 z-10 bg-white/80 backdrop-blur-md">
+                <main className="flex-1 flex flex-col relative overflow-hidden bg-slate-50 dark:bg-[#0b0c10] transition-colors">
+                    <header className="h-24 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-10 z-10 bg-white/80 dark:bg-[#0b0c10]/80 backdrop-blur-md transition-colors">
                         <div className="flex items-center gap-4">
-                            <div className={`h-2.5 w-2.5 rounded-full ring-4 ring-opacity-20 ${['processing', 'uploading', 'loading', 'resuming'].includes(status) ? 'bg-indigo-500 ring-indigo-500 animate-pulse' : 'bg-slate-300 ring-slate-300'}`} />
-                            <h2 className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">
+                            <div className={`h-2.5 w-2.5 rounded-full ring-4 ring-opacity-20 ${['processing', 'uploading', 'loading', 'resuming'].includes(status) ? 'bg-indigo-500 ring-indigo-500 animate-pulse' : 'bg-slate-300 dark:bg-slate-600 ring-slate-300 dark:ring-slate-600'}`} />
+                            <h2 className="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
                                 {status === 'idle' ? "Prêt" : status === 'uploading' ? "Téléchargement..." : status === 'loading' ? "Chargement..." : status === 'resuming' ? "Reprise en cours..." : status === 'finished' ? "Terminé" : "Traitement IA"}
                             </h2>
                         </div>
                         <div className="flex gap-4">
                             {status === 'finished' && (
-                                <button onClick={regenerateAll} className="bg-white border border-slate-200 hover:border-indigo-300 text-slate-600 px-6 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 transition-all shadow-sm">
+                                <button onClick={regenerateAll} className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500 text-slate-600 dark:text-slate-300 px-6 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 transition-all shadow-sm">
                                     <RefreshCw size={14} /> Relancer
                                 </button>
                             )}
-                            <button onClick={() => router.push('/twin')} className="bg-slate-900 hover:bg-indigo-600 text-white px-6 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-200/50">
-                                <BrainCircuit size={16} className="text-indigo-300" /> Jumeau Numérique
+                            <button onClick={() => router.push('/twin')} className="bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white px-6 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-200/50 dark:shadow-indigo-900/20">
+                                <BrainCircuit size={16} className="text-indigo-300 dark:text-indigo-200" /> Jumeau Numérique
                             </button>
                         </div>
                     </header>
@@ -762,16 +762,16 @@ export default function FactoryCopilot() {
                     <div className="flex-1 p-6 relative overflow-y-auto">
                         {status === 'uploading' || status === 'loading' || status === 'resuming' || status === 'idle' ? (
                             <div className="h-full w-full flex flex-col items-center justify-center">
-                                <Loader2 size={48} className="text-indigo-600 animate-spin mb-4" />
-                                <h3 className="text-xl font-bold text-slate-800">
+                                <Loader2 size={48} className="text-indigo-600 dark:text-indigo-500 animate-spin mb-4" />
+                                <h3 className="text-xl font-bold text-slate-800 dark:text-white">
                                     {status === 'loading' || status === 'idle' ? 'Chargement du projet' : status === 'resuming' ? 'Reprise du traitement' : 'Analyse du PDF'}
                                 </h3>
-                                <p className="text-slate-500">
+                                <p className="text-slate-500 dark:text-slate-400">
                                     {status === 'loading' || status === 'idle' ? 'Récupération depuis Supabase...' : status === 'resuming' ? 'Continuation depuis la dernière étape...' : 'Veuillez patienter...'}
                                 </p>
                             </div>
                         ) : (
-                            <div className="h-full w-full bg-white rounded-4xl border border-slate-200 shadow-sm overflow-auto relative">
+                            <div className="h-full w-full bg-white dark:bg-[#13141c] rounded-4xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none overflow-auto relative transition-colors">
                                 <AnimatePresence mode="wait">
                                     <motion.div key={selectedModule} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full w-full">
                                         {isSelectedProcessing ? (
@@ -798,47 +798,47 @@ export default function FactoryCopilot() {
                 </main>
 
                 {/* RIGHT SIDEBAR */}
-                <aside className="w-80 bg-white border-l border-slate-200 flex flex-col z-20 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
-                    <div className="h-24 p-8 border-b border-slate-100 flex items-center justify-between">
-                        <h2 className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">Livrables</h2>
-                        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-[10px] font-bold">{downloadableArtifacts.length} fichiers</span>
+                <aside className="w-80 bg-white dark:bg-[#0b0c10] border-l border-slate-200 dark:border-white/5 flex flex-col z-20 shadow-[-4px_0_24px_rgba(0,0,0,0.02)] transition-colors">
+                    <div className="h-24 p-8 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                        <h2 className="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Livrables</h2>
+                        <span className="bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md text-[10px] font-bold">{downloadableArtifacts.length} fichiers</span>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50 dark:bg-[#13141c]/50">
                         <AnimatePresence>
                             {downloadableArtifacts.length === 0 && (
-                                <div className="h-40 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-6 text-center">
-                                    <Info size={24} className="mb-2 text-slate-300" />
-                                    <p className="text-xs font-bold text-slate-400">En attente de génération...</p>
+                                <div className="h-40 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center p-6 text-center">
+                                    <Info size={24} className="mb-2 text-slate-300 dark:text-slate-600" />
+                                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500">En attente de génération...</p>
                                 </div>
                             )}
                             {downloadableArtifacts.slice().reverse().map(idx => (
                                 <motion.div key={idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                                    className={clsx("bg-white rounded-[20px] border p-4 transition-all group shadow-sm hover:shadow-md", selectedModule === idx ? "border-indigo-400 ring-4 ring-indigo-50" : "border-slate-200")}>
+                                    className={clsx("bg-white dark:bg-[#1f2937] rounded-[20px] border p-4 transition-all group shadow-sm hover:shadow-md", selectedModule === idx ? "border-indigo-400 ring-4 ring-indigo-50 dark:ring-indigo-900/20" : "border-slate-200 dark:border-white/5")}>
                                     <div className="flex justify-between items-start mb-3">
-                                        <div onClick={() => handleModuleClick(idx)} className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors cursor-pointer">
+                                        <div onClick={() => handleModuleClick(idx)} className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors cursor-pointer">
                                             <Eye size={18} />
                                         </div>
                                         <div className="flex gap-1">
-                                            <button onClick={() => regenerateOne(idx)} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors">
+                                            <button onClick={() => regenerateOne(idx)} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                                 <RefreshCw size={14} />
                                             </button>
-                                            <button onClick={() => handleArtifactDownload(idx)} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors">
+                                            <button onClick={() => handleArtifactDownload(idx)} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                                 <Download size={14} />
                                             </button>
                                         </div>
                                     </div>
-                                    <div className="text-xs font-extrabold text-slate-800 truncate mb-2">{MODULES[idx].file}</div>
+                                    <div className="text-xs font-extrabold text-slate-800 dark:text-slate-200 truncate mb-2">{MODULES[idx].file}</div>
                                     <div className="flex items-center gap-1.5">
                                         <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Prêt</span>
+                                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Prêt</span>
                                     </div>
                                 </motion.div>
                             ))}
                         </AnimatePresence>
                     </div>
                     {status === 'finished' && (
-                        <div className="p-6 border-t border-slate-100 bg-white">
-                            <button onClick={handleDownloadAll} className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
+                        <div className="p-6 border-t border-slate-100 dark:border-white/5 bg-white dark:bg-[#0b0c10]">
+                            <button onClick={handleDownloadAll} className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-indigo-900/20">
                                 <Download size={16} /> TOUT TÉLÉCHARGER
                             </button>
                         </div>

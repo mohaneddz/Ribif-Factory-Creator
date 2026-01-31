@@ -36,7 +36,7 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
 from vertex_utils import generate_message  # Vertex wrapper (must exist in your codebase)
-from vertex_utils import generate_message  # Vertex wrapper (must exist in your codebase)
+
 from utils.logger import get_logger
 from config import WEB_SEARCH_ENABLED
 
@@ -58,7 +58,7 @@ DEFAULT_DOMAIN_GAP_S = 0.6
 DEFAULT_LLM_CALL_TIMEOUT_S = 60
 
 # Give up on a machine if TOTAL enrichment exceeds this budget (seconds)
-DEFAULT_TOTAL_MACHINE_BUDGET_S = 50
+DEFAULT_TOTAL_MACHINE_BUDGET_S = 60
 
 # Where to save nano-banana generated best images
 DEFAULT_GENERATED_IMAGES_DIR = "data/extracted_data/module_4_images"
@@ -180,7 +180,7 @@ def default_machine_final(name: str) -> Dict[str, Any]:
             "rendement": "N/A",
             "temps_cycle": "N/A"
         },
-        "assets": {"image_urls": [], "datasheet_urls": [], "cad_urls": []},
+        "assets": {"image_urls": [], "datasheet_urls": [], "cad_urls": [], "generated_image": None},
         "best_image_url": "N/A",
         "image_quality_score": 0.0,
         "manufacturer_website": "N/A",
@@ -323,37 +323,8 @@ HARD RULES:
 Return JSON only.
 """
 
-LLM_SUPPLIERS_PROMPT = """
-You are generating clearly-labeled supplier leads for Algeria import context.
-
-MACHINE:
-{machine_final}
-
-TASK:
-Return a JSON array (2 to 4 items). Each item must match:
-
-{{
-  "supplier_name": "...",
-  "website": "...",
-  "region": "...",
-  "price_estimate": "...",
-  "price_type": "...",
-  "phone_number": "...",
-  "email_address": "...",
-  "customs_algeria_info": "...",
-  "source": "...",
-  "notes": "...",
-  "relevance_score": <float 0..1>
-}}
-
-HARD RULES:
-- Use ONLY real suppliers found via web search. Do NOT fabricate suppliers.
-- If no suppliers were found in scraping, return an empty array [].
-- Do NOT guess contact info, prices, or websites.
-- customs_algeria_info: only include if you have real data.
-- relevance_score based on actual data completeness.
-Return JSON array only.
-"""
+# LLM_SUPPLIERS_PROMPT removed. We do NOT simulate suppliers.
+# Only verifiable scraping/agentic search is allowed.
 
 LLM_IMAGE_DESC_PROMPT = """
 Write a short (1-2 sentences) image-generation description of the TOP VIEW of this machine.
@@ -379,18 +350,24 @@ MACHINE DESCRIPTION:
 
 
 # =========================================================
-# 5) HARD timeout wrapper for LLM calls (prevents “stuck”)
+# 5) Shared Executor for LLM calls (prevents unbounded thread growth)
 # =========================================================
+
+_SHARED_EXECUTOR = ThreadPoolExecutor(max_workers=32)
 
 def generate_message_timeout(timeout_s: int, **kwargs) -> str:
     """
-    Runs generate_message in a 1-worker executor and hard-times it out.
-    Note: if generate_message blocks at lower layers, the thread may linger,
-    but it will not block your pipeline.
+    Submits generate_message to a shared executor to prevent creating
+    a new ThreadPoolExecutor for every single LLM call.
     """
-    with ThreadPoolExecutor(max_workers=1) as ex:
-        fut = ex.submit(generate_message, **kwargs)
+    try:
+        fut = _SHARED_EXECUTOR.submit(generate_message, **kwargs)
         return fut.result(timeout=timeout_s)
+    except FuturesTimeoutError:
+        # We can't easily cancel the thread in the shared pool, but we stop waiting.
+        raise
+    except Exception:
+        raise
 
 
 # =========================================================
@@ -512,15 +489,16 @@ def _budget_check(t_start: float, budget_s: float) -> bool:
     return (time.time() - t_start) <= budget_s
 
 
-def _generate_best_image_url_green_bg(llm: VertexJSON, machine_final: Dict[str, Any], name: str, cfg: EnrichConfig, t_start: float) -> str:
+def _generate_green_bg_image(llm: VertexJSON, machine_final: Dict[str, Any], name: str, cfg: EnrichConfig, t_start: float) -> Optional[Dict[str, str]]:
     """
     1) Ask LLM for short image description
-    2) Call Nano Banana (via vertex_utils.generate_image if available, else raise)
-    3) Save file locally and return local path as best_image_url
+    2) Call Nano Banana
+    3) Save file locally
+    4) Return dict with local_path and logic for public_url
     """
     # --- budget gate
     if not _budget_check(t_start, cfg.total_machine_budget_s):
-        return "generated://skipped_budget"
+        return None
 
     # Step 1: short description
     left = max(5.0, _time_left(t_start, cfg.total_machine_budget_s))
@@ -538,15 +516,13 @@ def _generate_best_image_url_green_bg(llm: VertexJSON, machine_final: Dict[str, 
         desc = f"Top view industrial machine for {safe_s(name,'unknown')}"
 
     if not _budget_check(t_start, cfg.total_machine_budget_s):
-        return "generated://skipped_budget"
+        return None
 
     # Step 2: Nano Banana image generation
-    # IMPORTANT: This requires that your codebase exposes a callable `generate_image(prompt=...)`
-    # through vertex_utils. If not present, you must add it there.
     try:
-        from vertex_utils import generate_image  # local import to avoid hard-fail if missing
+        from vertex_utils import generate_image  # local import
     except Exception:
-        return "generated://missing_generate_image"
+        return None
 
     prompt = NANO_BANANA_IMAGE_PROMPT.format(desc=desc)
 
@@ -559,38 +535,44 @@ def _generate_best_image_url_green_bg(llm: VertexJSON, machine_final: Dict[str, 
     try:
         img = generate_image(prompt=prompt)
 
-        # Handle common return types:
-        # - bytes
-        # - base64 string
-        # - dict with {"bytes": ...} or {"b64": ...} or {"base64": ...}
+        # Handle common return types
+        final_bytes = None
         if isinstance(img, (bytes, bytearray)):
-            out_path.write_bytes(bytes(img))
-            return str(out_path.as_posix())
-
-        if isinstance(img, str):
-            # assume base64
+            final_bytes = bytes(img)
+        elif isinstance(img, str):
             try:
-                out_path.write_bytes(base64.b64decode(img))
-                return str(out_path.as_posix())
+                final_bytes = base64.b64decode(img)
             except Exception:
-                # maybe URL; still return it
-                return safe_s(img, "generated://invalid_image_return")
-
-        if isinstance(img, dict):
+                pass
+        elif isinstance(img, dict):
             for k in ("bytes", "image_bytes"):
                 if k in img and isinstance(img[k], (bytes, bytearray)):
-                    out_path.write_bytes(bytes(img[k]))
-                    return str(out_path.as_posix())
-            for k in ("b64", "base64"):
-                if k in img and isinstance(img[k], str):
-                    out_path.write_bytes(base64.b64decode(img[k]))
-                    return str(out_path.as_posix())
-            for k in ("url", "image_url"):
-                if k in img and isinstance(img[k], str):
-                    return safe_s(img[k], "generated://invalid_image_url")
+                    final_bytes = bytes(img[k])
+                    break
+            if not final_bytes:
+                for k in ("b64", "base64"):
+                    if k in img and isinstance(img[k], str):
+                        try:
+                            final_bytes = base64.b64decode(img[k])
+                        except Exception:
+                            pass
+                        break
+        
+        if final_bytes:
+            out_path.write_bytes(final_bytes)
+            # Return valid structure
+            # public_url will be formed by the route or client logic usually, 
+            # but here we can return relative path or let downstream handle it.
+            # We'll return the absolute local path and a placeholder for public URL.
+            return {
+                "local_path": str(out_path.resolve()),
+                "filename": filename,
+            }
 
     except Exception:
-        return "generated://image_generation_failed"
+        pass
+    
+    return None
 
 
 def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) -> Optional[Dict[str, Any]]:
@@ -615,7 +597,7 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
 
     # budget gate
     if not _budget_check(t_start, cfg.total_machine_budget_s):
-        return {"machine_input": default_machine_final(name), "suppliers": default_suppliers(name), "skipped_reason": "budget>50s"}
+        return {"machine_input": default_machine_final(name), "suppliers": default_suppliers(name), "skipped_reason": "budget>60s"}
 
     # scrape (optional)
     scraped = scrape_from_source_reference(
@@ -680,8 +662,11 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
 
     # budget gate
     if not _budget_check(t_start, cfg.total_machine_budget_s):
-        machine_final["best_image_url"] = "generated://skipped_budget"
-        return {"machine_input": machine_final, "suppliers": default_suppliers(name), "skipped_reason": "budget>50s"}
+        return {
+            "machine_input": machine_final,
+            "suppliers": [],
+            "skipped_steps": ["supplier_search", "image_generation"]
+        }
 
     # 2) Suppliers
     suppliers = []
@@ -704,39 +689,70 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
         except Exception as e:
             logger.warning("Agentic Web search suppliers failed for %s: %s", name, e)
 
-    # Fallback to LLM if no web suppliers found or web search disabled
+    # Fallback: verified suppliers only. NO LLM GENERATION.
     if not web_suppliers_found:
-        suppliers = llm.generate_json(
-            LLM_SUPPLIERS_PROMPT.format(machine_final=json.dumps(machine_final, ensure_ascii=False)),
-            temperature=cfg.llm_temperature_suppliers,
-            tag=f"suppliers:{name}",
-            timeout_s=cfg.llm_call_timeout_s,
-        )
-        if suppliers is None:
-            suppliers = default_suppliers(name)
+        suppliers = []
+        # If we had a mechanism to mark "no suppliers found", we do it here.
+        # But per requirements: "If no verifiable suppliers... output 'suppliers': []"
+
+    # Enforce provenance on suppliers
+    valid_suppliers = []
+    for s in suppliers:
+        # simple check: must have name and at least one source url or website
+        if s.get("supplier_name") and (s.get("source_urls") or s.get("website")):
+             # ensure source_urls is list
+             if "source_urls" not in s:
+                 s["source_urls"] = [s["website"]] if s.get("website") else []
+             if "evidence" not in s:
+                 s["evidence"] = "Verified via Agentic Search"
+             valid_suppliers.append(s)
+    
+    suppliers = valid_suppliers
 
     # budget gate
     if not _budget_check(t_start, cfg.total_machine_budget_s):
-        machine_final["best_image_url"] = "generated://skipped_budget"
-        return {"machine_input": machine_final, "suppliers": suppliers, "skipped_reason": "budget>50s"}
+        return {
+            "machine_input": machine_final, 
+            "suppliers": suppliers, 
+            "skipped_steps": ["image_generation"]
+        }
 
     # 3) Generate best_image_url via Nano Banana (green bg)
-    best_url = _generate_best_image_url_green_bg(llm, machine_final, name, cfg, t_start)
-    machine_final["best_image_url"] = safe_s(best_url, "generated://unavailable")
+        # Stored SEPARATELY in assets.generated_image
+    gen_result = _generate_green_bg_image(llm, machine_final, name, cfg, t_start)
+    if gen_result:
+        # Don't overwrite best_image_url if we have real images
+        # Check current best_image_url
+        current_best = machine_final.get("best_image_url")
+        has_real = current_best and current_best != "N/A"
+        
+        assets = machine_final.setdefault("assets", {})
+        assets["generated_image"] = {
+            "local_path": gen_result["local_path"],
+            "filename": gen_result["filename"],
+            "note": "AI generated green-bg render"
+        }
+        
+        # If no real image found, we can optionally fallback best_image_url to this generated one,
+        # but User Rule 4 says "Recommended: best_image_url = best real web image; Generated images go under assets.generated_image"
+        # We will ONLY set best_image_url to generated if currently N/A or empty
+        if not has_real:
+             # We can't put a raw local path here usually, but we'll use a placeholder that the route can resolve,
+             # or simply leave as N/A to be strict.
+             # User requested "Never expose raw filesystem paths to frontend" in Fix 3.
+             # So we will leave best_image_url as N/A here (since we don't have a public URL generator in core.py).
+             # The route/frontend can use assets.generated_image if best_image_url is N/A.
+             pass
 
-    # ensure rule: best_image_url must be in image_urls
-    try:
-        assets = machine_final.get("assets", {})
-        imgs = assets.get("image_urls", [])
-        if not isinstance(imgs, list):
-            imgs = []
-        if machine_final["best_image_url"] not in imgs:
-            imgs = [machine_final["best_image_url"]] + imgs
-        # keep 3-8 ideally, but don't break if small
-        assets["image_urls"] = imgs[:8]
-        machine_final["assets"] = assets
-    except Exception:
-        pass
+    # best_image_url must be REAL (from image_urls) or N/A
+    assets = machine_final.get("assets", {}) # Re-get assets after potential setdefault
+    real_imgs = assets.get("image_urls", [])
+    if real_imgs and isinstance(real_imgs, list) and len(real_imgs) > 0:
+        machine_final["best_image_url"] = real_imgs[0]
+    else:
+        machine_final["best_image_url"] = "N/A"
+        
+    machine_final["assets"] = assets
 
     return {"machine_input": machine_final, "suppliers": suppliers}
 
@@ -852,7 +868,7 @@ def build_machines_enriched(
 
     out_obj = {
         "ribif_metadata": {
-            "enrichment_method": "Module4 Parallel Machines (Vertex Gemini + Classify + Budget50s + NanoBanana best_image_url)",
+            "enrichment_method": "Module4 Parallel Machines (Vertex Gemini + Classify + Budget60s + GeneratedImage separate)",
             "enrichment_date": _now_iso(),
             "model_used": llm.vertex_model,
             "api_provider": "Vertex",

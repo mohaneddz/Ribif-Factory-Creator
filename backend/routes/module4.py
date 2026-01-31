@@ -1,10 +1,14 @@
 import json
 from flask import Blueprint, jsonify, request
+from pathlib import Path
+import time
+import uuid
+from datetime import datetime
 
-from config import OUTPUT_DIRS, SKIP_MODULE_4
+from config import OUTPUT_DIRS, SKIP_MODULE_4, BASE_URL
 from supabase_utils import get_supabase, insert_module4_sourcing
 from utils.module_4.core import build_machines_enriched
-from utils.logger import log_skip
+from utils.logger import log_skip, get_logger
 from utils.app_helpers import (
     get_request_project_id,
     get_request_user_id,
@@ -13,7 +17,29 @@ from utils.app_helpers import (
     load_template_payload,
     upsert_supplier,
     upload_and_register_file,
+    upload_with_name_timestamp,
 )
+
+logger = get_logger("module4")
+
+def extract_normalized_input(data: dict) -> dict:
+    """Normalize input to standard structure."""
+    if not isinstance(data, dict):
+        return {}
+    
+    # Try direct structure
+    machines = data.get("stage_4_machines_equipements", {}).get("machines_production", [])
+    if machines:
+        return data
+
+    # Try nested 'data' (common from frontend wrappers)
+    if "data" in data and isinstance(data["data"], dict):
+        sub = data["data"]
+        machines_sub = sub.get("stage_4_machines_equipements", {}).get("machines_production", [])
+        if machines_sub:
+            return sub
+            
+    return data
 
 bp_module4 = Blueprint("module4", __name__)
 
@@ -32,19 +58,17 @@ def enrich_machines_module4():
                     meta["project_id"] = meta.get("project_id") or project_id
             return jsonify(payload)
 
+        start_time = time.time()
         project_id = get_request_project_id(include_json=True)
-        module1_id = None
-
+        
         if not request.is_json:
             return jsonify({"error": "Expected JSON input (module_1 output)"}), 400
 
-        input_data = request.get_json()
+        raw_input = request.get_json()
+        input_data = extract_normalized_input(raw_input)
+        
         module1_id = input_data.get("module1_id") or input_data.get("ribif_metadata", {}).get("module1_id")
-
         machines = input_data.get("stage_4_machines_equipements", {}).get("machines_production", [])
-        if not machines and "data" in input_data:
-            machines = input_data["data"].get("stage_4_machines_equipements", {}).get("machines_production", [])
-            input_data = input_data["data"]
 
         if not machines:
             return jsonify({"error": "No machines found in input."}), 400
@@ -54,6 +78,8 @@ def enrich_machines_module4():
         input_path.write_text(json.dumps(input_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
         output_path = OUTPUT_DIRS["module4"] / "module_4.json"
+        
+        # Budget is consistent at 60s
         result = build_machines_enriched(
             input_path=str(input_path),
             output_path=str(output_path),
@@ -65,7 +91,6 @@ def enrich_machines_module4():
             generated_images_dir=str(OUTPUT_DIRS["module4"] / "module_4_images"),
         )
 
-
         if project_id:
             result["project_id"] = project_id
         if module1_id:
@@ -74,11 +99,63 @@ def enrich_machines_module4():
 
         client = get_supabase()
         owner_id = get_request_user_id()
+        
+        # Post-process: Handle generated images and DB sync
+        warnings = []
         if client and project_id:
             try:
-                module4_id = insert_module4_sourcing(client, project_id, module1_id, result)
+                # 1. Upload generated images & update URLs
+                machines_enriched = result.get("machines_enriched", []) or []
+                for entry in machines_enriched:
+                    try:
+                        m_input = entry.get("machine_input", {})
+                        assets = m_input.get("assets", {})
+                        gen = assets.get("generated_image")
+                        
+                        if gen and isinstance(gen, dict) and gen.get("local_path"):
+                            local_p = gen.get("local_path")
+                            fname = gen.get("filename")
+                            
+                            # Upload to storage
+                            fid, url, ob_path = upload_with_name_timestamp(
+                                client=client,
+                                project_id=project_id,
+                                owner_id=owner_id,
+                                local_path=local_p,
+                                category="module4-generated",
+                                label=fname,
+                            )
+                            
+                            # Update JSON with public URL
+                            gen["public_url"] = url
+                            gen["file_id"] = fid
+                            
+                            # Fallback best_image_url if N/A
+                            if m_input.get("best_image_url") in [None, "N/A", ""]:
+                                m_input["best_image_url"] = url
+                                
+                    except Exception as img_err:
+                        warnings.append(f"Image upload fail for item: {img_err}")
+                        logger.error("Image upload post-process failed: %s", img_err)
+
+                # 2. Insert Module 4 Record
+                # Stats
+                processing_time = int(time.time() - start_time)
+                run_id = str(uuid.uuid4())
+                enrichment_date = datetime.utcnow().isoformat()
+                
+                proj_meta = {
+                    "last_run_id": run_id,
+                    "last_enrichment_date": enrichment_date,
+                    "model_used": "vertex-gemini-pro",
+                    "last_processing_time_seconds": processing_time
+                }
+
+                module4_id = insert_module4_sourcing(client, project_id, module1_id, result, project_metadata=proj_meta)
                 result.setdefault("ribif_metadata", {})
                 result["ribif_metadata"]["module4_id"] = module4_id
+                
+                # 3. Upload Output JSON
                 if output_path.exists():
                     output_file_id, output_file_url = upload_and_register_file(
                         client=client,
@@ -91,33 +168,53 @@ def enrich_machines_module4():
                     result["ribif_metadata"]["module4_output_file_id"] = output_file_id
                     result["ribif_metadata"]["module4_output_file_url"] = output_file_url
 
+                # 4. Sync Suppliers & Machines
                 machines_map = get_project_machines(client, project_id)
-                machines_enriched = result.get("machines_enriched", []) or []
                 for entry in machines_enriched:
-                    machine_input = entry.get("machine_input", {}) if isinstance(entry, dict) else {}
-                    machine_name = machine_input.get("nom_machine") or machine_input.get("name")
-                    machine_id = machines_map.get(machine_name)
-                    if not machine_id:
-                        continue
-                    for supplier in entry.get("suppliers", []) or []:
-                        supplier_id = upsert_supplier(
-                            client,
-                            supplier.get("supplier_name") or supplier.get("name") or "Unknown",
-                            supplier.get("website"),
-                            supplier.get("region"),
-                            metadata={"source": "module4"},
-                        )
-                        if supplier_id:
-                            insert_machine_supplier(
+                    try:
+                        machine_input = entry.get("machine_input", {})
+                        machine_name = machine_input.get("nom_machine") or machine_input.get("name")
+                        machine_id = machines_map.get(machine_name)
+                        
+                        if not machine_id:
+                            continue
+                            
+                        # Insert suppliers
+                        for supplier in entry.get("suppliers", []) or []:
+                            supplier_id = upsert_supplier(
                                 client,
-                                machine_id,
-                                supplier_id,
-                                supplier,
+                                supplier.get("supplier_name") or supplier.get("name") or "Unknown",
+                                supplier.get("website"),
+                                supplier.get("region"),
                                 metadata={"source": "module4"},
                             )
-            except Exception:
-                pass
+                            if supplier_id:
+                                insert_machine_supplier(
+                                    client,
+                                    machine_id,
+                                    supplier_id,
+                                    supplier,
+                                    metadata={"source": "module4"},
+                                )
+                                
+                    except Exception as inner_e:
+                        warnings.append(f"DB sync fail for {machine_name}: {inner_e}")
+                        logger.error("DB sync failed: %s", inner_e)
+                        
+            except Exception as e:
+                msg = f"Critical DB operation failed: {e}"
+                warnings.append(msg)
+                logger.error(msg)
+        
+        if warnings:
+            result.setdefault("ribif_metadata", {})
+            existing = result["ribif_metadata"].get("warnings", [])
+            if isinstance(existing, list):
+                result["ribif_metadata"]["warnings"] = existing + warnings
+            else:
+                 result["ribif_metadata"]["warning_note"] = (existing if isinstance(existing, str) else "") + " | " + "; ".join(warnings)
 
         return jsonify(result)
     except Exception as e:
+        logger.error("Module 4 global failure: %s", e)
         return jsonify({"error": str(e), "status": "error"}), 500

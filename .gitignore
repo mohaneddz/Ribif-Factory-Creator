@@ -8,3 +8,4 @@ logs/
 .vscode/**
 backend/cache/search/**
 backend/utils/module_2/assets_cache/**
+backend/cache/negotiations/**

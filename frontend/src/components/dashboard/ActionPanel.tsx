@@ -8,14 +8,14 @@ interface ActionPanelProps {
 
 export const ActionPanel = ({ onCreateProject, onOpenSettings }: ActionPanelProps) => {
   return (
-    <div className="w-[480px] bg-[var(--surface-1)] border-l border-[var(--border-1)] flex flex-col z-20 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+    <div className="w-[480px] bg-white dark:bg-[#0b0c10] border-l border-slate-200 dark:border-white/5 flex flex-col z-20 shadow-[-4px_0_24px_rgba(0,0,0,0.1)] dark:shadow-[-4px_0_24px_rgba(0,0,0,0.4)]">
       <div className="p-10 flex justify-end">
         <button
           onClick={onOpenSettings}
-          className="w-12 h-12 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-2)] hover:bg-slate-100 hover:text-indigo-600 cursor-pointer transition-colors border border-transparent hover:border-slate-200"
+          className="w-12 h-12 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-white cursor-pointer transition-colors border border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
           aria-label="Open settings"
         >
-          <Settings size={24} />
+          <Settings size={22} />
         </button>
       </div>
 
@@ -26,23 +26,23 @@ export const ActionPanel = ({ onCreateProject, onOpenSettings }: ActionPanelProp
           transition={{ delay: 0.2 }}
         >
           <div className="mb-8">
-            <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 mb-6">
+            <div className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-6 shadow-lg shadow-indigo-500/10 dark:shadow-indigo-900/20">
               <LayoutGrid size={32} />
             </div>
-            <h2 className="text-4xl font-extrabold mb-4 leading-tight text-[var(--text-1)]">
-              Espace <br /> <span className="text-indigo-600">Ingénieur</span>
+            <h2 className="text-4xl font-extrabold mb-4 leading-tight text-slate-900 dark:text-white">
+              Espace <br /> <span className="text-indigo-600 dark:text-indigo-400">Ingénieur</span>
             </h2>
-            <p className="text-xl text-[var(--text-2)] font-medium leading-relaxed">
+            <p className="text-xl text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
               Créez, simulez et déployez vos usines intelligentes en quelques clics.
             </p>
           </div>
 
           <button
             onClick={onCreateProject}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-4xl mb-4 transition-all group active:scale-[0.98] duration-100 shadow-xl shadow-indigo-200"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 dark:hover:bg-indigo-500 text-white p-2 rounded-[2rem] mb-4 transition-all group active:scale-[0.98] duration-100 shadow-xl shadow-indigo-600/20"
           >
-            <div className="border-2 border-white/20 rounded-3xl py-8 flex flex-col items-center bg-indigo-600 group-hover:bg-indigo-700 transition-colors">
-              <div className="bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mb-4 text-white">
+            <div className="border-2 border-white/10 rounded-[1.5rem] py-8 flex flex-col items-center bg-indigo-600 group-hover:bg-indigo-700 dark:group-hover:bg-indigo-500 transition-colors">
+              <div className="bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mb-4 text-white backdrop-blur-sm">
                 <Plus size={32} strokeWidth={3} />
               </div>
               <span className="text-2xl font-bold">Nouveau Projet</span>

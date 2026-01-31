@@ -206,11 +206,11 @@ export const CatalogueTechniqueView = ({ pdfUrl, htmlUrl, loading = false }: { p
     // Show generating state when backend is still working
     if (loading) {
         return (
-            <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900">
+            <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-[#0b0c10] bg-none dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 transition-colors">
                 <div className="text-center">
-                    <Loader2 className="animate-spin text-indigo-400 mx-auto mb-4" size={48} />
-                    <p className="text-white font-bold">Génération du catalogue en cours...</p>
-                    <p className="text-indigo-300 text-sm mt-2">Compilation LaTeX du document PDF</p>
+                    <Loader2 className="animate-spin text-indigo-600 dark:text-indigo-400 mx-auto mb-4" size={48} />
+                    <p className="text-slate-800 dark:text-white font-bold">Génération du catalogue en cours...</p>
+                    <p className="text-indigo-600 dark:text-indigo-300 text-sm mt-2">Compilation LaTeX du document PDF</p>
                 </div>
             </div>
         );
@@ -219,10 +219,10 @@ export const CatalogueTechniqueView = ({ pdfUrl, htmlUrl, loading = false }: { p
     // Show loading PDF state
     if (isLoadingPdf || (!pdfDoc && resolvedPdfUrl && pdfJsLoaded)) {
         return (
-            <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900">
+            <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-[#0b0c10] bg-none dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 transition-colors">
                 <div className="text-center">
-                    <Loader2 className="animate-spin text-indigo-400 mx-auto mb-4" size={48} />
-                    <p className="text-white font-bold">Chargement du catalogue...</p>
+                    <Loader2 className="animate-spin text-indigo-600 dark:text-indigo-400 mx-auto mb-4" size={48} />
+                    <p className="text-slate-800 dark:text-white font-bold">Chargement du catalogue...</p>
                 </div>
             </div>
         );
@@ -231,11 +231,11 @@ export const CatalogueTechniqueView = ({ pdfUrl, htmlUrl, loading = false }: { p
     // No PDF URL available (but might have HTML)
     if (!resolvedPdfUrl && !resolvedHtmlUrl) {
         return (
-            <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900">
+            <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-[#0b0c10] bg-none dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 transition-colors">
                 <div className="text-center">
-                    <BookOpen className="text-indigo-400 mx-auto mb-4" size={48} />
-                    <p className="text-white font-bold">Catalogue non disponible</p>
-                    <p className="text-indigo-300 text-sm mt-2">Le catalogue sera généré automatiquement</p>
+                    <BookOpen className="text-indigo-600 dark:text-indigo-400 mx-auto mb-4" size={48} />
+                    <p className="text-slate-800 dark:text-white font-bold">Catalogue non disponible</p>
+                    <p className="text-indigo-600 dark:text-indigo-300 text-sm mt-2">Le catalogue sera généré automatiquement</p>
                 </div>
             </div>
         );
@@ -243,18 +243,18 @@ export const CatalogueTechniqueView = ({ pdfUrl, htmlUrl, loading = false }: { p
 
     if (loadError) {
         return (
-            <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900">
+            <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-[#0b0c10] bg-none dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 transition-colors">
                 <div className="text-center">
-                    <p className="text-white font-bold">{loadError}</p>
+                    <p className="text-slate-800 dark:text-white font-bold">{loadError}</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="h-full min-h-0 flex flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 relative overflow-hidden">
+        <div className="h-full min-h-0 flex flex-col bg-slate-50 dark:bg-[#0b0c10] bg-none dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 relative overflow-hidden transition-colors">
             {/* Background decoration */}
-            <div className="absolute inset-0 opacity-10">
+            <div className="absolute inset-0 opacity-10 pointer-events-none">
                 <div className="absolute top-0 left-0 w-96 h-96 bg-indigo-500 rounded-full blur-[150px]" />
                 <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500 rounded-full blur-[150px]" />
             </div>
@@ -262,12 +262,12 @@ export const CatalogueTechniqueView = ({ pdfUrl, htmlUrl, loading = false }: { p
             {/* Header with Download Button */}
             <div className="relative z-10 p-6 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                    <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-600 rounded-xl flex items-center justify-center text-indigo-600 dark:text-white shadow-lg shadow-indigo-500/10 dark:shadow-indigo-500/30">
                         <BookOpen size={24} />
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold text-white">Catalogue Technique</h2>
-                        <p className="text-sm text-indigo-300">{numPages} pages</p>
+                        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Catalogue Technique</h2>
+                        <p className="text-sm text-slate-500 dark:text-indigo-300">{numPages} pages</p>
                     </div>
                 </div>
                 <button
@@ -288,8 +288,8 @@ export const CatalogueTechniqueView = ({ pdfUrl, htmlUrl, loading = false }: { p
                     className={clsx(
                         "absolute left-6 z-20 w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg",
                         currentPage <= 0
-                            ? "bg-white/10 text-slate-500 cursor-not-allowed"
-                            : "bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 cursor-pointer hover:scale-110"
+                            ? "bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                            : "bg-white dark:bg-white/20 backdrop-blur-sm text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-white/30 cursor-pointer hover:scale-110"
                     )}
                 >
                     <ChevronLeft size={28} />
@@ -299,7 +299,7 @@ export const CatalogueTechniqueView = ({ pdfUrl, htmlUrl, loading = false }: { p
                 {resolvedHtmlUrl && !resolvedPdfUrl ? (
                     <iframe
                         src={resolvedHtmlUrl}
-                        className="w-full h-full max-w-[960px] max-h-[720px] rounded-2xl border border-white/10 bg-white"
+                        className="w-full h-full max-w-[960px] max-h-[720px] rounded-2xl border border-slate-200 dark:border-white/10 bg-white"
                         title="Catalogue HTML Preview"
                     />
                 ) : null}
@@ -347,8 +347,8 @@ export const CatalogueTechniqueView = ({ pdfUrl, htmlUrl, loading = false }: { p
                     className={clsx(
                         "absolute right-6 z-20 w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg",
                         currentPage >= numPages - 1
-                            ? "bg-white/10 text-slate-500 cursor-not-allowed"
-                            : "bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 cursor-pointer hover:scale-110"
+                            ? "bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                            : "bg-white dark:bg-white/20 backdrop-blur-sm text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-white/30 cursor-pointer hover:scale-110"
                     )}
                 >
                     <ChevronRight size={28} />
@@ -357,11 +357,11 @@ export const CatalogueTechniqueView = ({ pdfUrl, htmlUrl, loading = false }: { p
 
             {/* Page Counter */}
             <div className="relative z-10 p-6 flex justify-center shrink-0">
-                <div className="bg-white/10 backdrop-blur-sm px-6 py-3 rounded-full flex items-center gap-4">
-                    <span className="text-indigo-300 text-sm font-medium">Page</span>
-                    <span className="text-white font-bold text-lg">{resolvedPdfUrl ? currentPage + 1 : 1}</span>
-                    <span className="text-indigo-400">/</span>
-                    <span className="text-indigo-300 font-bold text-lg">{resolvedPdfUrl ? numPages : 1}</span>
+                <div className="bg-white dark:bg-white/10 backdrop-blur-sm border border-slate-200 dark:border-white/5 px-6 py-3 rounded-full flex items-center gap-4 shadow-sm dark:shadow-none">
+                    <span className="text-slate-500 dark:text-indigo-300 text-sm font-medium">Page</span>
+                    <span className="text-slate-800 dark:text-white font-bold text-lg">{resolvedPdfUrl ? currentPage + 1 : 1}</span>
+                    <span className="text-slate-400 dark:text-indigo-400">/</span>
+                    <span className="text-slate-500 dark:text-indigo-300 font-bold text-lg">{resolvedPdfUrl ? numPages : 1}</span>
                 </div>
             </div>
         </div>

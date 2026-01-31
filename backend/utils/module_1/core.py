@@ -106,6 +106,7 @@ def _json_loads_relaxed(s: str) -> Dict[str, Any]:
     try:
         return json.loads(s)
     except Exception:
+        # logger.warning("JSON direct parse failed, trying regex extraction") # optional: verbose
         pass
 
     # extract first {...}
@@ -140,8 +141,10 @@ def _drop_empty_items(obj: Any) -> Any:
     def is_empty_leaf(v: Any) -> bool:
         if v is None:
             return True
-        if isinstance(v, str) and v.strip() == "":
-            return True
+        if isinstance(v, str):
+            s = v.strip().lower()
+            if s == "" or s in ["n/a", "na", "n/a"]:
+                return True
         if isinstance(v, list) and len(v) == 0:
             return True
         if isinstance(v, dict) and len(v) == 0:
@@ -328,7 +331,8 @@ def build_stage_prompt(stage_key: str, schema_example: Dict[str, Any], excerpt: 
         "ABSOLUTE RULES:\n"
         "- If information is NOT in the document, output 'N/A'. DO NOT GUESS OR FABRICATE.\n"
         "- Do NOT output empty/template objects in lists.\n"
-        "- Do NOT include any pricing/cost/budget.\n\n"
+        "- Do NOT include any pricing/cost/budget.\n"
+        "- Use 0 for missing numbers.\n\n"
         "REQUIRED JSON STRUCTURE (must match exactly):\n"
         f"{json.dumps(schema_example, ensure_ascii=False, indent=2)}\n\n"
         "DOCUMENT EXCERPT:\n"
@@ -378,11 +382,24 @@ class VertexJSON:
         except Exception as e:
             logger.warning("%s: JSON parse failed -> %s", tag, e)
             logger.warning("Raw head: %s", _short(raw))
+            
+            # Save raw output for debugging
+            try:
+                debug_dir = Path("data/debug_dumps")
+                debug_dir.mkdir(parents=True, exist_ok=True)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                debug_file = debug_dir / f"{tag}_failed_{timestamp}.txt"
+                debug_file.write_text(raw, encoding="utf-8")
+                logger.info("Saved raw failed output to %s", debug_file)
+            except Exception as dump_err:
+                logger.error("Failed to save debug dump: %s", dump_err)
+
             # One repair attempt
             repair = (
                 "Your previous output was NOT valid JSON.\n"
                 "Return ONLY one valid JSON object, no text.\n"
-                "NEVER use null; guess realistic values.\n\n"
+                "If information is missing, output 'N/A' for strings and 0 for numbers.\n"
+                "Do NOT guess, estimate, or fabricate.\n\n"
                 f"ORIGINAL REQUEST:\n{prompt}\n\n"
                 "BROKEN OUTPUT:\n"
                 f"{raw}\n"
@@ -406,26 +423,7 @@ class RIBIFExtractor:
         prompt = build_stage_prompt(stage_key, schema, excerpt)
         return self.llm.generate_json(prompt, temperature=temperature, tag=stage_key)
 
-    def _global_fill_no_nulls(self, final_json: Dict[str, Any], full_text_excerpt: str) -> Dict[str, Any]:
-        """
-        Last pass: if ANY null (or empty essential strings) remain, ask Gemini to fill them.
-        """
-        if not _contains_null(final_json):
-            return final_json
-
-        prompt = (
-            "You are given a JSON output that may contain null values.\n"
-            "Your job: return the SAME JSON structure but with ALL null values replaced by realistic guesses.\n"
-            "Do NOT remove keys. Do NOT change structure.\n"
-            "No nulls anywhere.\n"
-            "Return ONLY valid JSON.\n\n"
-            "DOCUMENT CONTEXT EXCERPT:\n"
-            f"{full_text_excerpt[:18000]}\n\n"
-            "JSON TO FIX:\n"
-            f"{json.dumps(final_json, ensure_ascii=False)}\n"
-        )
-        fixed = self.llm.generate_json(prompt, temperature=0.0, tag="global_null_fill")
-        return fixed
+    # _global_fill_no_nulls removed to prevent fabrication.
 
     def process_document(
         self,
@@ -491,16 +489,17 @@ class RIBIFExtractor:
                 fut = submit_stage(ex, stage_key, schema, temp)
                 future_map[fut] = (stage_key, schema, temp, excerpts[stage_key])
 
-            for fut in as_completed(future_map):
-                stage_key, schema, temp, excerpt = future_map[fut]
-                ts = time.time()
+            # Option B: iterate futures and call result(timeout=timeout_s)
+            futures_list = list(future_map.keys())
+            for fut in futures_list:
+                stage_key, schema, temp, start_excerpt = future_map[fut]
                 try:
+                    # Enforce strict per-stage timeout check
                     data = fut.result(timeout=timeout_s)
-                    dt = time.time() - ts
                     # drop empty template items
                     data = _drop_empty_items(data)
                     results[stage_key] = data
-                    # quick counts
+                    
                     extra = ""
                     if stage_key == "stage_2_matieres_premieres":
                         extra = f" | count={len(data.get('matieres_premieres', []))}"
@@ -510,13 +509,19 @@ class RIBIFExtractor:
                         extra = f" | count={len(data.get('machines_production', []))}"
                     if stage_key == "stage_5_processus_production":
                         extra = f" | steps={len(data.get('processus_production', []))}"
-                    logger.info("DONE %s in %.2fs%s", stage_key, dt, extra)
+                    logger.info("DONE %s%s", stage_key, extra)
+                    
                 except FuturesTimeoutError:
                     warnings.append(f"{stage_key}: timeout after {timeout_s}s, retrying with smaller excerpt")
                     logger.warning("TIMEOUT %s -> retry smaller excerpt", stage_key)
+                    
+                    # Cancel the stuck future
+                    fut.cancel()
+                    
                     try:
-                        smaller = excerpt[:6000]
+                        smaller = start_excerpt[:6000]
                         prompt = build_stage_prompt(stage_key, schema, smaller)
+                        # synchronous retry
                         data = self.llm.generate_json(prompt, temperature=0.0, tag=stage_key + "_retry_small")
                         data = _drop_empty_items(data)
                         results[stage_key] = data
@@ -525,6 +530,7 @@ class RIBIFExtractor:
                         warnings.append(f"{stage_key}: retry failed: {e2}")
                         logger.error("ERROR %s RETRY FAIL -> %s", stage_key, e2)
                         results[stage_key] = {}
+                        
                 except Exception as e:
                     warnings.append(f"{stage_key}: failed: {e}")
                     logger.error("ERROR %s FAIL -> %s", stage_key, e)
@@ -533,17 +539,17 @@ class RIBIFExtractor:
         # Build final JSON (exact format)
         processing_time = round(time.time() - t0, 3)
 
-        meta_note = "Financial data excluded. All fields guessed if missing (no nulls)."
+        meta_note = "Explicit-only extraction; N/A or 0 if missing. No guessing."
         if warnings:
             meta_note = (meta_note + " | WARNINGS: " + " ; ".join(warnings))[:4000]
 
         final_json: Dict[str, Any] = {
             "ribif_metadata": {
-                "extraction_method": "Module1 Parallel 6-stage (Vertex Gemini + No-Nulls)",
+                "extraction_method": "Module1 Parallel 6-stage (Vertex Gemini + Explicit-only)",
                 "extraction_date": _now_iso(),
                 "model_used": self.llm.vertex_model,
                 "api_provider": "Vertex",
-                "extraction_mode": "Document + Industry Guessing (no nulls)",
+                "extraction_mode": "Document Only (No Fabrications)",
                 "ribif_modules_support": [1],
                 "note": meta_note,
                 "processing_time_seconds": processing_time,

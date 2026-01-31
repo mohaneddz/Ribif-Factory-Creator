@@ -30,7 +30,7 @@ export default function Home() {
   // Loading state
   if (isAuthenticated === null) {
     return (
-      <div className="min-h-screen bg-[#0b0c10] flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0b0c10] flex items-center justify-center transition-colors">
         <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );

@@ -22,7 +22,7 @@ export const DashboardShell = ({
   onDeleteProject,
 }: DashboardShellProps) => {
   return (
-    <div className="flex h-screen w-full bg-[var(--surface-0)] text-[var(--text-1)] overflow-hidden selection:bg-indigo-100">
+    <div className="flex h-screen w-full bg-slate-50 dark:bg-[#0b0c10] text-slate-900 dark:text-white overflow-hidden selection:bg-indigo-500/30">
       <ProjectsList
         projects={projects}
         onOpenTwin={onOpenTwin}

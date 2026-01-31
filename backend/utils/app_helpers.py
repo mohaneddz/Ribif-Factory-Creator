@@ -46,7 +46,9 @@ def get_pipeline_settings() -> dict:
     if isinstance(raw, str) and raw.strip():
         try:
             return json.loads(raw)
-        except Exception:
+        except Exception as e:
+            logger = get_logger("app_helpers")
+            logger.warning(f"Failed to parse settings JSON: {e}")
             return {}
     return {}
 
@@ -92,6 +94,20 @@ def upload_and_register_file(
         label=label,
         metadata={},
     )
+    # Generate signed_url safely
+    signed_url = None
+    try:
+        signed_url = create_signed_url(client, bucket_id, object_path)
+    except Exception as e:
+        logger = get_logger("app_helpers")
+        logger.warning(f"Failed to create signed URL: {e}")
+    
+    if not signed_url:
+        try:
+            signed_url = get_public_url(client, bucket_id, object_path)
+        except Exception as e:
+            logger = get_logger("app_helpers")
+            logger.warning(f"Failed to generate public URL: {e}")
     logger = get_logger("app_helpers")
     logger.info("Uploaded %s to Supabase: %s (file_id=%s) category=%s", label or os.path.basename(local_path), signed_url, file_id, category)
     return file_id, signed_url
@@ -131,7 +147,9 @@ def load_template_payload(name: str) -> Optional[Dict[str, Any]]:
         return None
     try:
         return json.loads(template_path.read_text(encoding="utf-8"))
-    except Exception:
+    except Exception as e:
+        logger = get_logger("app_helpers")
+        logger.warning(f"Failed to load template {name}: {e}")
         return None
 
 

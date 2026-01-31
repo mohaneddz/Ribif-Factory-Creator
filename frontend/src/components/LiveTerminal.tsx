@@ -31,14 +31,14 @@ export default function LiveTerminal() {
     }, [logs]);
 
     return (
-        <div className="bg-black border border-slate-800 rounded-lg font-mono text-[10px] h-48 flex flex-col shadow-inner">
-            <div className="bg-slate-900 px-3 py-1 flex items-center gap-2 border-b border-slate-800">
-                <Terminal size={12} className="text-[#66fcf1]" />
-                <span className="text-slate-400">RIBIF_KERNEL.exe</span>
+        <div className="bg-white border border-slate-200 dark:bg-black dark:border-slate-800 rounded-lg font-mono text-[10px] h-48 flex flex-col shadow-inner transition-colors">
+            <div className="bg-slate-50 border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800 px-3 py-1 flex items-center gap-2">
+                <Terminal size={12} className="text-indigo-600 dark:text-[#66fcf1]" />
+                <span className="text-slate-500 dark:text-slate-400">RIBIF_KERNEL.exe</span>
             </div>
-            <div ref={scrollRef} className="p-3 overflow-hidden flex-1 text-[#66fcf1] space-y-1">
+            <div ref={scrollRef} className="p-3 overflow-hidden flex-1 text-slate-700 dark:text-[#66fcf1] space-y-1">
                 {logs.map((log, i) => <div key={i}>{log}</div>)}
-                <div className="animate-pulse">_</div>
+                <div className="animate-pulse text-indigo-600 dark:text-[#66fcf1]">_</div>
             </div>
         </div>
     );

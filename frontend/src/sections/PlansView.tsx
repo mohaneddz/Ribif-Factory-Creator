@@ -10,11 +10,11 @@ const Layout2DPanel = ({
     heightClass?: string;
     imageUrl?: string | null;
 }) => (
-    <div className={`${heightClass} relative bg-[#f8fafc] rounded-4xl overflow-hidden border border-slate-200`}>
-        <div className="absolute top-6 left-6 bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold z-10 shadow-lg shadow-indigo-200">
+    <div className={`${heightClass} relative bg-[#f8fafc] dark:bg-[#13141c] rounded-4xl overflow-hidden border border-slate-200 dark:border-white/10 transition-colors`}>
+        <div className="absolute top-6 left-6 bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold z-10 shadow-lg shadow-indigo-200 dark:shadow-indigo-900/40">
             VUE 2D (PLAN D'IMPLANTATION)
         </div>
-        <div className="h-full w-full flex items-center justify-center bg-[#f8fafc]">
+        <div className="h-full w-full flex items-center justify-center bg-[#f8fafc] dark:bg-[#13141c]">
             {imageUrl ? (
                 imageUrl.toLowerCase().endsWith(".dxf") || imageUrl.toLowerCase().endsWith(".dwg") ? (
                     <SimpleDxfViewer url={imageUrl} />
@@ -22,7 +22,7 @@ const Layout2DPanel = ({
                     <img
                         src={imageUrl}
                         alt="Plan 2D"
-                        className="w-full h-full object-contain p-10"
+                        className="w-full h-full object-contain p-10 dark:invert-[.1]"
                     />
                 )
             ) : (
@@ -30,11 +30,11 @@ const Layout2DPanel = ({
             )}
         </div>
         {/* Scale indicator */}
-        <div className="absolute bottom-6 right-6 flex items-center gap-2 bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] text-slate-500 font-medium">
-            <div className="w-12 h-0.5 bg-slate-400"></div>
+        <div className="absolute bottom-6 right-6 flex items-center gap-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+            <div className="w-12 h-0.5 bg-slate-400 dark:bg-slate-500"></div>
             <span>10m</span>
         </div>
-        <div className="absolute bottom-6 left-6 flex items-center gap-2 bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] text-slate-500 font-medium">
+        <div className="absolute bottom-6 left-6 flex items-center gap-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
             layout_square.dxf
         </div>
     </div>
@@ -53,9 +53,9 @@ const Model3DPanel = ({ heightClass = "h-1/2", pipelineModelUrl }: Model3DPanelP
         : null;
 
     return (
-        <div className={`${heightClass} relative rounded-4xl overflow-hidden border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900`}>
+        <div className={`${heightClass} relative rounded-4xl overflow-hidden border border-slate-200 dark:border-white/10 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 transition-colors`}>
             <div className="absolute inset-0 opacity-40" style={{ backgroundImage: "radial-gradient(circle at 20% 20%, rgba(148,163,184,0.35) 0, transparent 45%), radial-gradient(circle at 80% 10%, rgba(99,102,241,0.3) 0, transparent 40%)" }} />
-            <div className="absolute top-6 left-6 bg-white/90 backdrop-blur text-slate-800 px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200 shadow-sm">
+            <div className="absolute top-6 left-6 bg-white/90 dark:bg-white/10 backdrop-blur text-slate-800 dark:text-white px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
                 VUE 3D ISOMÉTRIQUE (GLB)
             </div>
             <div className="h-full w-full relative">
@@ -65,7 +65,7 @@ const Model3DPanel = ({ heightClass = "h-1/2", pipelineModelUrl }: Model3DPanelP
                     factoryModel="/models/factory1.glb"
                     pipelineModel={modelUrl}
                 />
-                <div className="absolute bottom-6 left-6 bg-slate-900/80 text-white px-3 py-1.5 rounded-lg text-[10px] font-semibold border border-white/10">
+                <div className="absolute bottom-6 left-6 bg-slate-900/80 dark:bg-black/50 text-white px-3 py-1.5 rounded-lg text-[10px] font-semibold border border-white/10">
                     {modelName
                         ? `factory1.glb + ${modelName}`
                         : "factory1.glb (awaiting pipeline model...)"
@@ -82,14 +82,14 @@ interface PlansViewProps {
 }
 
 export const PlansView = ({ imageUrl, pipelineModelUrl }: PlansViewProps) => (
-    <div className="h-full flex flex-col gap-4 p-4">
+    <div className="h-full flex flex-col gap-4 p-4 bg-slate-50 dark:bg-[#0b0c10] transition-colors">
         <Layout2DPanel imageUrl={imageUrl} />
         <Model3DPanel pipelineModelUrl={pipelineModelUrl} />
     </div>
 );
 
 export const Layout2DView = ({ imageUrl }: { imageUrl?: string | null }) => (
-    <div className="h-full p-4">
+    <div className="h-full p-4 bg-slate-50 dark:bg-[#0b0c10] transition-colors">
         <Layout2DPanel heightClass="h-full" imageUrl={imageUrl} />
     </div>
 );
@@ -99,7 +99,7 @@ interface Model3DViewProps {
 }
 
 export const Model3DView = ({ pipelineModelUrl }: Model3DViewProps) => (
-    <div className="h-full p-4">
+    <div className="h-full p-4 bg-slate-50 dark:bg-[#0b0c10] transition-colors">
         <Model3DPanel heightClass="h-full" pipelineModelUrl={pipelineModelUrl} />
     </div>
 );

@@ -5,8 +5,12 @@ import { getTheme, ThemeMode } from "@/utils/theme";
 
 const applyTheme = (mode: ThemeMode) => {
   const root = document.documentElement;
-  root.classList.remove("theme-light", "theme-dark");
-  root.classList.add(mode === "light" ? "theme-light" : "theme-dark");
+  // Use standard 'dark' class for Tailwind
+  if (mode === "dark") {
+    root.classList.add("dark");
+  } else {
+    root.classList.remove("dark");
+  }
 };
 
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {

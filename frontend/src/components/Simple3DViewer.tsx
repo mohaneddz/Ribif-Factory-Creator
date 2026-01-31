@@ -42,7 +42,7 @@ export default function Simple3DViewer({
 
         // Scene
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1e293b); // slate-800
+        // scene.background = null; // Transparent to let CSS background show
         sceneRef.current = scene;
 
         // Camera
@@ -51,7 +51,7 @@ export default function Simple3DViewer({
         cameraRef.current = camera;
 
         // Renderer
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(width, height);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;

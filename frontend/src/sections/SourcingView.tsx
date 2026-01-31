@@ -38,12 +38,12 @@ export const SourcingView = ({ progress, data, module4Data, loading }: { progres
     }
 
     return (
-        <div className="p-6 h-full flex gap-6">
+        <div className="p-6 h-full flex gap-6 bg-slate-50 dark:bg-[#0b0c10] transition-colors">
             {/* Left: Machine List */}
-            <div className="w-80 bg-white rounded-3xl border border-slate-200 p-4 flex flex-col shadow-sm">
+            <div className="w-80 bg-white dark:bg-[#13141c] rounded-3xl border border-slate-200 dark:border-white/5 p-4 flex flex-col shadow-sm dark:shadow-none transition-colors">
                 <div className="mb-4">
-                    <h3 className="text-sm font-extrabold text-slate-400 uppercase tracking-widest">Machines</h3>
-                    <span className="text-xs text-slate-500">{enrichedMachines.length} équipements</span>
+                    <h3 className="text-sm font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Machines</h3>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{enrichedMachines.length} équipements</span>
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-2">
                     {enrichedMachines.map((item: any, i: number) => (
@@ -53,18 +53,18 @@ export const SourcingView = ({ progress, data, module4Data, loading }: { progres
                             className={clsx(
                                 "p-4 rounded-xl cursor-pointer transition-all border",
                                 selectedMachine === i
-                                    ? "bg-indigo-50 border-indigo-300 ring-2 ring-indigo-100"
-                                    : "bg-slate-50 border-slate-100 hover:border-indigo-200"
+                                    ? "bg-indigo-50 dark:bg-indigo-500/10 border-indigo-300 dark:border-indigo-500/50 ring-2 ring-indigo-100 dark:ring-indigo-900/20"
+                                    : "bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/5 hover:border-indigo-200 dark:hover:border-indigo-500/30"
                             )}
                         >
-                            <div className="font-bold text-sm text-slate-800 truncate">
+                            <div className="font-bold text-sm text-slate-800 dark:text-white truncate">
                                 {item.machine_input?.nom_machine || `Machine ${i + 1}`}
                             </div>
-                            <div className="text-xs text-slate-500 mt-1 truncate">
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">
                                 {item.machine_input?.fabricant_recommande || 'N/A'}
                             </div>
                             <div className="flex gap-2 mt-2">
-                                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[10px] font-bold">
+                                <span className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded text-[10px] font-bold">
                                     {item.suppliers?.length || 0} fournisseurs
                                 </span>
                             </div>
@@ -74,26 +74,26 @@ export const SourcingView = ({ progress, data, module4Data, loading }: { progres
             </div>
 
             {/* Right: Supplier Details */}
-            <div className="flex-1 bg-white rounded-3xl border border-slate-200 p-6 overflow-hidden flex flex-col shadow-sm">
+            <div className="flex-1 bg-white dark:bg-[#13141c] rounded-3xl border border-slate-200 dark:border-white/5 p-6 overflow-hidden flex flex-col shadow-sm dark:shadow-none transition-colors">
                 {currentMachine && (
                     <>
                         {/* Machine Header */}
-                        <div className="flex items-start gap-4 mb-6 pb-6 border-b border-slate-100">
-                            <div className="w-20 h-20 bg-slate-100 rounded-xl flex items-center justify-center overflow-hidden">
+                        <div className="flex items-start gap-4 mb-6 pb-6 border-b border-slate-100 dark:border-white/5">
+                            <div className="w-20 h-20 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center overflow-hidden">
                                 {currentMachine.machine_input?.best_image_url && !currentMachine.machine_input.best_image_url.startsWith('generated://') ? (
                                     <img src={currentMachine.machine_input.best_image_url} alt="" className="w-full h-full object-cover" />
                                 ) : (
-                                    <Layers size={32} className="text-slate-400" />
+                                    <Layers size={32} className="text-slate-400 dark:text-slate-600" />
                                 )}
                             </div>
                             <div className="flex-1">
-                                <h2 className="text-xl font-extrabold text-slate-800">{currentMachine.machine_input?.nom_machine}</h2>
-                                <p className="text-sm text-slate-500">{currentMachine.machine_input?.type}</p>
+                                <h2 className="text-xl font-extrabold text-slate-800 dark:text-white">{currentMachine.machine_input?.nom_machine}</h2>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">{currentMachine.machine_input?.type}</p>
                                 <div className="flex gap-2 mt-2">
-                                    <span className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold">
+                                    <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold">
                                         Qté: {currentMachine.machine_input?.quantite_necessaire || 1}
                                     </span>
-                                    <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">
+                                    <span className="px-2 py-1 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold">
                                         {currentMachine.machine_input?.fabricant_recommande}
                                     </span>
                                 </div>
@@ -102,7 +102,7 @@ export const SourcingView = ({ progress, data, module4Data, loading }: { progres
 
                         {/* Suppliers List */}
                         <div className="flex-1 overflow-y-auto">
-                            <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4">Fournisseurs ({suppliers.length})</h3>
+                            <h3 className="text-xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Fournisseurs ({suppliers.length})</h3>
                             <div className="space-y-4">
                                 {suppliers.map((supplier: any, i: number) => (
                                     <motion.div
@@ -110,18 +110,18 @@ export const SourcingView = ({ progress, data, module4Data, loading }: { progres
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: i * 0.1 }}
                                         key={i}
-                                        className="p-5 bg-slate-50 rounded-xl border border-slate-100 hover:border-indigo-200 transition-all"
+                                        className="p-5 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/10 hover:border-indigo-200 dark:hover:border-indigo-500/50 transition-all"
                                     >
                                         <div className="flex justify-between items-start mb-3">
                                             <div>
-                                                <div className="font-bold text-base text-slate-800">{supplier.supplier_name}</div>
-                                                <div className="text-xs text-slate-500">{supplier.region}</div>
+                                                <div className="font-bold text-base text-slate-800 dark:text-white">{supplier.supplier_name}</div>
+                                                <div className="text-xs text-slate-500 dark:text-slate-400">{supplier.region}</div>
                                             </div>
                                             <span className={clsx(
                                                 "px-2 py-1 rounded-full text-[10px] font-bold",
                                                 (supplier.relevance_score || 0) > 0.8
-                                                    ? "bg-emerald-50 text-emerald-600"
-                                                    : "bg-amber-50 text-amber-600"
+                                                    ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                                    : "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400"
                                             )}>
                                                 Score: {Math.round((supplier.relevance_score || 0) * 100)}%
                                             </span>
@@ -129,31 +129,31 @@ export const SourcingView = ({ progress, data, module4Data, loading }: { progres
 
                                         <div className="grid grid-cols-2 gap-4 mb-3">
                                             <div>
-                                                <div className="text-[10px] font-bold text-slate-400 uppercase">Prix Estimé</div>
-                                                <div className="text-sm font-bold text-indigo-600">{supplier.price_estimate || 'Sur demande'}</div>
+                                                <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Prix Estimé</div>
+                                                <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{supplier.price_estimate || 'Sur demande'}</div>
                                             </div>
                                             <div>
-                                                <div className="text-[10px] font-bold text-slate-400 uppercase">Type de Prix</div>
-                                                <div className="text-sm text-slate-600">{supplier.price_type || 'N/A'}</div>
+                                                <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Type de Prix</div>
+                                                <div className="text-sm text-slate-600 dark:text-slate-300">{supplier.price_type || 'N/A'}</div>
                                             </div>
                                         </div>
 
                                         <div className="flex gap-3 text-xs">
                                             {supplier.website && (
-                                                <a href={supplier.website} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">🌐 Site web</a>
+                                                <a href={supplier.website} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">🌐 Site web</a>
                                             )}
                                             {supplier.email_address && (
-                                                <a href={`mailto:${supplier.email_address}`} className="text-indigo-600 hover:underline font-medium">✉️ Email</a>
+                                                <a href={`mailto:${supplier.email_address}`} className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">✉️ Email</a>
                                             )}
                                             {supplier.phone_number && (
-                                                <span className="text-slate-500">📞 {supplier.phone_number}</span>
+                                                <span className="text-slate-500 dark:text-slate-400">📞 {supplier.phone_number}</span>
                                             )}
                                         </div>
 
                                         {supplier.customs_algeria_info && (
-                                            <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
-                                                <div className="text-[10px] font-bold text-amber-600 uppercase mb-1">Info Douanes Algérie</div>
-                                                <div className="text-xs text-amber-700">{supplier.customs_algeria_info}</div>
+                                            <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-500/10 rounded-lg border border-amber-100 dark:border-amber-500/20">
+                                                <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase mb-1">Info Douanes Algérie</div>
+                                                <div className="text-xs text-amber-700 dark:text-amber-300">{supplier.customs_algeria_info}</div>
                                             </div>
                                         )}
                                     </motion.div>

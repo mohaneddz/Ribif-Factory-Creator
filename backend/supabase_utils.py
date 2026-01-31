@@ -28,7 +28,8 @@ def _safe_name(name: str) -> str:
 def get_supabase() -> Optional[Client]:
     if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
         return None
-    return create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    url = SUPABASE_URL.rstrip("/") + "/"
+    return create_client(url, SUPABASE_SERVICE_ROLE_KEY)
 
 
 def is_enabled() -> bool:
@@ -122,12 +123,24 @@ def upsert_project_settings(
     settings: Dict[str, Any],
     updated_by: Optional[str] = None,
 ) -> None:
-    payload = {
-        "project_id": project_id,
+    if not project_id:
+        return
+    
+    # Merge existing settings if needed, or just overwrite. 
+    # Usually settings are partial updates, but here we replace the dict or merge? 
+    # The requirement says "must write to projects.settings".
+    # We'll do a direct update.
+    
+    # Also update metadata if needed? No, just settings.
+    # We should probably fetch existing to merge if we want to be safe, but 
+    # typically "upsert settings" implies writing the state.
+    # Let's just update the column.
+    
+    client.table("projects").update({
         "settings": settings or {},
-        "updated_by": updated_by,
-    }
-    client.table("project_settings").upsert(payload, on_conflict="project_id").execute()
+        # "updated_by": updated_by # No column for this in schema provided, maybe metadata?
+        # Schema has `updated_at` trigger.
+    }).eq("id", project_id).execute()
 
 
 def insert_project_file(
@@ -163,15 +176,33 @@ def insert_module1_extraction(
     project_id: str,
     source_file_id: Optional[str],
     data: Dict[str, Any],
+    project_metadata: Optional[Dict[str, Any]] = None,
 ) -> Optional[str]:
+    if not project_id:
+        return None
+        
+    # 1. Fetch current project to get completed_modules and metadata
+    res = client.table("projects").select("completed_modules, metadata, current_module").eq("id", project_id).single().execute()
+    current_data = res.data or {}
+    
+    completed = current_data.get("completed_modules") or []
+    if "module1" not in completed:
+        completed.append("module1")
+        
+    meta = current_data.get("metadata") or {}
+    if project_metadata:
+        meta.update(project_metadata)
+    
     payload = {
-        "project_id": project_id,
-        "source_file_id": source_file_id,
-        "data": data,
+        "module1_data": data,
+        "completed_modules": completed,
+        "current_module": "module1",
+        "metadata": meta,
+        "updated_at": _now_stamp(), # Optional but good practice
     }
-    res = client.table("module1_extractions").insert(payload).execute()
-    data_rows = getattr(res, "data", None) or []
-    return data_rows[0]["id"] if data_rows else None
+    
+    client.table("projects").update(payload).eq("id", project_id).execute()
+    return project_id
 
 
 def insert_module4_sourcing(
@@ -179,15 +210,33 @@ def insert_module4_sourcing(
     project_id: str,
     module1_id: Optional[str],
     data: Dict[str, Any],
+    project_metadata: Optional[Dict[str, Any]] = None,
 ) -> Optional[str]:
+    if not project_id:
+        return None
+
+    # 1. Fetch current project
+    res = client.table("projects").select("completed_modules, metadata").eq("id", project_id).single().execute()
+    current_data = res.data or {}
+    
+    completed = current_data.get("completed_modules") or []
+    if "module4" not in completed:
+        completed.append("module4")
+        
+    meta = current_data.get("metadata") or {}
+    if project_metadata:
+        meta.update(project_metadata)
+
     payload = {
-        "project_id": project_id,
-        "module1_id": module1_id,
-        "data": data,
+        "module4_data": data,
+        "completed_modules": completed,
+        "current_module": "module4", 
+        "metadata": meta,
+        "updated_at": _now_stamp(),
     }
-    res = client.table("module4_sourcing").insert(payload).execute()
-    data_rows = getattr(res, "data", None) or []
-    return data_rows[0]["id"] if data_rows else None
+    
+    client.table("projects").update(payload).eq("id", project_id).execute()
+    return project_id
 
 
 def insert_tco_run(

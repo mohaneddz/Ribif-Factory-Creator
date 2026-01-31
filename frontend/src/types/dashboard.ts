@@ -5,9 +5,9 @@ export type ProjectType = string;
 export interface Project {
   id: string;
   name: string;
-  client: string;
-  location: string;
+  source_filename?: string;
   date: string;
   status: ProjectStatus;
-  type: ProjectType;
+  progress: number;
+  completed_modules: string[];
 }

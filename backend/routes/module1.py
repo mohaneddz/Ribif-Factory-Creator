@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 from config import BASE_URL, OUTPUT_DIRS, UPLOAD_DIR, CREATE_MACHINE_IMAGES, SKIP_MODULE_1, write_json
 from supabase_utils import get_supabase, insert_module1_extraction
 from utils.module_1.core import RIBIFExtractor
-from utils.logger import log_skip
+from utils.logger import log_skip, get_logger
 from utils.app_helpers import (
     get_pipeline_settings,
     get_request_project_id,
@@ -24,6 +24,10 @@ from utils.app_helpers import (
 )
 from utils.image_selector import find_best_image, get_random_image
 from vertex_utils import generate_image
+
+import time
+import uuid
+from datetime import datetime
 
 bp_module1 = Blueprint("module1", __name__)
 extractor = RIBIFExtractor()
@@ -75,7 +79,9 @@ def process_module_1():
         response_payload = {"message": "Success", "data": payload, "status": "skipped"}
         return jsonify(response_payload)
 
+    start_time = time.time()
     project_id = get_request_project_id(include_form=True, include_json=True)
+    download_error = None
     filepath = None
     filename = "source.pdf"
 
@@ -102,8 +108,9 @@ def process_module_1():
                 res = client.table("projects").select("source_file_path").eq("id", project_id).single().execute()
                 if res.data and res.data.get("source_file_path"):
                     object_path = res.data.get("source_file_path")
-            except Exception:
-                pass
+            except Exception as e:
+                module1_logger = get_logger("module1")
+                module1_logger.warning(f"Failed to fetch source_file_path from DB: {e}")
 
         # Download if we found a path
         # Download if we found a path
@@ -118,7 +125,9 @@ def process_module_1():
                         if "/" in raw_name:
                             raw_name = raw_name.split("/")[-1]
                         filename = secure_filename(raw_name)
-                except:
+                except Exception as e:
+                    module1_logger = get_logger("module1")
+                    module1_logger.warning(f"Failed to resolve filename from object path: {e}")
                     filename = "source.pdf"
                 
                 filepath = UPLOAD_DIR / filename
@@ -126,8 +135,8 @@ def process_module_1():
                     f.write(file_data)
             except Exception as e:
                 download_error = f"Error downloading file from {object_path}: {str(e)}"
-                print(download_error)
-                pass
+                module1_logger = get_logger("module1")
+                module1_logger.warning(download_error)
     
     if not filepath:
          error_details = "No file uploaded and could not retrieve from project"
@@ -148,8 +157,9 @@ def process_module_1():
     if client and project_id and settings:
         try:
             store_project_settings(client, project_id, settings, owner_id)
-        except Exception:
-            pass
+        except Exception as e:
+            module1_logger = get_logger("module1")
+            module1_logger.warning(f"Failed to store project settings: {e}")
 
     source_file_id = None
     source_file_url = None
@@ -164,8 +174,9 @@ def process_module_1():
                 category="uploads",
                 label="module1_source",
             )
-        except Exception:
-            pass
+        except Exception as e:
+            module1_logger = get_logger("module1")
+            module1_logger.warning(f"Failed to upload source file copy: {e}")
 
     extraction_result = extractor.process_document(str(filepath), str(OUTPUT_DIRS["module1"]))
 
@@ -183,41 +194,105 @@ def process_module_1():
         
         # New: Try web search for images first
         from config import WEB_SEARCH_ENABLED
+
+        module1_logger = get_logger("module1")
         web_image_found = False
         
         if WEB_SEARCH_ENABLED and settings.get("useWebImages", True):
             try:
                 from utils.web_search import aggregator as web_search
                 import requests
+                from urllib.parse import urlparse
+                import ipaddress
+                import socket
+                def is_safe_url(url: str) -> bool:
+                    """Validate URL is safe for fetch (no SSRF)."""
+                    try:
+                        parsed = urlparse(url)
+                        # Only allow http/https
+                        if parsed.scheme not in ("http", "https"):
+                            return False
+                        # Reject localhost
+                        hostname = parsed.hostname or ""
+                        if hostname in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
+                            return False
+                        # Resolve and check for private IPs
+                        try:
+                            resolved = socket.gethostbyname(hostname)
+                            ip = ipaddress.ip_address(resolved)
+                            if ip.is_private or ip.is_loopback or ip.is_reserved:
+                                return False
+                        except Exception:
+                            pass  # Let requests handle resolution if this fails
+                        return True
+                    except Exception:
+                        return False
+                
+                MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
                 
                 web_images = web_search.search_machine_images(nom_machine, manufacturer)
                 if web_images:
                     best_web_image = web_images[0]
-                    # Download it
-                    try:
-                        resp = requests.get(best_web_image.url, timeout=10)
-                        if resp.status_code == 200:
-                            image_filename = f"{nom_machine.replace(' ', '_').replace('/', '_')[:50]}_web.jpg"
-                            image_path = OUTPUT_DIRS["module1"] / image_filename
-                            image_path.write_bytes(resp.content)
-                            
-                            web_image_found = True
-                            image_local_path = str(image_path)
-                            
-                            # Convert to base64 for frontend display if needed
-                            b64 = base64.b64encode(resp.content).decode("utf-8")
-                            image_result = {
-                                "image_url": f"data:image/jpeg;base64,{b64}",
-                                "image_path": str(image_path),
-                                "status": "web_found",
-                                "source_url": best_web_image.url
-                            }
-                    except Exception:
-                        pass
+                    image_url = best_web_image.url
+                    
+                    # SSRF check
+                    if not is_safe_url(image_url):
+                        module1_logger.warning("Rejected unsafe image URL (SSRF protection): %s", image_url)
+                        image_result["status"] = "rejected_unsafe_url"
+                    else:
+                        # Download with safety checks
+                        try:
+                            resp = requests.get(image_url, timeout=10, stream=True)
+                            if resp.status_code == 200:
+                                # Check Content-Type
+                                content_type = resp.headers.get("Content-Type", "")
+                                if not content_type.startswith("image/"):
+                                    module1_logger.warning("Rejected non-image Content-Type: %s for %s", content_type, image_url)
+                                    image_result["status"] = "rejected_invalid_content_type"
+                                else:
+                                    # Check Content-Length if available
+                                    content_length = resp.headers.get("Content-Length")
+                                    if content_length and int(content_length) > MAX_IMAGE_SIZE:
+                                        module1_logger.warning("Rejected oversized image (%s bytes): %s", content_length, image_url)
+                                        image_result["status"] = "rejected_too_large"
+                                    else:
+                                        # Read with size limit
+                                        content = b""
+                                        for chunk in resp.iter_content(chunk_size=8192):
+                                            content += chunk
+                                            if len(content) > MAX_IMAGE_SIZE:
+                                                module1_logger.warning("Image exceeded max size during download: %s", image_url)
+                                                image_result["status"] = "rejected_too_large"
+                                                content = None
+                                                break
+                                        
+                                        if content:
+                                            # Sanitize filename
+                                            safe_name = secure_filename(f"{nom_machine[:50]}_web")
+                                            if not safe_name:
+                                                safe_name = "machine_web"
+                                            image_filename = f"{safe_name}.jpg"
+                                            image_path = OUTPUT_DIRS["module1"] / image_filename
+                                            image_path.write_bytes(content)
+                                            
+                                            web_image_found = True
+                                            image_local_path = str(image_path)
+                                            
+                                            # Convert to base64 for frontend display if needed
+                                            b64 = base64.b64encode(content).decode("utf-8")
+                                            image_result = {
+                                                "image_url": f"data:image/jpeg;base64,{b64}",
+                                                "image_path": str(image_path),
+                                                "status": "web_found",
+                                                "source_url": image_url
+                                            }
+                        except Exception as e:
+                            module1_logger.warning("Web image download failed for %s: %s", image_url, e)
+                            image_result["status"] = "download_failed"
             except ImportError:
                 pass
             except Exception as e:
-                print(f"Web image search failed: {e}")
+                module1_logger.warning("Web image search failed for %s: %s", nom_machine, e)
 
         # If no web image, try generation or cache
         if not web_image_found:
@@ -257,10 +332,11 @@ def process_module_1():
 
     final_result = extraction_result.copy()
     final_result["enriched_machines"] = enriched_machines
+    successful_scrapes = sum(1 for m in enriched_machines if m.get("image_status") in ("success", "web_found", "cache_found"))
     final_result["scraping_summary"] = {
         "total_machines": len(machines),
-        "successful_scrapes": sum(1 for m in enriched_machines if m.get("image_status") == "success"),
-        "failed_scrapes": sum(1 for m in enriched_machines if m.get("image_status") != "success"),
+        "successful_scrapes": successful_scrapes,
+        "failed_scrapes": len(machines) - successful_scrapes,
     }
     final_result.setdefault("ribif_metadata", {})
     final_result["ribif_metadata"].update({
@@ -282,7 +358,21 @@ def process_module_1():
     module1_id = None
     if client and project_id:
         try:
-            module1_id = insert_module1_extraction(client, project_id, source_file_id, final_result)
+            # Metadata stats
+            processing_time = int(time.time() - start_time)
+            run_id = str(uuid.uuid4())
+            extraction_date = datetime.utcnow().isoformat()
+            
+            proj_meta = {
+                "last_run_id": run_id,
+                "last_extraction_date": extraction_date,
+                "model_used": "vertex-gemini-pro-vision", # Assumed default from config/extractor
+                "last_processing_time_seconds": processing_time
+            }
+            
+            # module1_id is now just project_id
+            module1_id = insert_module1_extraction(client, project_id, source_file_id, final_result, project_metadata=proj_meta)
+            
             output_file_id, output_file_url = upload_and_register_file(
                 client=client,
                 project_id=project_id,
@@ -323,8 +413,9 @@ def process_module_1():
                 if machine_id and file_id:
                     insert_machine_assets(client, machine_id, file_id, asset_type="image", label=name)
 
-        except Exception:
-            pass
+        except Exception as e:
+            module1_logger = get_logger("module1")
+            module1_logger.warning(f"Failed to upload module1 output or enrich machines: {e}")
 
     final_result.setdefault("ribif_metadata", {})
     final_result["ribif_metadata"]["module1_id"] = module1_id
