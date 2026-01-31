@@ -325,3 +325,41 @@ def insert_video(
     }
     client.table("videos").insert(payload).execute()
 
+
+def delete_project_files(client: Client, project_id: str, bucket: str = SUPABASE_BUCKET_FILES) -> Tuple[int, Optional[str]]:
+    """
+    Delete all files in the storage bucket for a given project.
+    Returns (count_deleted, error_message).
+    """
+    try:
+        # List all files in the project folder
+        res = client.storage.from_(bucket).list(project_id)
+        
+        if not res:
+            return (0, None)
+        
+        # Build list of file paths to delete
+        file_paths = [f"{project_id}/{item['name']}" for item in res if item.get('name')]
+        
+        if not file_paths:
+            return (0, None)
+        
+        # Delete all files
+        client.storage.from_(bucket).remove(file_paths)
+        
+        return (len(file_paths), None)
+    except Exception as e:
+        return (0, str(e))
+
+
+def delete_project(client: Client, project_id: str) -> Optional[str]:
+    """
+    Delete a project from the database.
+    Returns error message if any, None on success.
+    Note: This assumes CASCADE delete is configured in the database for related tables.
+    """
+    try:
+        client.table("projects").delete().eq("id", project_id).execute()
+        return None
+    except Exception as e:
+        return str(e)

@@ -2685,7 +2685,7 @@ export default function FactoryCopilot() {
                                             <>
                                                 {selectedModuleItem.type === 'specs' && <SpecsView data={extractedData} />}
                                                 {selectedModuleItem.type === 'layout2d' && <Layout2DView imageUrl={layoutImageUrl} />}
-                                                {selectedModuleItem.type === 'model3d' && <Model3DView />}
+                                                {selectedModuleItem.type === 'model3d' && <Model3DView pipelineModelUrl={undefined} />}
                                                 {selectedModuleItem.type === 'video' && <VideoView progress={selectedProgress} videoUrl={videoUrl} />}
                                                 {selectedModuleItem.type === 'sourcing' && <SourcingView progress={selectedProgress} data={extractedData} module4Data={module4Data} loading={module4Loading} />}
                                                 {selectedModuleItem.type === 'email' && <EmailCenterView />}

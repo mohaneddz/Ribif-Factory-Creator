@@ -14,8 +14,12 @@ export const goToCreateProject = (router: AppRouterInstance) => {
   router.push(ROUTES.createProject);
 };
 
-export const goToTwin = (router: AppRouterInstance) => {
-  router.push(ROUTES.twin);
+export const goToTwin = (router: AppRouterInstance, id?: string) => {
+  if (id) {
+    router.push(`${ROUTES.workflow}/${id}/twin`);
+  } else {
+    router.push(ROUTES.twin);
+  }
 };
 
 export const goToSettings = (router: AppRouterInstance) => {
@@ -28,4 +32,8 @@ export const goToLogin = (router: AppRouterInstance) => {
 
 export const goToRegister = (router: AppRouterInstance) => {
   router.push(ROUTES.register);
+};
+
+export const goToDashboard = (router: AppRouterInstance) => {
+  router.push(ROUTES.dashboard);
 };

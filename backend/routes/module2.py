@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request
 
-from config import BASE_URL, OUTPUT_DIRS, SKIP_MODULE_2, PIPLEINE_3D_CAP, CREATE_REALISTIC_RENDER, CREATE_3D_MODEL
+from config import BASE_URL, OUTPUT_DIRS, SKIP_MODULE_2, PIPLEINE_3D_CAP, CREATE_REALISTIC_RENDER, CREATE_3D_MODEL, TEMPLATE_DIR
 from supabase_utils import get_supabase, insert_layout, insert_pipeline, update_project_current_pipeline
 from utils.app_helpers import (
     get_pipeline_settings,
@@ -217,6 +217,26 @@ def generate_layout():
         if SKIP_MODULE_2:
             log_skip("module2.generate_layout", reason="SKIP_MODULE_2")
             payload = load_template_payload("module2") or {}
+            
+            output_dir = OUTPUT_DIRS["module2"]
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Copy template PNG
+            template_img = TEMPLATE_DIR / "layout_square.png"
+            if template_img.exists():
+                target_img = output_dir / "layout_square.png"
+                shutil.copy2(template_img, target_img)
+                payload["layout_2d"] = str(target_img)
+                payload["layout_2d_url"] = _download_url_for(str(target_img))
+            
+            # Copy template GLB
+            template_glb = TEMPLATE_DIR / "pipeline.glb"
+            if template_glb.exists():
+                target_glb = output_dir / "factory_model.glb"
+                shutil.copy2(template_glb, target_glb)
+                payload["layout_3d"] = str(target_glb)
+                payload["layout_3d_url"] = _download_url_for(str(target_glb))
+
             project_id = get_request_project_id(include_json=True)
             if isinstance(payload, dict) and project_id:
                 payload["project_id"] = payload.get("project_id") or project_id
@@ -373,61 +393,6 @@ def generate_layout():
                 layout_realistic_file_id = None
                 layout_realistic_clean_file_id = None
                 pipeline_links_file_id = None
-
-                if layout_2d and Path(layout_2d).exists():
-                    layout_2d_file_id, _ = upload_and_register_file(
-                        client=client,
-                        project_id=project_id,
-                        owner_id=owner_id,
-                        local_path=layout_2d,
-                        category="layout-2d",
-                        label=Path(layout_2d).name,
-                    )
-                if layout_3d and Path(layout_3d).exists():
-                    layout_3d_file_id, _ = upload_and_register_file(
-                        client=client,
-                        project_id=project_id,
-                        owner_id=owner_id,
-                        local_path=layout_3d,
-                        category="layout-3d",
-                        label=Path(layout_3d).name,
-                    )
-                if layout_dxf and Path(layout_dxf).exists():
-                    layout_dxf_file_id, _ = upload_and_register_file(
-                        client=client,
-                        project_id=project_id,
-                        owner_id=owner_id,
-                        local_path=layout_dxf,
-                        category="layout-dxf",
-                        label=Path(layout_dxf).name,
-                    )
-                if layout_realistic and Path(layout_realistic).exists():
-                    layout_realistic_file_id, _ = upload_and_register_file(
-                        client=client,
-                        project_id=project_id,
-                        owner_id=owner_id,
-                        local_path=layout_realistic,
-                        category="layout-realistic",
-                        label=Path(layout_realistic).name,
-                    )
-                if layout_realistic_clean and Path(layout_realistic_clean).exists():
-                    layout_realistic_clean_file_id, _ = upload_and_register_file(
-                        client=client,
-                        project_id=project_id,
-                        owner_id=owner_id,
-                        local_path=layout_realistic_clean,
-                        category="layout-realistic-clean",
-                        label=Path(layout_realistic_clean).name,
-                    )
-                if pipeline_links and Path(pipeline_links).exists():
-                    pipeline_links_file_id, _ = upload_and_register_file(
-                        client=client,
-                        project_id=project_id,
-                        owner_id=owner_id,
-                        local_path=pipeline_links,
-                        category="pipeline-links",
-                        label=Path(pipeline_links).name,
-                    )
                 pipeline_id = None
                 pipeline_payload = None
                 if pipeline_links and Path(pipeline_links).exists():

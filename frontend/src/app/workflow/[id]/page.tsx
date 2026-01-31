@@ -69,7 +69,7 @@ export default function FactoryCopilot() {
     // Refs for tracking workflow state
     const runHasData = useRef(false);
     const projectLoadedRef = useRef(false);
-    
+
     // State-based trigger for auto-resume (state triggers re-render, refs don't)
     const [shouldAutoResume, setShouldAutoResume] = useState(false);
     const [pendingResumeData, setPendingResumeData] = useState<ProjectRecord | null>(null);
@@ -247,10 +247,10 @@ export default function FactoryCopilot() {
         if (!userId) return;
 
         const activeSettings = loadPipelineSettings();
-        
+
         runHasData.current = true;
         setStatus('processing');
-        
+
         // UX Helper
         const runPlaceholderStep = async (idx: number) => {
             if (idx < 0) return;
@@ -278,7 +278,7 @@ export default function FactoryCopilot() {
             // =====================================================
             let m1Data = currentData?.module1_data;
             const idxSpecs = getModuleIndex("specs");
-            
+
             if (!m1Data) {
                 if (idxSpecs >= 0) {
                     setCurrentModule(idxSpecs);
@@ -288,27 +288,27 @@ export default function FactoryCopilot() {
 
                 let body: any;
                 let headers = { ...baseHeaders };
-                
+
                 if (file) {
-                     const fd = new FormData();
-                     fd.append('file', file);
-                     fd.append('project_id', currentProjectId);
-                     fd.append('settings', JSON.stringify(activeSettings));
-                     body = fd;
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    fd.append('project_id', currentProjectId);
+                    fd.append('settings', JSON.stringify(activeSettings));
+                    body = fd;
                 } else {
-                     headers = { ...headers, "Content-Type": "application/json" };
-                     body = JSON.stringify({ project_id: currentProjectId, settings: activeSettings });
+                    headers = { ...headers, "Content-Type": "application/json" };
+                    body = JSON.stringify({ project_id: currentProjectId, settings: activeSettings });
                 }
 
                 const res = await fetch(`${API_BASE}/api/module1/process`, { method: 'POST', headers, body });
                 const json = await res.json();
                 if (!res.ok) throw new Error(json.error || "Module 1 failed");
                 m1Data = json.data || json;
-                
+
                 await updateProject(currentProjectId, { module1_data: m1Data, status: "specs_complete" });
             }
             setExtractedData(m1Data);
-            if(idxSpecs >= 0) markArtifact(idxSpecs);
+            if (idxSpecs >= 0) markArtifact(idxSpecs);
 
             // =====================================================
             // MODULE 4: SOURCING
@@ -323,26 +323,26 @@ export default function FactoryCopilot() {
                     setModule4Loading(true);
                     setCurrentModule(idxSourcing);
                     setSelectedModule(idxSourcing);
-                    
+
                     const res = await fetch(`${API_BASE}/api/module4/enrich`, {
                         method: 'POST', headers: jsonHeaders,
                         body: JSON.stringify({ ...m1Data, project_id: currentProjectId, pipeline_settings: activeSettings })
                     });
                     const json = await res.json();
-                    if(!res.ok) throw new Error(json.error);
+                    if (!res.ok) throw new Error(json.error);
                     m4Data = json;
                     await updateProject(currentProjectId, { module4_data: m4Data, status: "sourcing_complete" });
                     setModule4Loading(false);
                 }
                 setModule4Data(m4Data);
                 markArtifact(idxSourcing);
-                
+
                 if (!currentData?.module4_data) {
                     await runPlaceholderStep(idxEmail);
                     await runPlaceholderStep(idxCalls);
                 } else {
-                    if(idxEmail >= 0) markArtifact(idxEmail);
-                    if(idxCalls >= 0) markArtifact(idxCalls);
+                    if (idxEmail >= 0) markArtifact(idxEmail);
+                    if (idxCalls >= 0) markArtifact(idxCalls);
                 }
             }
 
@@ -351,9 +351,9 @@ export default function FactoryCopilot() {
             // =====================================================
             let tcoJson = currentData?.module6_data;
             const idxTco = getModuleIndex("tco");
-            
+
             if (activeSettings.enableTco && m4Data && idxTco >= 0) {
-                 if (!tcoJson) {
+                if (!tcoJson) {
                     setTcoLoading(true);
                     setCurrentModule(idxTco);
                     setSelectedModule(idxTco);
@@ -365,9 +365,9 @@ export default function FactoryCopilot() {
                     tcoJson = json;
                     await updateProject(currentProjectId, { module6_data: tcoJson, status: "tco_complete" });
                     setTcoLoading(false);
-                 }
-                 setTcoData(tcoJson);
-                 markArtifact(idxTco);
+                }
+                setTcoData(tcoJson);
+                markArtifact(idxTco);
             }
 
             // =====================================================
@@ -376,7 +376,7 @@ export default function FactoryCopilot() {
             let bpJson = currentData?.module7_business;
             let pitchJson = currentData?.module7_pitch;
             const idxBusinessPlan = getModuleIndex("businessplan");
-            
+
             if (tcoJson && (activeSettings.enableBusinessPlan || activeSettings.enablePitchDeck) && idxBusinessPlan >= 0) {
                 if ((!bpJson && activeSettings.enableBusinessPlan) || (!pitchJson && activeSettings.enablePitchDeck)) {
                     setBusinessPlanLoading(true);
@@ -411,7 +411,7 @@ export default function FactoryCopilot() {
                     setCatalogLoading(true);
                     setCurrentModule(idxCatalogue);
                     setSelectedModule(idxCatalogue);
-                    const res = await fetch(`${API_BASE}/api/module9/catalog`, { 
+                    const res = await fetch(`${API_BASE}/api/module9/catalog`, {
                         method: 'POST', headers: jsonHeaders,
                         body: JSON.stringify({ module1_data: m1Data, module4_data: m4Data, output_format: activeSettings.catalogFormat, project_id: currentProjectId })
                     });
@@ -440,54 +440,74 @@ export default function FactoryCopilot() {
                         body: JSON.stringify({ ...m1Data, project_id: currentProjectId, pipeline_settings: activeSettings })
                     });
                     layoutJson = await res.json();
+
+                    // Upload layout files to Supabase from frontend
+                    if (layoutJson && currentProjectId) {
+                        const { uploadLayoutFilesToSupabase } = await import("@/lib/supabaseStorageUpload");
+                        try {
+                            const supabaseUrls = await uploadLayoutFilesToSupabase(currentProjectId, {
+                                layout_2d_url: layoutJson.layout_2d_url as string | undefined,
+                                layout_3d_url: layoutJson.layout_3d_url as string | undefined,
+                                layout_dxf_url: layoutJson.layout_dxf_url as string | undefined,
+                                layout_realistic_url: layoutJson.layout_realistic_url as string | undefined,
+                                layout_realistic_clean_url: layoutJson.layout_realistic_clean_url as string | undefined,
+                            });
+                            // Merge Supabase URLs into layoutJson
+                            layoutJson = { ...layoutJson, ...supabaseUrls };
+                            console.log("✅ Layout files uploaded to Supabase:", supabaseUrls);
+                        } catch (uploadError) {
+                            console.warn("⚠️ Failed to upload layout files to Supabase:", uploadError);
+                        }
+                    }
+
                     await updateProject(currentProjectId, { module2_data: layoutJson, status: "layout_complete" });
                     setLayoutLoading(false);
                 }
                 setLayoutData(layoutJson);
                 markArtifact(idxLayout2d);
-                
+
                 if (!currentData?.module2_data) {
-                    await runPlaceholderStep(idxModel3d); 
+                    await runPlaceholderStep(idxModel3d);
                 } else {
-                   if(idxModel3d >= 0) markArtifact(idxModel3d);
+                    if (idxModel3d >= 0) markArtifact(idxModel3d);
                 }
             }
 
             // =====================================================
             // MODULE 3: VIDEO
             // =====================================================
-             let videoJson = currentData?.module3_data;
-             const idxVideo = getModuleIndex("video");
+            let videoJson = currentData?.module3_data;
+            const idxVideo = getModuleIndex("video");
 
-             if (idxVideo >= 0 && layoutJson) {
-                 if (!videoJson) {
-                     setVideoLoading(true);
-                     setCurrentModule(idxVideo);
-                     setSelectedModule(idxVideo);
-                     const res = await fetch(`${API_BASE}/api/module3/video`, {
-                         method: 'POST', headers: jsonHeaders,
-                         body: JSON.stringify({ ...layoutJson, project_id: currentProjectId, pipeline_settings: activeSettings })
-                     });
-                     videoJson = await res.json();
-                     await updateProject(currentProjectId, { module3_data: videoJson, status: "complete" });
-                     setVideoLoading(false);
-                 }
-                 setVideoData(videoJson);
-                 markArtifact(idxVideo);
-             }
+            if (idxVideo >= 0 && layoutJson) {
+                if (!videoJson) {
+                    setVideoLoading(true);
+                    setCurrentModule(idxVideo);
+                    setSelectedModule(idxVideo);
+                    const res = await fetch(`${API_BASE}/api/module3/video`, {
+                        method: 'POST', headers: jsonHeaders,
+                        body: JSON.stringify({ ...layoutJson, project_id: currentProjectId, pipeline_settings: activeSettings })
+                    });
+                    videoJson = await res.json();
+                    await updateProject(currentProjectId, { module3_data: videoJson, status: "complete" });
+                    setVideoLoading(false);
+                }
+                setVideoData(videoJson);
+                markArtifact(idxVideo);
+            }
 
-             console.log("🎉 Workflow complete / synced");
-             setStatus('finished');
+            console.log("🎉 Workflow complete / synced");
+            setStatus('finished');
 
-        } catch(e) {
-             console.error("Workflow Error", e);
-             setStatus('idle'); 
-             setModule4Loading(false);
-             setTcoLoading(false);
-             setBusinessPlanLoading(false);
-             setCatalogLoading(false);
-             setLayoutLoading(false);
-             setVideoLoading(false);
+        } catch (e) {
+            console.error("Workflow Error", e);
+            setStatus('idle');
+            setModule4Loading(false);
+            setTcoLoading(false);
+            setBusinessPlanLoading(false);
+            setCatalogLoading(false);
+            setLayoutLoading(false);
+            setVideoLoading(false);
         }
     };
 
@@ -496,20 +516,20 @@ export default function FactoryCopilot() {
         if (!shouldAutoResume || !pendingResumeData) {
             return;
         }
-        
+
         console.log("🔄 Auto-resume triggered via state!");
         console.log("   - pendingResumeData.id:", pendingResumeData.id);
         console.log("   - source_file_path:", pendingResumeData.source_file_path);
         console.log("   - module1_data:", !!pendingResumeData.module1_data);
-        
+
         // Clear the flags immediately to prevent re-triggering
         setShouldAutoResume(false);
         runHasData.current = true;
-        
+
         // Call processWorkflow with the pending data
         console.log("🚀 Starting processWorkflow...");
         processWorkflow(pendingResumeData.id, pendingResumeData, null);
-        
+
         // Clear pending data
         setPendingResumeData(null);
     }, [shouldAutoResume, pendingResumeData]);
@@ -548,13 +568,25 @@ export default function FactoryCopilot() {
         });
     };
 
-    const layoutImageUrl = layoutLoading ? null : resolveDownloadUrl(
-        layoutData?.layout_realistic_clean_url ||
-        layoutData?.layout_realistic_url ||
-        layoutData?.layout_2d_url
+    // 2D Layout Image URL - prefer Supabase signed URLs, fallback to backend proxy
+    const layoutImageUrl = layoutLoading ? null : (
+        layoutData?.layout_realistic_clean_supabase_url ||
+        layoutData?.layout_realistic_supabase_url ||
+        layoutData?.layout_2d_supabase_url ||
+        resolveDownloadUrl(
+            layoutData?.layout_realistic_clean_url ||
+            layoutData?.layout_realistic_url ||
+            layoutData?.layout_2d_url
+        )
     ) || "/deliverables/layout_square.png";
 
     const videoUrl = videoLoading ? null : resolveDownloadUrl(videoData?.video_url);
+
+    // 3D Model URL - prefer Supabase signed URL, fallback to backend proxy
+    const pipelineModelUrl = layoutLoading ? null : (
+        layoutData?.layout_3d_supabase_url ||
+        resolveDownloadUrl(layoutData?.layout_3d_url)
+    );
 
     const selectedModuleItem = MODULES[selectedModule];
     const activeStagePrimary = MODULES[currentModule];
@@ -573,7 +605,7 @@ export default function FactoryCopilot() {
             <div className="flex h-screen bg-[#F8FAFC] overflow-hidden font-sans text-slate-900 selection:bg-indigo-100">
                 {/* LEFT SIDEBAR */}
                 <aside className="w-80 bg-white border-r border-slate-200 flex flex-col z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-                    <div className="p-8 h-24 border-b border-slate-100 flex items-center gap-4">
+                    <div className="p-8 h-24 border-b border-slate-100 flex items-center gap-4 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => router.push('/')}>
                         <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
                             <Building2 size={20} />
                         </div>
@@ -679,7 +711,7 @@ export default function FactoryCopilot() {
                                             <>
                                                 {selectedModuleItem.type === 'specs' && <SpecsView data={extractedData} />}
                                                 {selectedModuleItem.type === 'layout2d' && <Layout2DView imageUrl={layoutImageUrl} />}
-                                                {selectedModuleItem.type === 'model3d' && <Model3DView />}
+                                                {selectedModuleItem.type === 'model3d' && <Model3DView pipelineModelUrl={pipelineModelUrl} />}
                                                 {selectedModuleItem.type === 'video' && <VideoView progress={selectedProgress} videoUrl={videoUrl} />}
                                                 {selectedModuleItem.type === 'sourcing' && <SourcingView progress={selectedProgress} data={extractedData} module4Data={module4Data} loading={module4Loading} />}
                                                 {selectedModuleItem.type === 'email' && <EmailCenterView />}

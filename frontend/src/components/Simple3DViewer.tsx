@@ -5,13 +5,25 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
+interface Vector3Tuple {
+    x: number;
+    y: number;
+    z: number;
+}
+
 interface Simple3DViewerProps {
-    modelUrl?: string;
+    boundingboxStart: Vector3Tuple;
+    boundingboxEnd: Vector3Tuple;
+    factoryModel?: string;
+    pipelineModel?: string;
     className?: string;
 }
 
-export default function Simple3DViewer({ 
-    modelUrl = "/models/factory1.glb",
+export default function Simple3DViewer({
+    boundingboxStart,
+    boundingboxEnd,
+    factoryModel,
+    pipelineModel,
     className = ""
 }: Simple3DViewerProps) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -57,14 +69,14 @@ export default function Simple3DViewer({
         controlsRef.current = controls;
 
         // Grid
-        const gridHelper = new THREE.GridHelper(20, 20, 0x6366f1, 0x334155);
-        scene.add(gridHelper);
+        // const gridHelper = new THREE.GridHelper(20, 20, 0x6366f1, 0x334155);
+        // scene.add(gridHelper);
 
         // Lights
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.4);
         directionalLight.position.set(10, 20, 10);
         directionalLight.castShadow = true;
         directionalLight.shadow.mapSize.width = 2048;
@@ -77,39 +89,96 @@ export default function Simple3DViewer({
         directionalLight.shadow.camera.bottom = -10;
         scene.add(directionalLight);
 
-        // Load model
-        const loader = new GLTFLoader();
-        loader.load(
-            modelUrl,
-            (gltf) => {
-                const model = gltf.scene;
-                
-                // Center and scale model
-                const box = new THREE.Box3().setFromObject(model);
-                const center = box.getCenter(new THREE.Vector3());
-                const size = box.getSize(new THREE.Vector3());
-                const maxDim = Math.max(size.x, size.y, size.z);
-                const scale = 5 / maxDim;
-                
-                model.scale.setScalar(scale);
-                model.position.sub(center.multiplyScalar(scale));
-                model.position.y = 0;
-                
-                // Enable shadows
-                model.traverse((child) => {
-                    if ((child as THREE.Mesh).isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-                    }
-                });
-                
-                scene.add(model);
-            },
-            undefined,
-            (error) => {
-                console.error("Error loading model:", error);
-            }
+        // Calculate target bounding box from props
+        const targetMin = new THREE.Vector3(
+            Math.min(boundingboxStart.x, boundingboxEnd.x),
+            Math.min(boundingboxStart.y, boundingboxEnd.y),
+            Math.min(boundingboxStart.z, boundingboxEnd.z)
         );
+        const targetMax = new THREE.Vector3(
+            Math.max(boundingboxStart.x, boundingboxEnd.x),
+            Math.max(boundingboxStart.y, boundingboxEnd.y),
+            Math.max(boundingboxStart.z, boundingboxEnd.z)
+        );
+        const targetSize = new THREE.Vector3().subVectors(targetMax, targetMin);
+        const targetCenter = new THREE.Vector3().addVectors(targetMin, targetMax).multiplyScalar(0.5);
+
+        // Adjust camera to fit the bounding box
+        const maxDim = Math.max(targetSize.x, targetSize.y, targetSize.z);
+        const cameraDistance = maxDim * 2; // Arbitrary multiplier to frame the box
+        camera.position.set(
+            targetCenter.x + cameraDistance,
+            targetCenter.y + cameraDistance * 0.8,
+            targetCenter.z + cameraDistance
+        );
+        controls.target.copy(targetCenter);
+        controls.update();
+
+        const loader = new GLTFLoader();
+
+        // Load Factory (Environment)
+        if (factoryModel) {
+            loader.load(
+                factoryModel,
+                (gltf) => {
+                    const model = gltf.scene;
+                    model.scale.set(0.2, 0.2, 0.2);
+
+                    model.traverse((child) => {
+                        if ((child as THREE.Mesh).isMesh) {
+                            child.receiveShadow = true;
+                            child.castShadow = true;
+                        }
+                    });
+                    scene.add(model);
+                },
+                undefined,
+                (error) => console.error("Error loading factory model:", error)
+            );
+        }
+
+        // Load Pipeline (Stretched Content) - only if URL is provided
+        if (pipelineModel) {
+            loader.load(
+                pipelineModel,
+                (gltf) => {
+                    const model = gltf.scene;
+
+                    // Get original model bounding box
+                    const originalBox = new THREE.Box3().setFromObject(model);
+                    const originalSize = originalBox.getSize(new THREE.Vector3());
+                    const originalCenter = originalBox.getCenter(new THREE.Vector3());
+
+                    // Calculate scale factors to stretch model to fit target bounding box
+                    const scaleX = targetSize.x / (originalSize.x || 1);
+                    const scaleY = targetSize.y / (originalSize.y || 1);
+                    const scaleZ = targetSize.z / (originalSize.z || 1);
+
+                    // Apply non-uniform scale
+                    model.scale.set(scaleX, scaleY, scaleZ);
+
+                    // Position the model
+                    model.position.set(
+                        targetCenter.x - originalCenter.x * scaleX,
+                        targetCenter.y - originalCenter.y * scaleY,
+                        targetCenter.z - originalCenter.z * scaleZ
+                    );
+
+                    model.rotateX(Math.PI / 2);
+
+                    model.traverse((child) => {
+                        if ((child as THREE.Mesh).isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+
+                    scene.add(model);
+                },
+                undefined,
+                (error) => console.error("Error loading pipeline model:", error)
+            );
+        }
 
         // Animation loop
         const animate = () => {
@@ -140,11 +209,11 @@ export default function Simple3DViewer({
                 container.removeChild(renderer.domElement);
             }
         };
-    }, [modelUrl]);
+    }, [boundingboxStart, boundingboxEnd, factoryModel, pipelineModel]);
 
     return (
-        <div 
-            ref={containerRef} 
+        <div
+            ref={containerRef}
             className={`w-full h-full ${className}`}
             style={{ minHeight: "300px" }}
         />

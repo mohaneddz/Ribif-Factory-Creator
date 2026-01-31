@@ -94,5 +94,34 @@ export function useDashboardProjects() {
     return "Aucun projet pour le moment. Créez votre premier projet.";
   }, [loading, error, signedIn]);
 
-  return { projects, loading, signedIn, error, emptyState };
+  const handleDeleteProject = async (projectId: string): Promise<boolean> => {
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+      const response = await fetch(`${backendUrl}/api/projects/${projectId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Failed to delete project:", data.error);
+        setError(data.error || "Failed to delete project");
+        return false;
+      }
+
+      // Remove the project from local state
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      console.log("Project deleted successfully:", data);
+      return true;
+    } catch (err) {
+      console.error("Error deleting project:", err);
+      setError("Failed to delete project");
+      return false;
+    }
+  };
+
+  return { projects, loading, signedIn, error, emptyState, deleteProject: handleDeleteProject };
 }

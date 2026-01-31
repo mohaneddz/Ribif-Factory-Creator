@@ -559,7 +559,6 @@ class RIBIFExtractor:
 
         # Final cleanup: remove empty template list rows
         final_json = _drop_empty_items(final_json)
-
         # Global null fill (should be rare, but guarantees "no nulls")
         context_excerpt = build_excerpt(pages, list(range(min(4, len(pages)))), max_chars=18000)
         final_json = self._global_fill_no_nulls(final_json, context_excerpt)
@@ -568,6 +567,60 @@ class RIBIFExtractor:
         if _contains_null(final_json):
             logger.warning("Nulls still detected after global fill. Forcing final repair pass...")
             final_json = self._global_fill_no_nulls(final_json, context_excerpt)
+
+        # NEW: Web Search Post-Processing Enumeration
+        # If enabled, verify machines and enrichment specifications from the web
+        from config import WEB_SEARCH_ENABLED
+        if WEB_SEARCH_ENABLED:
+            try:
+                from utils.web_search import aggregator as web_search
+                machines_stage = final_json.get("stage_4_machines_equipements", {})
+                machine_list = machines_stage.get("machines_production", [])
+                
+                if isinstance(machine_list, list) and machine_list:
+                    logger.info("Enriching %d machines with web search...", len(machine_list))
+                    
+                    for m in machine_list:
+                         if not isinstance(m, dict): continue
+                         name = m.get("nom_machine")
+                         if not name: continue
+                         
+                         manufacturer = m.get("fabricant_recommande", "")
+                         
+                         try:
+                             # Search specs
+                             specs = web_search.search_machine_specs(name, manufacturer)
+                             
+                             # Update manufacturer if missing or generic
+                             if specs.manufacturer and (not manufacturer or len(manufacturer) < 3):
+                                 m["fabricant_recommande"] = specs.manufacturer
+                             elif specs.manufacturer_website and not m.get("source_reference"):
+                                 m["source_reference"] = specs.manufacturer_website
+                                 
+                             # Enrich specs
+                             curr_specs = m.get("specifications", {})
+                             if specs.specifications and isinstance(curr_specs, dict):
+                                 for k, v in specs.specifications.items():
+                                     if k not in curr_specs or not curr_specs[k]:
+                                         curr_specs[k] = v
+                                 m["specifications"] = curr_specs
+                                 
+                             # Add datasheet/image links to a new field if possible (though schema is strict-ish, we can try adding non-breaking fields)
+                             # Module 4 is the main consumer, but adding here helps downstream
+                             m["_web_enrichment"] = {
+                                 "datasheets": specs.datasheet_urls,
+                                 "images": specs.image_urls,
+                                 "sources": specs.sources
+                             }
+                             
+                         except Exception as e:
+                             logger.warning("Web enrichment failed for %s: %s", name, e)
+                             
+                    logger.info("Web enrichment complete.")
+            except ImportError:
+                logger.warning("Could not import web_search utils")
+            except Exception as e:
+                logger.warning("Web search enrichment stage failed: %s", e)
 
         # Save
         out_dir = Path(output_dir)
