@@ -1,7 +1,7 @@
 import os
 import re
 import mimetypes
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
 from supabase import create_client, Client
@@ -15,8 +15,10 @@ SUPABASE_BUCKET_PUBLIC = os.getenv("SUPABASE_BUCKET_PUBLIC", "public-assets")
 SUPABASE_SIGNED_URL_EXPIRES = int(os.getenv("SUPABASE_SIGNED_URL_EXPIRES", "3600"))
 
 
+
+
 def _now_stamp() -> str:
-    return datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
 
 def _safe_name(name: str) -> str:
@@ -377,26 +379,47 @@ def insert_video(
 
 def delete_project_files(client: Client, project_id: str, bucket: str = SUPABASE_BUCKET_FILES) -> Tuple[int, Optional[str]]:
     """
-    Delete all files in the storage bucket for a given project.
+    Recursively delete all files in the storage bucket for a given project.
     Returns (count_deleted, error_message).
     """
     try:
-        # List all files in the project folder
-        res = client.storage.from_(bucket).list(project_id)
+        all_file_paths = []
         
-        if not res:
+        def collect_files(path: str):
+            res = client.storage.from_(bucket).list(path)
+            if not res:
+                return
+            
+            for item in res:
+                item_name = item.get('name')
+                if not item_name:
+                    continue
+                    
+                full_path = f"{path}/{item_name}"
+                # In Supabase storage list, items without an ID are typically folders
+                # or you can check if it's a file by trying to list it or checking metadata
+                # A common pattern is that files have 'metadata' or 'id'
+                if item.get('id') is None:
+                    # It's a folder, recurse
+                    collect_files(full_path)
+                else:
+                    # It's a file
+                    all_file_paths.append(full_path)
+
+        # Start collection from project root
+        collect_files(project_id)
+        
+        if not all_file_paths:
             return (0, None)
         
-        # Build list of file paths to delete
-        file_paths = [f"{project_id}/{item['name']}" for item in res if item.get('name')]
+        # Supabase remove takes chunks of paths
+        # Delete in batches of 100 to avoid request size limits if many files
+        batch_size = 100
+        for i in range(0, len(all_file_paths), batch_size):
+            batch = all_file_paths[i:i + batch_size]
+            client.storage.from_(bucket).remove(batch)
         
-        if not file_paths:
-            return (0, None)
-        
-        # Delete all files
-        client.storage.from_(bucket).remove(file_paths)
-        
-        return (len(file_paths), None)
+        return (len(all_file_paths), None)
     except Exception as e:
         return (0, str(e))
 

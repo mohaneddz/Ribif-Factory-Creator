@@ -568,65 +568,7 @@ class RIBIFExtractor:
         # NOTE: We no longer call _global_fill_no_nulls because we want to preserve
         # "N/A" and missing values rather than fabricating data.
 
-        # NEW: Web Search Post-Processing Enumeration
-        # If enabled, verify machines and enrichment specifications from the web
-        from config import WEB_SEARCH_ENABLED
-        if WEB_SEARCH_ENABLED:
-            try:
-                from utils.web_search.agentic import agentic_search
-                machines_stage = final_json.get("stage_4_machines_equipements", {})
-                machine_list = machines_stage.get("machines_production", [])
-                
-                if isinstance(machine_list, list) and machine_list:
-                    logger.info("Enriching %d machines with Agentic Web Search...", len(machine_list))
-                    
-                if isinstance(machine_list, list) and machine_list:
-                    logger.info("Enriching %d machines with Agentic Web Search (Parallel 7 workers)...", len(machine_list))
-                    
-                    def _enrich_one(m):
-                         if not isinstance(m, dict): return
-                         name = m.get("nom_machine")
-                         if not name: return
-                         
-                         manufacturer = m.get("fabricant_recommande", "")
-                         try:
-                             # Search specs Agentically
-                             specs = agentic_search.search_specs_agentic(name, manufacturer)
-                             
-                             # Update manufacturer if missing or generic
-                             if specs.manufacturer and (not manufacturer or len(manufacturer) < 3):
-                                 m["fabricant_recommande"] = specs.manufacturer
-                             elif specs.manufacturer_website and not m.get("source_reference"):
-                                 m["source_reference"] = specs.manufacturer_website
-                                 
-                             # Enrich specs
-                             curr_specs = m.get("specifications", {})
-                             if specs.specifications and isinstance(curr_specs, dict):
-                                 for k, v in specs.specifications.items():
-                                     if k not in curr_specs or not curr_specs[k]:
-                                         curr_specs[k] = v
-                                 m["specifications"] = curr_specs
-                                 
-                             # Add datasheet/image links
-                             m["_web_enrichment"] = {
-                                 "datasheets": specs.datasheet_urls,
-                                 "images": specs.image_urls,
-                                 "sources": specs.sources,
-                                 "agentic_notes": "Enriched via Agentic Loop"
-                             }
-                         except Exception as e:
-                             logger.warning("Agentic Web enrichment failed for %s: %s", name, e)
-
-                    with ThreadPoolExecutor(max_workers=7) as executor:
-                        futures = [executor.submit(_enrich_one, m) for m in machine_list]
-                        for _ in as_completed(futures):
-                            pass
-                             
-                    logger.info("Agentic Web enrichment complete.")
-            except ImportError:
-                logger.warning("Could not import agentic_search utils")
-            except Exception as e:
-                logger.warning("Web search enrichment stage failed: %s", e)
+        # Web enrichment is now handled by the RIBIFEnricher in the pipeline route.
 
         # Save
         out_dir = Path(output_dir)

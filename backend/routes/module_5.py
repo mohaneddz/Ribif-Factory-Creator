@@ -1,7 +1,7 @@
 import base64
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from flask import Blueprint, jsonify, request
 
@@ -105,7 +105,7 @@ def module5_text_negotiation():
         # Persist output for traceability
         output_dir = OUTPUT_DIRS.get("module5")
         if output_dir:
-            filename = f"module_5_text_{int(datetime.utcnow().timestamp())}.json"
+            filename = f"module_5_text_{int(datetime.now(timezone.utc).timestamp())}.json"
             write_json(output_dir / filename, result)
 
         return jsonify(result)
@@ -150,7 +150,7 @@ def module5_voice_negotiation():
         # Persist output for traceability
         output_dir = OUTPUT_DIRS.get("module5")
         if output_dir:
-            filename = f"module_5_voice_{int(datetime.utcnow().timestamp())}.json"
+            filename = f"module_5_voice_{int(datetime.now(timezone.utc).timestamp())}.json"
             write_json(output_dir / filename, result)
 
         return jsonify(result)
