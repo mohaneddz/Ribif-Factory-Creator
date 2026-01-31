@@ -345,6 +345,7 @@ class RIBIFModule8PitchDeck:
         
         try:
             logger.info("Calling Presenton API: %s", generate_endpoint)
+            logger.info("API Key present: %s", bool(self.presenton_api_key))
             response = requests.post(
                 generate_endpoint,
                 json=payload,
@@ -356,7 +357,9 @@ class RIBIFModule8PitchDeck:
                 timeout=180
             )
             
+            logger.info("Presenton API response status: %s", response.status_code)
             if response.status_code != 200:
+                logger.error("Presenton API error response: %s", response.text[:1000] if response.text else "empty")
                 raise Exception(f"Presenton API error ({response.status_code}): {response.text}")
             
             result = response.json()
@@ -372,12 +375,15 @@ class RIBIFModule8PitchDeck:
                 file_url = presenton_path if presenton_path.startswith("http") else f"{self.presenton_url}{presenton_path}"
                 logger.info("Downloading from: %s", file_url)
                 
+                # Don't use Authorization header for S3 pre-signed URLs
+                download_headers = {"Accept": "application/pdf"}
+                # Only add auth header if it's a Presenton URL, not S3/cloud storage
+                if "presenton" in file_url.lower() and "s3" not in file_url.lower() and "amazonaws" not in file_url.lower():
+                    download_headers["Authorization"] = f"Bearer {self.presenton_api_key}"
+                
                 download_response = requests.get(
                     file_url,
-                    headers={
-                        "Accept": "application/pdf",
-                        "Authorization": f"Bearer {self.presenton_api_key}"
-                    },
+                    headers=download_headers,
                     timeout=60
                 )
                 

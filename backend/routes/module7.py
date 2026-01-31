@@ -6,8 +6,9 @@ from supabase_utils import get_supabase, insert_business_plan, insert_pitch_deck
 from utils.module_7.business_plan import RIBIFModule7BusinessPlan, BusinessPlanInput
 from utils.module_7.pitch_deck import RIBIFModule8PitchDeck, PitchDeckInput
 from utils.app_helpers import get_request_user_id, load_template_payload, upload_and_register_file
-from utils.logger import log_skip
+from utils.logger import log_skip, get_logger
 
+logger = get_logger(__name__)
 bp_module7 = Blueprint("module7", __name__)
 
 
@@ -89,8 +90,9 @@ def generate_business_plan():
                     filename=result.filename,
                     data=data_payload,
                 )
-            except Exception:
-                pass
+                logger.info("Business plan data saved to project %s", project_id)
+            except Exception as e:
+                logger.error("Failed to save business plan to DB: %s", e)
 
         return jsonify(response_payload)
     except Exception as e:
@@ -195,9 +197,11 @@ def generate_pitch_deck():
                     edit_url=None,
                     data=data_payload,
                 )
-            except Exception:
-                pass
+                logger.info("Pitch deck data saved to project %s", project_id)
+            except Exception as e:
+                logger.error("Failed to save pitch deck to DB: %s", e)
 
         return jsonify(response_payload)
     except Exception as e:
+        logger.error("Pitch deck generation failed: %s", e, exc_info=True)
         return jsonify({"error": str(e)}), 500

@@ -5,8 +5,9 @@ from config import BASE_URL, OUTPUT_DIRS, SKIP_MODULE_9
 from supabase_utils import get_supabase, insert_catalog
 from utils.module_9.core import RIBIFModule9Catalog, CatalogInput
 from utils.app_helpers import get_request_user_id, load_template_payload, upload_and_register_file
-from utils.logger import log_skip
+from utils.logger import log_skip, get_logger
 
+logger = get_logger(__name__)
 bp_module9 = Blueprint("module9", __name__)
 
 
@@ -85,8 +86,9 @@ def generate_catalog_module9():
                     html_file_id=response_payload.get("html_file_id"),
                     data=data_payload,
                 )
-            except Exception:
-                pass
+                logger.info("Catalog data saved to project %s", project_id)
+            except Exception as e:
+                logger.error("Failed to save catalog to DB: %s", e)
 
         return jsonify(response_payload)
     except Exception as e:
