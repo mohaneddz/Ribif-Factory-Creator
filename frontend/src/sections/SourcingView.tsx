@@ -99,13 +99,11 @@ export const SourcingView = ({ progress, data, module4Data, loading }: { progres
                     <>
                         {/* Machine Header */}
                         <div className="flex items-start gap-4 mb-6 pb-6 border-b border-slate-100 dark:border-white/5">
-                            <div className="w-20 h-20 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center overflow-hidden">
-                                {currentMachine.machine_input?.best_image_url && !currentMachine.machine_input.best_image_url.startsWith('generated://') ? (
+                            {currentMachine.machine_input?.best_image_url && !currentMachine.machine_input.best_image_url.startsWith('generated://') && (
+                                <div className="w-20 h-20 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center overflow-hidden">
                                     <img src={currentMachine.machine_input.best_image_url} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                    <Layers size={32} className="text-slate-400 dark:text-slate-600" />
-                                )}
-                            </div>
+                                </div>
+                            )}
                             <div className="flex-1">
                                 <h2 className="text-xl font-extrabold text-slate-800 dark:text-white">{renderValue(currentMachine.machine_input?.nom_machine)}</h2>
                                 <p className="text-sm text-slate-500 dark:text-slate-400">{renderValue(currentMachine.machine_input?.type)}</p>
