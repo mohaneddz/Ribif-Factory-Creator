@@ -172,24 +172,49 @@ class RIBIFModule6TCO:
     RIBIF Module 6: Total Cost of Ownership Calculator
     Uses Gemini API for intelligent cost estimation with Algerian market context
     Supports English and French input/output
+    All monetary values are in Algerian Dinar (DZD)
     """
     
-    SYSTEM_PROMPT = """You are an expert in financial analysis and industrial cost estimation in Algeria.
-You must estimate the acquisition, operating, maintenance, and disposal costs of industrial equipment.
+    SYSTEM_PROMPT = """You are an expert in financial analysis and industrial cost estimation for SMALL TO MID-SIZE companies in Algeria.
+You must estimate realistic acquisition, operating, maintenance, and disposal costs of industrial equipment.
 
-IMPORTANT ALGERIAN CONTEXT:
-- Labor costs: relatively low (average technician salary: 50,000-80,000 DZD/month)
-- Energy costs: subsidized electricity (~5 DZD/kWh industrial)
-- Spare parts: often imported, 30-50% markup on international prices
-- Preventive maintenance: less common, tendency for corrective maintenance
-- Exchange rate: consider ~135 DZD for 1 EUR
-- Inflation: approximately 7-9% annually
-- Logistics costs: high for imports (Algiers port, customs)
-- Skilled labor: limited availability, training required
-- Equipment lifespan: generally 10-15 years for industrial machines
-- Used machines: 40-60% of new price
+CRITICAL: These are SMALL TO MID-SIZE Algerian companies with annual revenue of 50M-500M DZD.
+All prices must be realistic for this market segment - NOT prices for large multinationals.
 
-Respond ONLY with valid JSON containing estimates in DZD."""
+ALL VALUES MUST BE IN ALGERIAN DINAR (DZD).
+
+IMPORTANT ALGERIAN MARKET CONTEXT:
+- Labor costs: Technician salary 50,000-80,000 DZD/month, Engineer 100,000-150,000 DZD/month
+- Energy costs: Industrial electricity ~5-8 DZD/kWh
+- Spare parts: Often imported, add 30-50% markup on international prices
+- Equipment import: Customs duties 15-30%, freight adds 10-20%
+- Inflation: ~7-9% annually
+- Equipment lifespan: 8-15 years for industrial machines
+- Used equipment: 40-60% of new price
+
+REALISTIC PRICE RANGES FOR SMALL/MID-SIZE COMPANIES (DZD):
+- Small injection molding machine (up to 200 tons): 8,000,000 - 25,000,000 DZD
+- Medium injection molding machine (200-500 tons): 25,000,000 - 60,000,000 DZD
+- Large injection molding machine (500-1000 tons): 60,000,000 - 150,000,000 DZD
+- CNC machine (basic to mid-range): 15,000,000 - 50,000,000 DZD
+- Industrial mixer/blender: 3,000,000 - 15,000,000 DZD
+- Packaging machine: 5,000,000 - 30,000,000 DZD
+- Conveyor system: 2,000,000 - 10,000,000 DZD
+- Compressor (industrial): 2,000,000 - 8,000,000 DZD
+- Chiller unit: 3,000,000 - 12,000,000 DZD
+
+RAW MATERIAL PRICES (DZD per tonne, CIF Algeria):
+- Standard polymers (PP, PE, PVC): 180,000 - 280,000 DZD/tonne
+- Engineering plastics (ABS, PC): 280,000 - 400,000 DZD/tonne
+- Specialty resins (epoxy, PU): 350,000 - 550,000 DZD/tonne
+- Additives/colorants: 400,000 - 800,000 DZD/tonne
+
+ANNUAL COST GUIDELINES:
+- Maintenance: 3-8% of purchase price annually
+- Operations (energy, labor): 10-20% of purchase price annually
+- Downtime losses: 1-3% of annual production value
+
+Respond ONLY with valid JSON containing estimates in DZD (Algerian Dinar)."""
 
     # French keywords for language detection
     FRENCH_KEYWORDS = [
@@ -281,43 +306,6 @@ Respond ONLY with valid JSON containing estimates in DZD."""
         except Exception as e:
             logger.error("Gemini API Error: %s", e)
             return {}
-
-    def _get_defaults_by_capacity(self, capacite: str, manufacturer: str) -> Dict:
-        """Get default price estimates based on machine capacity"""
-        try:
-            numbers = re.findall(r'(\d+)', capacite)
-            if len(numbers) >= 2:
-                min_cap = int(numbers[0])
-                max_cap = int(numbers[1])
-                avg_cap = (min_cap + max_cap) / 2
-            elif len(numbers) == 1:
-                avg_cap = int(numbers[0])
-            else:
-                avg_cap = 500
-        except:
-            avg_cap = 500
-        
-        if avg_cap <= 200:
-            price_eur = 200000
-        elif avg_cap <= 500:
-            price_eur = 400000
-        elif avg_cap <= 1000:
-            price_eur = 700000
-        elif avg_cap <= 2000:
-            price_eur = 1200000
-        elif avg_cap <= 3000:
-            price_eur = 2000000
-        else:
-            price_eur = 3000000
-        
-        price_dzd = price_eur * 135
-        
-        if manufacturer.lower() in ['engel', 'arburg']:
-            price_dzd *= 0.95
-        elif manufacturer.lower() in ['haitian', 'chen hsong']:
-            price_dzd *= 0.60
-        
-        return {"price": price_dzd}
 
     def _validate_machine_estimate(self, result: Dict, machine: Dict) -> Dict:
         """Validate required values in the estimate and fail if missing."""
@@ -501,13 +489,86 @@ Respond in JSON:
 
     def estimate_product_costs(
         self, 
-        product: Dict[str, Any], 
-        machine_tco: Dict[str, Any]
-    ) -> Dict[str, float]:
+        products: List[Dict[str, Any]], 
+        avg_machine_annual: float,
+        stage_1: Dict[str, Any] = None,
+        stage_3: Dict[str, Any] = None,
+    ) -> Dict[str, Dict[str, float]]:
         """
-        Estimate product TCO components.
+        Estimate product TCO components using LLM for realistic cost estimation.
+        Returns a dict mapping product name to cost estimates.
         """
-        raise ValueError("Product TCO estimation requires explicit inputs; fallback estimation is disabled.")
+        if not products:
+            return {}
+        
+        # Build product list for prompt
+        products_text = ""
+        product_names = []
+        for i, p in enumerate(products, 1):
+            nom = p.get("nom_produit", "Unknown")
+            product_names.append(nom)
+            categorie = p.get("categorie", "finished")
+            quantite = p.get("quantite_annuelle", 0)
+            products_text += f"{i}. {nom} (category: {categorie}, annual qty: {quantite})\n"
+        
+        company_info = ""
+        if stage_1:
+            info = stage_1.get("informations_generales", {})
+            company_info = f"""
+Company context:
+- Company: {info.get("nom_entreprise", "Unknown")}
+- Sector: {info.get("secteur_activite", "Manufacturing")}
+- Size: Small to mid-size Algerian company
+"""
+
+        prompt = f"""Estimate product handling and logistics costs for these products for a small/mid-size Algerian manufacturer:
+
+{products_text}
+
+{company_info}
+
+Reference: Average annual machine TCO is {avg_machine_annual:,.0f} DZD.
+
+For each product, estimate realistic costs in DZD for:
+1. landing_cost: Import duties, freight, customs clearance for raw materials/components
+2. holding_cost: Inventory storage, warehousing, insurance costs
+3. quality_cost: Quality control, testing, certification, defect handling
+4. administrative_cost: Documentation, customs paperwork, procurement overhead
+
+IMPORTANT: These should be REALISTIC costs for a SMALL/MID-SIZE company:
+- Landing cost: typically 1-4% of material costs
+- Holding cost: typically 1-3% of material costs  
+- Quality cost: typically 0.5-2% of production value
+- Administrative cost: typically 0.5-1.5% of procurement costs
+
+Return ONLY a JSON object mapping product names to cost estimates:
+{{
+    "Product Name 1": {{
+        "landing_cost": <number in DZD>,
+        "holding_cost": <number in DZD>,
+        "quality_cost": <number in DZD>,
+        "administrative_cost": <number in DZD>
+    }},
+    ...
+}}
+"""
+        
+        result = self.call_gemini(prompt)
+        
+        if not result:
+            logger.warning("LLM did not return product cost estimates, using conservative defaults")
+            # Return conservative defaults based on avg_machine_annual
+            return {
+                name: {
+                    "landing_cost": avg_machine_annual * 0.03,
+                    "holding_cost": avg_machine_annual * 0.02,
+                    "quality_cost": avg_machine_annual * 0.015,
+                    "administrative_cost": avg_machine_annual * 0.01,
+                }
+                for name in product_names
+            }
+        
+        return result
 
     def estimate_raw_material_costs(
         self, 
@@ -571,44 +632,6 @@ Respond in JSON:
         
         return results
 
-    def _get_fallback_material_estimate(self, nom: str, type_mat: str = "") -> Dict:
-        """
-        Provide reasonable fallback estimates for materials when LLM doesn't return them.
-        Based on typical Algerian market prices for common industrial materials.
-        """
-        # Default polymer/thermoplastic estimates (DZD per tonne, CIF Algeria)
-        defaults = {
-            "unit_price": 320000,  # ~2370 EUR/tonne average for imported polymers
-            "transport_pct": 0.15,  # 15% for maritime + land transport
-            "storage_pct": 0.03,    # 3% for warehousing
-            "wastage_pct": 0.025,   # 2.5% material loss
-            "confidence": "low",
-            "notes": "Fallback estimate - LLM did not provide specific data"
-        }
-        
-        # Adjust based on material type keywords
-        nom_lower = nom.lower()
-        type_lower = type_mat.lower() if type_mat else ""
-        
-        # Higher-end materials
-        if any(kw in nom_lower or kw in type_lower for kw in ["époxy", "epoxy", "polyuréthane", "polyurethane", "silicone"]):
-            defaults["unit_price"] = 380000
-            defaults["transport_pct"] = 0.18
-        
-        # Standard polymers
-        elif any(kw in nom_lower or kw in type_lower for kw in ["pvc", "abs", "pc", "pp", "pe", "ps", "thermoplast"]):
-            defaults["unit_price"] = 280000
-            defaults["transport_pct"] = 0.12
-        
-        # Additives and specialized materials
-        elif any(kw in nom_lower or kw in type_lower for kw in ["additif", "additive", "pigment", "colorant", "stabilisant"]):
-            defaults["unit_price"] = 450000
-            defaults["transport_pct"] = 0.10
-            defaults["storage_pct"] = 0.05
-        
-        logger.warning(f"Using fallback estimate for material: {nom} (type: {type_mat})")
-        return defaults
-
     def _estimate_materials_batch(self, materials: List[Dict]) -> Dict[str, Dict]:
         """Estimate all raw material prices in a single LLM call for performance"""
         if not materials:
@@ -662,38 +685,77 @@ Example format:
                 returned_materials = list(result.keys())
                 logger.info(f"LLM returned estimates for {len(returned_materials)} materials: {returned_materials}")
                 
-                # Check for missing materials and add fallback estimates
+                # Check for missing materials - raise error if any missing
                 missing_materials = set(material_names) - set(returned_materials)
                 if missing_materials:
                     logger.warning(f"LLM did not return estimates for {len(missing_materials)} materials: {list(missing_materials)}")
-                    # Add fallback estimates for missing materials
-                    for m in materials:
-                        nom = m.get("nom_materiau", "Unknown")
-                        if nom in missing_materials:
-                            type_mat = m.get("type", "")
-                            result[nom] = self._get_fallback_material_estimate(nom, type_mat)
-                            logger.info(f"Added fallback estimate for: {nom}")
+                    # Retry with just the missing materials
+                    retry_materials = [m for m in materials if m.get("nom_materiau", "Unknown") in missing_materials]
+                    if retry_materials:
+                        logger.info(f"Retrying LLM estimation for {len(retry_materials)} missing materials")
+                        retry_result = self._estimate_materials_batch_single(retry_materials)
+                        if retry_result:
+                            result.update(retry_result)
                 
                 return result
             
-            # If LLM returns empty, use fallbacks for all
-            logger.warning("Empty LLM response - using fallback estimates for all materials")
-            result = {}
-            for m in materials:
-                nom = m.get("nom_materiau", "Unknown")
-                type_mat = m.get("type", "")
-                result[nom] = self._get_fallback_material_estimate(nom, type_mat)
-            return result
+            # If LLM returns empty, raise error
+            raise ValueError("LLM returned empty response for material estimation. Please provide more context or retry.")
             
+        except ValueError:
+            raise
         except Exception as e:
-            logger.error(f"Batch material estimation failed: {e} - using fallback estimates")
-            # Return fallback estimates instead of failing
-            result = {}
-            for m in materials:
-                nom = m.get("nom_materiau", "Unknown")
-                type_mat = m.get("type", "")
-                result[nom] = self._get_fallback_material_estimate(nom, type_mat)
-            return result
+            logger.error(f"Batch material estimation failed: {e}")
+            raise ValueError(f"Material cost estimation failed: {e}. Please retry or provide manual estimates.")
+
+    def _estimate_materials_batch_single(self, materials: List[Dict]) -> Dict[str, Dict]:
+        """Retry estimation for individual materials that failed in batch."""
+        if not materials:
+            return {}
+        
+        result = {}
+        for m in materials:
+            nom = m.get("nom_materiau", "Unknown")
+            type_mat = m.get("type", "")
+            quantite_info = m.get("quantite_estimee", {})
+            quantite = quantite_info.get("valeur", 0)
+            unite = quantite_info.get("unite", "tonnes")
+            
+            prompt = f"""Estimate the purchase price for this raw material for industry in Algeria:
+
+Material: {nom}
+Type: {type_mat}
+Annual quantity needed: {quantite} {unite}
+
+Provide realistic prices for SMALL TO MID-SIZE Algerian companies in DZD (Algerian Dinar).
+
+RAW MATERIAL PRICE GUIDELINES (DZD per tonne, CIF Algeria):
+- Standard polymers (PP, PE, PVC): 180,000 - 280,000 DZD/tonne
+- Engineering plastics (ABS, PC): 280,000 - 400,000 DZD/tonne
+- Specialty resins (epoxy, PU): 350,000 - 550,000 DZD/tonne
+- Additives/colorants: 400,000 - 800,000 DZD/tonne
+- Industrial solvents: 150,000 - 300,000 DZD/tonne
+- Glass materials: 200,000 - 500,000 DZD/tonne
+
+Return ONLY a JSON object:
+{{
+    "unit_price": <number - price per tonne in DZD>,
+    "transport_pct": <number - transport cost as decimal, e.g. 0.12 for 12%>,
+    "storage_pct": <number - storage cost as decimal>,
+    "wastage_pct": <number - material loss as decimal>,
+    "confidence": "<high/medium/low>",
+    "notes": "<brief note about the estimate>"
+}}"""
+            
+            try:
+                estimate = self.call_gemini(prompt)
+                if estimate and isinstance(estimate, dict):
+                    result[nom] = estimate
+                    logger.info(f"Got single estimate for: {nom}")
+            except Exception as e:
+                logger.warning(f"Failed to get estimate for {nom}: {e}")
+        
+        return result
 
     def _validate_material_estimate(self, result: Dict, material: Dict) -> Dict:
         """Validate material estimate and fail if missing."""

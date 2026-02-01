@@ -33,11 +33,16 @@ from utils.module_5.negotiation_manager import (
     generate_reply_subject,
     generate_negotiation_email,
     generate_acceptance_email,
+    generate_voice_call_confirmation_email,
+    generate_voice_call_confirmation_subject,
+    generate_negotiation_link_email,
+    generate_negotiation_link_subject,
     parse_supplier_response,
 )
 from utils.email_service import send_email, poll_inbox, watch_inbox
 from utils.app_helpers import get_request_project_id
 from utils.logger import get_logger
+import supabase_utils
 
 logger = get_logger(__name__)
 
@@ -200,7 +205,7 @@ def start_negotiation():
         "buyer_requirements": {
             "target_price": 500000,
             "max_price": 600000,
-            "currency": "EUR",
+            "currency": "DZD",
             "preferred_incoterms": ["DDP", "CIF"],
             "max_lead_time_days": 90,
             "min_warranty_months": 24,
@@ -934,6 +939,7 @@ def save_voice_negotiation():
     """
     Save voice negotiation result back to the thread.
     Called by the voice call page when a call ends.
+    Also sends a confirmation email to the supplier.
     """
     try:
         if not request.is_json:
@@ -944,6 +950,7 @@ def save_voice_negotiation():
         # Extract thread ID from machine_id (first 8 chars) or look up by supplier
         machine_id = payload.get("machine_id", "")
         supplier_email = payload.get("supplier_email", "")
+        send_confirmation_email = payload.get("send_confirmation_email", True)
         
         # Try to find the thread
         thread = None
@@ -991,24 +998,602 @@ def save_voice_negotiation():
             update_thread_status(thread, NegotiationStatus.ACCEPTED)
             thread.best_offer = {
                 "price": payload.get("final_price_per_unit"),
-                "currency": "EUR",
+                "currency": "DZD",
                 "source": "voice_negotiation",
                 "_score": 100,
             }
         
         save_thread(thread)
         
+        # Send confirmation email to supplier
+        email_result = None
+        if send_confirmation_email and payload.get("final_status") == "ACCEPTED":
+            try:
+                # Apply test email override if configured
+                recipient_email = TEST_RECIPIENT_EMAIL if TEST_RECIPIENT_EMAIL else thread.supplier_email
+                
+                # Generate email content
+                subject = generate_voice_call_confirmation_subject(thread)
+                body = generate_voice_call_confirmation_email(thread, voice_result)
+                
+                email_config = _get_email_config()
+                
+                send_payload = {
+                    **email_config,
+                    "to": [recipient_email],
+                    "subject": subject,
+                    "text": body,
+                    "from_address": thread.buyer_email,
+                    "reply_to": thread.buyer_email,
+                }
+                
+                result = send_email(send_payload)
+                
+                # Record email in thread
+                add_email_to_thread(
+                    thread=thread,
+                    message_id=result.get("message_id", ""),
+                    direction="outbound",
+                    subject=subject,
+                    body_text=body,
+                    from_address=thread.buyer_email,
+                    to_address=recipient_email,
+                )
+                save_thread(thread)
+                
+                email_result = {
+                    "status": "sent",
+                    "message_id": result.get("message_id"),
+                    "recipient": recipient_email,
+                }
+                logger.info(f"Sent voice call confirmation email to {recipient_email}")
+                
+            except Exception as e:
+                logger.error(f"Failed to send confirmation email: {e}")
+                email_result = {
+                    "status": "failed",
+                    "error": str(e),
+                }
+        
         return jsonify({
             "status": "success",
             "message": "Voice negotiation result saved to thread",
             "thread_id": thread.thread_id,
             "thread": thread.to_dict(),
+            "confirmation_email": email_result,
         })
         
     except Exception as e:
         logger.exception("Error saving voice negotiation")
         return jsonify({"error": str(e), "status": "error"}), 500
+
+
+# ============================================================
+# NEW: Voice-First Negotiation Endpoints (Supabase-backed)
+# ============================================================
+
+# Frontend base URL for negotiation links
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:3000")
+
+
+@bp_module5.route("/api/module5/v2/negotiations/create", methods=["POST"])
+def create_negotiation_v2():
+    """
+    Create a new negotiation record in Supabase.
+    Called after supplier confirms product info, before sending negotiation link.
+    
+    Required payload:
+    {
+        "project_id": "uuid",
+        "supplier_name": "Supplier Corp",
+        "machine_name": "CNC Mill X500",
+        "quantity": 2,
+        "supplier_email": "sales@supplier.com",
+        "initial_price_estimate": 5000.00,
+        ...
+    }
+    """
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Expected JSON input"}), 400
+        
+        payload = request.get_json() or {}
+        
+        project_id = payload.get("project_id")
+        if not project_id:
+            return jsonify({"error": "project_id is required"}), 400
+        
+        supplier_name = payload.get("supplier_name")
+        machine_name = payload.get("machine_name")
+        if not supplier_name or not machine_name:
+            return jsonify({"error": "supplier_name and machine_name are required"}), 400
+        
+        client = supabase_utils.get_supabase()
+        if not client:
+            return jsonify({"error": "Supabase not configured"}), 500
+        
+        negotiation = supabase_utils.create_negotiation(
+            client=client,
+            project_id=project_id,
+            supplier_name=supplier_name,
+            machine_name=machine_name,
+            quantity=payload.get("quantity", 1),
+            supplier_email=payload.get("supplier_email"),
+            supplier_phone=payload.get("supplier_phone"),
+            supplier_website=payload.get("supplier_website"),
+            supplier_region=payload.get("supplier_region"),
+            machine_type=payload.get("machine_type"),
+            initial_price_estimate=payload.get("initial_price_estimate"),
+            currency=payload.get("currency", "DZD"),
+            buyer_company=payload.get("buyer_company", "RIBIF Algeria"),
+            buyer_email=payload.get("buyer_email"),
+            buyer_contact_name=payload.get("buyer_contact_name"),
+        )
+        
+        if not negotiation:
+            return jsonify({"error": "Failed to create negotiation"}), 500
+        
+        return jsonify({
+            "status": "success",
+            "negotiation": negotiation,
+        })
         
     except Exception as e:
+        logger.exception("Error creating negotiation")
         return jsonify({"error": str(e), "status": "error"}), 500
 
+
+@bp_module5.route("/api/module5/v2/negotiations/<negotiation_id>/send-link", methods=["POST"])
+def send_negotiation_link(negotiation_id: str):
+    """
+    Send voice negotiation link email to the supplier.
+    
+    Optional payload:
+    {
+        "buyer_email": "override@company.com"  // Override sender email
+    }
+    """
+    try:
+        payload = request.get_json() or {} if request.is_json else {}
+        
+        client = supabase_utils.get_supabase()
+        if not client:
+            return jsonify({"error": "Supabase not configured"}), 500
+        
+        # Get negotiation
+        negotiation = supabase_utils.get_negotiation_by_id(client, negotiation_id)
+        if not negotiation:
+            return jsonify({"error": "Negotiation not found"}), 404
+        
+        supplier_email = negotiation.get("supplier_email")
+        if not supplier_email:
+            return jsonify({"error": "Supplier email not set"}), 400
+        
+        # Apply test override if configured
+        recipient_email = TEST_RECIPIENT_EMAIL if TEST_RECIPIENT_EMAIL else supplier_email
+        
+        # Build negotiation link
+        link_token = negotiation.get("link_token")
+        negotiation_link = f"{FRONTEND_BASE_URL}/voice-call?token={link_token}"
+        
+        # Generate email
+        subject = generate_negotiation_link_subject(negotiation.get("machine_name"))
+        body = generate_negotiation_link_email(
+            supplier_name=negotiation.get("supplier_name"),
+            machine_name=negotiation.get("machine_name"),
+            quantity=negotiation.get("quantity", 1),
+            negotiation_link=negotiation_link,
+            buyer_company=negotiation.get("buyer_company", "RIBIF Algeria"),
+            buyer_contact_name=negotiation.get("buyer_contact_name", ""),
+            initial_price_estimate=negotiation.get("initial_price_estimate"),
+        )
+        
+        # Send email
+        email_config = _get_email_config(payload)
+        buyer_email = payload.get("buyer_email") or negotiation.get("buyer_email") or NEGOTIATION_SMTP_USERNAME
+        
+        send_payload = {
+            **email_config,
+            "to": [recipient_email],
+            "subject": subject,
+            "text": body,
+            "from_address": buyer_email,
+            "reply_to": buyer_email,
+        }
+        
+        result = send_email(send_payload)
+        
+        # Update negotiation status
+        supabase_utils.mark_negotiation_link_sent(client, negotiation_id)
+        
+        # Record email
+        email_record = {
+            "type": "negotiation_link",
+            "message_id": result.get("message_id"),
+            "recipient": recipient_email,
+            "subject": subject,
+            "sent_at": datetime.now(timezone.utc).isoformat(),
+        }
+        supabase_utils.add_email_to_negotiation(client, negotiation_id, email_record)
+        
+        logger.info(f"Sent negotiation link to {recipient_email} for negotiation {negotiation_id}")
+        
+        return jsonify({
+            "status": "success",
+            "message": "Negotiation link sent",
+            "negotiation_id": negotiation_id,
+            "recipient": recipient_email,
+            "link": negotiation_link,
+            "message_id": result.get("message_id"),
+        })
+        
+    except Exception as e:
+        logger.exception("Error sending negotiation link")
+        return jsonify({"error": str(e), "status": "error"}), 500
+
+
+@bp_module5.route("/api/module5/v2/negotiations/by-token/<link_token>", methods=["GET"])
+def get_negotiation_by_token(link_token: str):
+    """
+    Get negotiation data by link token (for supplier access via voice-call page).
+    This is called by the voice-call page when a supplier clicks the negotiation link.
+    """
+    try:
+        client = supabase_utils.get_supabase()
+        if not client:
+            return jsonify({"error": "Supabase not configured"}), 500
+        
+        negotiation = supabase_utils.get_negotiation_by_token(client, link_token)
+        if not negotiation:
+            return jsonify({"error": "Invalid or expired link"}), 404
+        
+        # Check if link is expired
+        expires_at = negotiation.get("link_expires_at")
+        if expires_at:
+            from datetime import datetime
+            try:
+                exp_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+                if datetime.now(timezone.utc) > exp_dt:
+                    return jsonify({"error": "This negotiation link has expired"}), 410
+            except:
+                pass
+        
+        # Check if already completed
+        if negotiation.get("status") in ["completed", "accepted", "rejected"]:
+            return jsonify({
+                "error": "This negotiation has already been completed",
+                "status": negotiation.get("status"),
+            }), 410
+        
+        # Update status to in_progress if not already
+        if negotiation.get("status") == "link_sent":
+            supabase_utils.update_negotiation_status(client, negotiation["id"], "in_progress")
+        
+        # Return negotiation data formatted for voice-call page
+        negotiation_data = {
+            "machine_input": {
+                "id": negotiation.get("id"),
+                "name": negotiation.get("machine_name"),
+                "quantity": negotiation.get("quantity", 1),
+            },
+            "suppliers": [{
+                "id": negotiation.get("id"),
+                "supplier_name": negotiation.get("supplier_name"),
+                "name": negotiation.get("supplier_name"),
+                "website": negotiation.get("supplier_website") or "",
+                "region": negotiation.get("supplier_region") or "",
+                "price_estimate": negotiation.get("initial_price_estimate") or 5000,
+                "email": negotiation.get("supplier_email") or "",
+                "phone_number": negotiation.get("supplier_phone") or "",
+                "relevance_score": 100,
+            }],
+            "negotiation_id": negotiation.get("id"),
+            "project_id": negotiation.get("project_id"),
+        }
+        
+        return jsonify({
+            "status": "success",
+            "negotiation_data": negotiation_data,
+        })
+        
+    except Exception as e:
+        logger.exception("Error getting negotiation by token")
+        return jsonify({"error": str(e), "status": "error"}), 500
+
+
+@bp_module5.route("/api/module5/v2/negotiations/<negotiation_id>/save-result", methods=["POST"])
+def save_negotiation_result_v2(negotiation_id: str):
+    """
+    Save voice negotiation result to Supabase.
+    Called by the voice-call page when negotiation completes.
+    Also sends confirmation email to supplier.
+    
+    Payload:
+    {
+        "final_status": "accepted",  // accepted, rejected, no_deal
+        "final_price": 4500.00,
+        "discount_achieved": 10.0,
+        "total_value": 9000.00,
+        "negotiation_rounds": 3,
+        "transcript": [...],
+        "rounds_history": [...]
+    }
+    """
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Expected JSON input"}), 400
+        
+        payload = request.get_json() or {}
+        
+        client = supabase_utils.get_supabase()
+        if not client:
+            return jsonify({"error": "Supabase not configured"}), 500
+        
+        # Get negotiation
+        negotiation = supabase_utils.get_negotiation_by_id(client, negotiation_id)
+        if not negotiation:
+            return jsonify({"error": "Negotiation not found"}), 404
+        
+        # Map status
+        final_status = payload.get("final_status", "completed")
+        if final_status == "ACCEPTED":
+            final_status = "accepted"
+        elif final_status == "no_deal":
+            final_status = "rejected"
+        
+        # Save result
+        result = supabase_utils.save_voice_call_result(
+            client=client,
+            negotiation_id=negotiation_id,
+            final_price=payload.get("final_price") or payload.get("final_price_per_unit"),
+            discount_achieved=payload.get("discount_achieved", 0),
+            total_value=payload.get("total_value", 0),
+            negotiation_rounds=payload.get("negotiation_rounds", 1),
+            transcript=payload.get("transcript", []),
+            rounds_history=payload.get("rounds_history", []),
+            status=final_status,
+        )
+        
+        if not result:
+            return jsonify({"error": "Failed to save result"}), 500
+        
+        # Update project's module5_data
+        project_id = negotiation.get("project_id")
+        if project_id:
+            summary = supabase_utils.get_negotiations_summary(client, project_id)
+            supabase_utils.update_project_module5_data(client, project_id, {
+                "summary": summary,
+                "last_updated": datetime.now(timezone.utc).isoformat(),
+            })
+        
+        # Send confirmation email if accepted
+        email_result = None
+        send_confirmation = payload.get("send_confirmation_email", True)
+        if send_confirmation and final_status == "accepted":
+            try:
+                supplier_email = negotiation.get("supplier_email")
+                if supplier_email:
+                    recipient_email = TEST_RECIPIENT_EMAIL if TEST_RECIPIENT_EMAIL else supplier_email
+                    
+                    # Create a minimal thread-like object for the email generator
+                    class MinimalThread:
+                        pass
+                    thread = MinimalThread()
+                    thread.supplier_name = negotiation.get("supplier_name")
+                    thread.machine_name = negotiation.get("machine_name")
+                    thread.quantity = negotiation.get("quantity", 1)
+                    thread.buyer_company = negotiation.get("buyer_company", "RIBIF Algeria")
+                    thread.buyer_contact_name = negotiation.get("buyer_contact_name", "")
+                    thread.buyer_email = negotiation.get("buyer_email", "")
+                    
+                    voice_result = {
+                        "final_status": final_status,
+                        "final_price_per_unit": payload.get("final_price") or payload.get("final_price_per_unit"),
+                        "discount_achieved": payload.get("discount_achieved", 0),
+                        "total_value": payload.get("total_value", 0),
+                        "negotiation_rounds": payload.get("negotiation_rounds", 1),
+                    }
+                    
+                    subject = generate_voice_call_confirmation_subject(thread)
+                    body = generate_voice_call_confirmation_email(thread, voice_result)
+                    
+                    email_config = _get_email_config()
+                    buyer_email = negotiation.get("buyer_email") or NEGOTIATION_SMTP_USERNAME
+                    
+                    send_payload = {
+                        **email_config,
+                        "to": [recipient_email],
+                        "subject": subject,
+                        "text": body,
+                        "from_address": buyer_email,
+                        "reply_to": buyer_email,
+                    }
+                    
+                    email_send_result = send_email(send_payload)
+                    
+                    # Record email
+                    email_record = {
+                        "type": "confirmation",
+                        "message_id": email_send_result.get("message_id"),
+                        "recipient": recipient_email,
+                        "subject": subject,
+                        "sent_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                    supabase_utils.add_email_to_negotiation(client, negotiation_id, email_record)
+                    
+                    email_result = {
+                        "status": "sent",
+                        "message_id": email_send_result.get("message_id"),
+                        "recipient": recipient_email,
+                    }
+                    logger.info(f"Sent confirmation email to {recipient_email}")
+                    
+            except Exception as e:
+                logger.error(f"Failed to send confirmation email: {e}")
+                email_result = {"status": "failed", "error": str(e)}
+        
+        return jsonify({
+            "status": "success",
+            "message": "Negotiation result saved",
+            "negotiation_id": negotiation_id,
+            "negotiation": result,
+            "confirmation_email": email_result,
+        })
+        
+    except Exception as e:
+        logger.exception("Error saving negotiation result")
+        return jsonify({"error": str(e), "status": "error"}), 500
+
+
+@bp_module5.route("/api/module5/v2/negotiations/project/<project_id>", methods=["GET"])
+def get_project_negotiations(project_id: str):
+    """
+    Get all negotiations for a project.
+    """
+    try:
+        client = supabase_utils.get_supabase()
+        if not client:
+            return jsonify({"error": "Supabase not configured"}), 500
+        
+        negotiations = supabase_utils.get_negotiations_by_project(client, project_id)
+        summary = supabase_utils.get_negotiations_summary(client, project_id)
+        
+        return jsonify({
+            "status": "success",
+            "negotiations": negotiations,
+            "summary": summary,
+        })
+        
+    except Exception as e:
+        logger.exception("Error getting project negotiations")
+        return jsonify({"error": str(e), "status": "error"}), 500
+
+
+@bp_module5.route("/api/module5/v2/negotiations/<negotiation_id>", methods=["GET"])
+def get_negotiation_v2(negotiation_id: str):
+    """
+    Get a single negotiation by ID.
+    """
+    try:
+        client = supabase_utils.get_supabase()
+        if not client:
+            return jsonify({"error": "Supabase not configured"}), 500
+        
+        negotiation = supabase_utils.get_negotiation_by_id(client, negotiation_id)
+        if not negotiation:
+            return jsonify({"error": "Negotiation not found"}), 404
+        
+        return jsonify({
+            "status": "success",
+            "negotiation": negotiation,
+        })
+        
+    except Exception as e:
+        logger.exception("Error getting negotiation")
+        return jsonify({"error": str(e), "status": "error"}), 500
+
+
+@bp_module5.route("/api/module5/v2/negotiations/bulk-create", methods=["POST"])
+def bulk_create_negotiations():
+    """
+    Create negotiations for multiple suppliers at once (from module 4 data).
+    
+    Payload:
+    {
+        "project_id": "uuid",
+        "machine_name": "CNC Mill",
+        "machine_type": "milling",
+        "quantity": 2,
+        "suppliers": [
+            {
+                "supplier_name": "Supplier A",
+                "email_address": "a@supplier.com",
+                "price_estimate": 5000,
+                ...
+            }
+        ],
+        "buyer_email": "buyer@company.com",
+        "buyer_company": "RIBIF Algeria",
+        "buyer_contact_name": "Ibrahim"
+    }
+    """
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Expected JSON input"}), 400
+        
+        payload = request.get_json() or {}
+        
+        project_id = payload.get("project_id")
+        if not project_id:
+            return jsonify({"error": "project_id is required"}), 400
+        
+        suppliers = payload.get("suppliers", [])
+        if not suppliers:
+            return jsonify({"error": "No suppliers provided"}), 400
+        
+        client = supabase_utils.get_supabase()
+        if not client:
+            return jsonify({"error": "Supabase not configured"}), 500
+        
+        machine_name = payload.get("machine_name", payload.get("machine", {}).get("name", "Equipment"))
+        machine_type = payload.get("machine_type", payload.get("machine", {}).get("type"))
+        quantity = payload.get("quantity", payload.get("machine", {}).get("quantity", 1))
+        buyer_email = payload.get("buyer_email")
+        buyer_company = payload.get("buyer_company", "RIBIF Algeria")
+        buyer_contact_name = payload.get("buyer_contact_name", "")
+        
+        created = []
+        failed = []
+        
+        for supplier in suppliers:
+            try:
+                # Parse price estimate
+                price_estimate = supplier.get("price_estimate")
+                if isinstance(price_estimate, str):
+                    import re
+                    match = re.search(r'[\d,]+(?:\.\d+)?', price_estimate.replace(",", ""))
+                    price_estimate = float(match.group()) if match else None
+                
+                negotiation = supabase_utils.create_negotiation(
+                    client=client,
+                    project_id=project_id,
+                    supplier_name=supplier.get("supplier_name", supplier.get("name", "Unknown")),
+                    machine_name=machine_name,
+                    quantity=quantity,
+                    supplier_email=supplier.get("email_address", supplier.get("email")),
+                    supplier_phone=supplier.get("phone_number", supplier.get("phone")),
+                    supplier_website=supplier.get("website"),
+                    supplier_region=supplier.get("region"),
+                    machine_type=machine_type,
+                    initial_price_estimate=price_estimate,
+                    currency=supplier.get("currency", "DZD"),
+                    buyer_company=buyer_company,
+                    buyer_email=buyer_email,
+                    buyer_contact_name=buyer_contact_name,
+                )
+                
+                if negotiation:
+                    created.append(negotiation)
+                else:
+                    failed.append({
+                        "supplier": supplier.get("supplier_name"),
+                        "error": "Failed to create",
+                    })
+                    
+            except Exception as e:
+                failed.append({
+                    "supplier": supplier.get("supplier_name"),
+                    "error": str(e),
+                })
+        
+        return jsonify({
+            "status": "success",
+            "created_count": len(created),
+            "failed_count": len(failed),
+            "negotiations": created,
+            "failed": failed,
+        })
+        
+    except Exception as e:
+        logger.exception("Error bulk creating negotiations")
+        return jsonify({"error": str(e), "status": "error"}), 500

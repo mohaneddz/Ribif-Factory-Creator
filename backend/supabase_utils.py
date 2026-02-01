@@ -554,6 +554,7 @@ def reset_project_data(client: Client, project_id: str) -> Optional[str]:
             "module2_data": None,
             "module3_data": None,
             "module4_data": None,
+            "module5_data": None,
             "module6_data": None,
             "module7_business": None,
             "module7_pitch": None,
@@ -574,3 +575,208 @@ def reset_project_data(client: Client, project_id: str) -> Optional[str]:
         return None
     except Exception as e:
         return str(e)
+
+
+# ============================================================
+# NEGOTIATIONS (Module 5) - Voice-first negotiation tracking
+# ============================================================
+
+import secrets
+
+
+def generate_negotiation_token() -> str:
+    """Generate a secure random token for negotiation links."""
+    return secrets.token_hex(32)
+
+
+def create_negotiation(
+    client: Client,
+    project_id: str,
+    supplier_name: str,
+    machine_name: str,
+    quantity: int = 1,
+    supplier_email: Optional[str] = None,
+    supplier_phone: Optional[str] = None,
+    supplier_website: Optional[str] = None,
+    supplier_region: Optional[str] = None,
+    machine_type: Optional[str] = None,
+    initial_price_estimate: Optional[float] = None,
+    currency: str = "DZD",
+    buyer_company: str = "RIBIF Algeria",
+    buyer_email: Optional[str] = None,
+    buyer_contact_name: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """
+    Create a new negotiation record in the database.
+    Returns the created negotiation record or None on failure.
+    """
+    try:
+        # Generate unique link token
+        link_token = generate_negotiation_token()
+        
+        payload = {
+            "project_id": project_id,
+            "supplier_name": supplier_name,
+            "supplier_email": supplier_email,
+            "supplier_phone": supplier_phone,
+            "supplier_website": supplier_website,
+            "supplier_region": supplier_region,
+            "machine_name": machine_name,
+            "machine_type": machine_type,
+            "quantity": quantity,
+            "initial_price_estimate": initial_price_estimate,
+            "currency": currency,
+            "status": "pending",
+            "link_token": link_token,
+            "buyer_company": buyer_company,
+            "buyer_email": buyer_email,
+            "buyer_contact_name": buyer_contact_name,
+        }
+        
+        res = client.table("negotiations").insert(payload).execute()
+        data = getattr(res, "data", None) or []
+        return data[0] if data else None
+    except Exception as e:
+        from utils.logger import get_logger
+        get_logger("supabase_utils").error(f"Failed to create negotiation: {e}")
+        return None
+
+
+def get_negotiation_by_id(client: Client, negotiation_id: str) -> Optional[Dict[str, Any]]:
+    """Get a negotiation by its ID."""
+    try:
+        res = client.table("negotiations").select("*").eq("id", negotiation_id).single().execute()
+        return res.data
+    except Exception:
+        return None
+
+
+def get_negotiation_by_token(client: Client, link_token: str) -> Optional[Dict[str, Any]]:
+    """Get a negotiation by its link token (for supplier access)."""
+    try:
+        res = client.table("negotiations").select("*").eq("link_token", link_token).single().execute()
+        return res.data
+    except Exception:
+        return None
+
+
+def get_negotiations_by_project(client: Client, project_id: str) -> list:
+    """Get all negotiations for a project."""
+    try:
+        res = client.table("negotiations").select("*").eq("project_id", project_id).order("created_at", desc=True).execute()
+        return getattr(res, "data", None) or []
+    except Exception:
+        return []
+
+
+def update_negotiation(client: Client, negotiation_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Update a negotiation record."""
+    try:
+        res = client.table("negotiations").update(updates).eq("id", negotiation_id).execute()
+        data = getattr(res, "data", None) or []
+        return data[0] if data else None
+    except Exception as e:
+        from utils.logger import get_logger
+        get_logger("supabase_utils").error(f"Failed to update negotiation: {e}")
+        return None
+
+
+def update_negotiation_status(client: Client, negotiation_id: str, status: str) -> Optional[Dict[str, Any]]:
+    """Update negotiation status."""
+    return update_negotiation(client, negotiation_id, {"status": status})
+
+
+def mark_negotiation_link_sent(client: Client, negotiation_id: str) -> Optional[Dict[str, Any]]:
+    """Mark that the negotiation link has been sent to the supplier."""
+    from datetime import datetime, timezone, timedelta
+    
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(days=7)  # Link valid for 7 days
+    
+    return update_negotiation(client, negotiation_id, {
+        "status": "link_sent",
+        "link_sent_at": now.isoformat(),
+        "link_expires_at": expires.isoformat(),
+    })
+
+
+def save_voice_call_result(
+    client: Client,
+    negotiation_id: str,
+    final_price: float,
+    discount_achieved: float,
+    total_value: float,
+    negotiation_rounds: int,
+    transcript: list,
+    rounds_history: list,
+    status: str = "accepted",
+) -> Optional[Dict[str, Any]]:
+    """Save the results of a completed voice call negotiation."""
+    from datetime import datetime, timezone
+    
+    updates = {
+        "status": status,
+        "final_price": final_price,
+        "discount_achieved": discount_achieved,
+        "total_value": total_value,
+        "negotiation_rounds": negotiation_rounds,
+        "voice_call_transcript": transcript,
+        "rounds_history": rounds_history,
+        "voice_call_completed_at": datetime.now(timezone.utc).isoformat(),
+    }
+    
+    return update_negotiation(client, negotiation_id, updates)
+
+
+def add_email_to_negotiation(client: Client, negotiation_id: str, email_record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Add an email record to the negotiation's emails_sent array."""
+    try:
+        # Fetch current emails
+        neg = get_negotiation_by_id(client, negotiation_id)
+        if not neg:
+            return None
+        
+        emails = neg.get("emails_sent") or []
+        emails.append(email_record)
+        
+        return update_negotiation(client, negotiation_id, {"emails_sent": emails})
+    except Exception as e:
+        from utils.logger import get_logger
+        get_logger("supabase_utils").error(f"Failed to add email to negotiation: {e}")
+        return None
+
+
+def get_negotiations_summary(client: Client, project_id: str) -> Optional[Dict[str, Any]]:
+    """Get negotiation summary stats for a project."""
+    try:
+        res = client.table("negotiations_summary").select("*").eq("project_id", project_id).single().execute()
+        return res.data
+    except Exception:
+        return None
+
+
+def update_project_module5_data(client: Client, project_id: str, module5_data: Dict[str, Any]) -> Optional[str]:
+    """Update project's module5_data column with negotiation summary."""
+    try:
+        # Fetch current project to merge data
+        res = client.table("projects").select("completed_modules, module5_data").eq("id", project_id).single().execute()
+        current_data = res.data or {}
+        
+        # Merge with existing module5_data if present
+        existing = current_data.get("module5_data") or {}
+        merged = {**existing, **module5_data}
+        
+        # Update completed_modules
+        completed = current_data.get("completed_modules") or []
+        if "module5" not in completed:
+            completed.append("module5")
+        
+        client.table("projects").update({
+            "module5_data": merged,
+            "completed_modules": completed,
+        }).eq("id", project_id).execute()
+        
+        return None
+    except Exception as e:
+        return str(e)
+

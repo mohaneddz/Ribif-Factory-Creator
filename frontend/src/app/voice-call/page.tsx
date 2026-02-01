@@ -20,6 +20,7 @@ interface NegotiationData {
     };
     suppliers: Array<{
         supplier_name: string;
+        name?: string;
         website: string;
         region: string;
         price_estimate: number;
@@ -27,6 +28,9 @@ interface NegotiationData {
         phone_number: string;
         relevance_score: number;
     }>;
+    // New fields for v2 token-based negotiations
+    negotiation_id?: string;
+    project_id?: string;
 }
 
 interface CompanyConfig {
@@ -103,7 +107,7 @@ class NegotiationEngine {
             region: s.region,
             relevance_score: s.relevance_score || 0,
             price_estimate: s.price_estimate,
-            currency: "EUR"
+            currency: "DZD"
         }));
         return mapped.sort((a, b) => b.relevance_score - a.relevance_score);
     }
@@ -433,9 +437,11 @@ function extractPriceFromText(text: string): number | null {
 function VoiceCallContent() {
     const searchParams = useSearchParams();
     const sessionId = searchParams.get("session");
+    const linkToken = searchParams.get("token");  // New: token-based access for v2
 
     const [status, setStatus] = useState<"loading" | "ready" | "calling" | "ended" | "error">("loading");
     const [negotiationData, setNegotiationData] = useState<NegotiationData | null>(null);
+    const [negotiationId, setNegotiationId] = useState<string | null>(null);  // For v2 saving
     const [engine, setEngine] = useState<NegotiationEngine | null>(null);
     const [vapi, setVapi] = useState<any>(null);
     const [vapiLoading, setVapiLoading] = useState(true);
@@ -452,32 +458,56 @@ function VoiceCallContent() {
     // Load negotiation data from backend
     useEffect(() => {
         async function loadData() {
-            if (!sessionId) {
-                setError("No session ID provided");
+            // Support both old session-based and new token-based access
+            if (!sessionId && !linkToken) {
+                setError("No session ID or token provided");
                 setStatus("error");
                 return;
             }
 
             try {
-                const response = await fetch(`${API_BASE}/api/module5/get-negotiation-data/${sessionId}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    setNegotiationData(data.negotiation_data);
-                    const eng = new NegotiationEngine(data.negotiation_data, companyConfig);
-                    setEngine(eng);
-                    setStatus("ready");
-                } else {
-                    throw new Error("Failed to load negotiation data");
+                let response;
+                let data;
+
+                if (linkToken) {
+                    // New v2 token-based endpoint
+                    response = await fetch(`${API_BASE}/api/module5/v2/negotiations/by-token/${linkToken}`);
+                    if (response.ok) {
+                        data = await response.json();
+                        setNegotiationData(data.negotiation_data);
+                        setNegotiationId(data.negotiation_data?.negotiation_id);
+                        const eng = new NegotiationEngine(data.negotiation_data, companyConfig);
+                        setEngine(eng);
+                        setStatus("ready");
+                    } else if (response.status === 410) {
+                        const errData = await response.json();
+                        setError(errData.error || "This negotiation link has expired or already been used");
+                        setStatus("error");
+                    } else {
+                        throw new Error("Invalid or expired negotiation link");
+                    }
+                } else if (sessionId) {
+                    // Old session-based endpoint (backwards compatibility)
+                    response = await fetch(`${API_BASE}/api/module5/get-negotiation-data/${sessionId}`);
+                    if (response.ok) {
+                        data = await response.json();
+                        setNegotiationData(data.negotiation_data);
+                        const eng = new NegotiationEngine(data.negotiation_data, companyConfig);
+                        setEngine(eng);
+                        setStatus("ready");
+                    } else {
+                        throw new Error("Failed to load negotiation data");
+                    }
                 }
             } catch (err) {
                 console.error("Failed to load data:", err);
-                setError("Could not load negotiation data");
+                setError(err instanceof Error ? err.message : "Could not load negotiation data");
                 setStatus("error");
             }
         }
 
         loadData();
-    }, [sessionId]);
+    }, [sessionId, linkToken]);
 
     // Initialize Vapi SDK
     useEffect(() => {
@@ -673,6 +703,7 @@ function VoiceCallContent() {
             target_price: engine.targetPrice,
             final_status: "ACCEPTED",
             final_price_per_unit: forcedFinalPrice,
+            final_price: forcedFinalPrice,  // For v2 endpoint
             discount_achieved: 10.0,
             total_value: totalVal,
             negotiation_rounds: engine.currentRound,
@@ -684,14 +715,25 @@ function VoiceCallContent() {
         setFinalResult(outputJSON);
         setStatus("ended");
 
-        // Save to backend
+        // Save to backend - use v2 endpoint if we have a negotiation_id (token-based)
         try {
-            await fetch(`${API_BASE}/api/module5/save-negotiation`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(outputJSON)
-            });
-            console.log("Result saved to backend");
+            if (negotiationId) {
+                // New v2 Supabase-backed endpoint
+                await fetch(`${API_BASE}/api/module5/v2/negotiations/${negotiationId}/save-result`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(outputJSON)
+                });
+                console.log("Result saved to v2 endpoint (Supabase)");
+            } else {
+                // Old file-based endpoint (backwards compatibility)
+                await fetch(`${API_BASE}/api/module5/save-negotiation`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(outputJSON)
+                });
+                console.log("Result saved to backend");
+            }
         } catch (err) {
             console.error("Failed to save to backend:", err);
         }

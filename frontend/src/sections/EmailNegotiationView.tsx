@@ -164,7 +164,7 @@ const EmailViewer = ({ thread, onAction, onCallSupplier }: {
                                 title="Open voice call in new tab"
                             >
                                 <Phone size={14} />
-                                Call Supplier
+                                Test Call Supplier
                             </button>
                         )}
                         <StatusBadge status={thread.status} />

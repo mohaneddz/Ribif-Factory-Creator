@@ -389,7 +389,7 @@ Context:
 - Their initial price estimate: {thread.initial_price_estimate or "Not specified"}
 
 Buyer requirements:
-- Target price: {thread.buyer_requirements.get("target_price")} {thread.buyer_requirements.get("currency", "EUR")}
+- Target price: {thread.buyer_requirements.get("target_price")} {thread.buyer_requirements.get("currency", "DZD")}
 - Preferred Incoterms: {thread.buyer_requirements.get("preferred_incoterms", ["DDP", "CIF"])}
 - Maximum lead time: {thread.buyer_requirements.get("max_lead_time_days", 90)} days
 - Minimum warranty: {thread.buyer_requirements.get("min_warranty_months", 24)} months
@@ -436,7 +436,7 @@ Please include in your quote:
 5. Warranty terms
 6. Technical specifications
 
-Our target budget is around {thread.buyer_requirements.get("target_price", "competitive")} {thread.buyer_requirements.get("currency", "EUR")} per unit.
+Our target budget is around {thread.buyer_requirements.get("target_price", "competitive")} {thread.buyer_requirements.get("currency", "DZD")} per unit.
 
 Please provide a quotation valid for at least 30 days.
 
@@ -516,7 +516,7 @@ Requirements:
 We are pleased to accept your offer for {thread.machine_name} x{thread.quantity}.
 
 Confirmed terms:
-- Price: {offer.get("price")} {offer.get("currency", "EUR")}
+- Price: {offer.get("price")} {offer.get("currency", "DZD")}
 - Incoterms: {offer.get("incoterm")}
 - Payment: {offer.get("payment_terms")}
 - Delivery: {offer.get("lead_time_days")} days
@@ -529,6 +529,170 @@ Best regards,
 {thread.buyer_contact_name or "Procurement Team"}
 {thread.buyer_company}
 """
+
+
+# ================================
+# Voice Call Confirmation Email
+# ================================
+
+def generate_voice_call_confirmation_email(
+    thread: NegotiationThread,
+    voice_result: Dict[str, Any],
+) -> str:
+    """Generate email confirming voice call negotiation results"""
+    from utils.module_5.core import _llm_generate
+    
+    final_status = voice_result.get("final_status", "COMPLETED")
+    final_price = voice_result.get("final_price_per_unit")
+    discount = voice_result.get("discount_achieved")
+    total_value = voice_result.get("total_value")
+    rounds = voice_result.get("negotiation_rounds", 1)
+    
+    system = (
+        "You are a procurement specialist writing a follow-up email after a successful phone negotiation. "
+        "Be professional, warm, and confirm the key terms discussed. Express appreciation for their flexibility."
+    )
+    
+    prompt = f"""
+Write a follow-up email confirming the results of a phone negotiation call.
+
+Context:
+- Buyer: {thread.buyer_company}
+- Buyer Contact: {thread.buyer_contact_name or "Procurement Team"}
+- Supplier: {thread.supplier_name}
+- Product: {thread.machine_name}
+- Quantity: {thread.quantity} units
+
+Call Results:
+- Final Status: {final_status}
+- Agreed Price: {final_price} DZD per unit
+- Discount Achieved: {discount}%
+- Total Order Value: {total_value} DZD
+- Negotiation Rounds: {rounds}
+
+Requirements:
+1. Thank them for the productive call
+2. Confirm the agreed price and terms
+3. Summarize the key points discussed
+4. Request proforma invoice with the agreed terms
+5. Mention next steps (PO to follow after proforma)
+6. Keep it professional but warm
+7. Keep under 200 words
+"""
+    
+    text = _llm_generate(prompt, system, temperature=0.3)
+    if text:
+        return text.strip()
+    
+    # Fallback template if LLM fails
+    return f"""Dear {thread.supplier_name} Team,
+
+Thank you for the productive phone call today regarding our order for {thread.machine_name}.
+
+I'm writing to confirm the terms we agreed upon during our conversation:
+
+- Product: {thread.machine_name}
+- Quantity: {thread.quantity} units
+- Agreed Price: {final_price:,.2f} DZD per unit
+- Total Order Value: {total_value:,.2f} DZD
+- Discount: {discount}%
+
+We appreciate your flexibility in working with us to reach this agreement.
+
+Could you please send us the proforma invoice reflecting these agreed terms? Once received, we will proceed with the purchase order.
+
+Please don't hesitate to reach out if you have any questions.
+
+Best regards,
+{thread.buyer_contact_name or "Procurement Team"}
+{thread.buyer_company}
+"""
+
+
+def generate_voice_call_confirmation_subject(thread: NegotiationThread) -> str:
+    """Generate subject line for voice call confirmation email"""
+    return f"Confirmation: {thread.machine_name} - Order Terms Agreed via Call"
+
+
+# ================================
+# Negotiation Link Email
+# ================================
+
+def generate_negotiation_link_email(
+    supplier_name: str,
+    machine_name: str,
+    quantity: int,
+    negotiation_link: str,
+    buyer_company: str = "RIBIF Algeria",
+    buyer_contact_name: str = "",
+    initial_price_estimate: float = None,
+) -> str:
+    """Generate email with voice negotiation link for supplier"""
+    from utils.module_5.core import _llm_generate
+    
+    system = (
+        "You are a procurement specialist writing an email to schedule a voice negotiation call with a supplier. "
+        "Be professional, clear, and explain that clicking the link will start a voice call with an AI agent to finalize pricing. "
+        "Keep it concise and action-oriented."
+    )
+    
+    price_context = f"Your quoted price of {initial_price_estimate:,.2f} DZD" if initial_price_estimate else "your quotation"
+    
+    prompt = f"""
+Write an email inviting a supplier to a voice negotiation call.
+
+Context:
+- Buyer company: {buyer_company}
+- Buyer contact: {buyer_contact_name or "Procurement Team"}
+- Supplier: {supplier_name}
+- Product: {machine_name}
+- Quantity: {quantity} units
+- Initial price estimate: {initial_price_estimate or "As quoted"}
+
+The email should:
+1. Thank them for their quotation/product information
+2. Express interest in proceeding with the order
+3. Explain that we'd like to discuss final pricing via a quick voice call
+4. Clearly explain that clicking the link will connect them with our AI negotiation agent
+5. Mention the call typically takes 5-10 minutes
+6. Include this EXACT link (do not modify): {negotiation_link}
+7. Ask them to ensure good audio/microphone quality
+8. Provide a valid timeframe (link valid for 7 days)
+9. Keep under 200 words
+"""
+    
+    text = _llm_generate(prompt, system, temperature=0.3)
+    if text:
+        return text.strip()
+    
+    # Fallback template
+    return f"""Dear {supplier_name} Team,
+
+Thank you for providing information about your {machine_name}. We are very interested in proceeding with this order for {quantity} unit(s).
+
+Before finalizing the purchase, we would like to have a quick voice discussion to confirm pricing and terms. Our company uses an AI-powered negotiation system for efficient price discussions.
+
+**To proceed, please click the link below when you're ready for a 5-10 minute voice call:**
+
+{negotiation_link}
+
+When you click the link, you'll be connected to our AI negotiation agent who will discuss the final terms with you. Please ensure you have a working microphone and are in a quiet environment.
+
+This link is valid for 7 days.
+
+If you have any questions or prefer to schedule a specific time, please reply to this email.
+
+We look forward to finalizing this order with you.
+
+Best regards,
+{buyer_contact_name or "Procurement Team"}
+{buyer_company}
+"""
+
+
+def generate_negotiation_link_subject(machine_name: str) -> str:
+    """Generate subject line for negotiation link email"""
+    return f"Voice Call Invitation: Finalize {machine_name} Order Terms"
 
 
 # ================================
@@ -558,13 +722,13 @@ Extract the supplier's offer from this email:
 Context:
 - Product: {thread.machine_name}
 - Quantity: {thread.quantity}
-- Expected currency: {thread.buyer_requirements.get("currency", "EUR")}
+- Expected currency: {thread.buyer_requirements.get("currency", "DZD")}
 
 Extract and return ONLY a JSON object with these fields:
 {{
     "price": <number or null - unit price>,
     "total_price": <number or null - total if mentioned>,
-    "currency": <string - EUR, USD, etc.>,
+    "currency": <string - DZD, EUR, USD, etc.>,
     "incoterm": <string - EXW, FOB, CIF, DDP, etc. or null>,
     "payment_terms": <string - e.g. "30% deposit, 70% against BL" or null>,
     "lead_time_days": <number or null>,
