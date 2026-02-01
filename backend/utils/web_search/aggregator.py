@@ -571,3 +571,59 @@ def search_company_contacts(company_name: str, region: str = "") -> Dict[str, st
         
     cache.set(cache_key, "aggregator_contacts", contact_info)
     return contact_info
+
+
+def search_general(
+    query: str,
+    max_results: int = 10,
+) -> List[SearchResult]:
+    """
+    General web search across multiple sources.
+    
+    Args:
+        query: Search query
+        max_results: Maximum results to return
+    
+    Returns:
+        List of SearchResult from web sources
+    """
+    cache = get_cache()
+    cache_key = f"general:{query}"
+    cached = cache.get(cache_key, "aggregator")
+    if cached:
+        return [SearchResult(**r) if isinstance(r, dict) else r for r in cached]
+    
+    all_results: List[SearchResult] = []
+    
+    # Use DuckDuckGo as primary source (no API key needed)
+    try:
+        results = duckduckgo.search(query, max_results=max_results)
+        all_results.extend(results)
+    except Exception as e:
+        pass
+    
+    # If DuckDuckGo fails or we need more, try other sources
+    if len(all_results) < max_results:
+        # Try Serper if available
+        if _serper_available:
+            try:
+                serper_results = serper.search(query, max_results=max_results - len(all_results))
+                all_results.extend(serper_results)
+            except Exception:
+                pass
+        
+        # Try Bing if available
+        if _bing_available and len(all_results) < max_results:
+            try:
+                bing_results = bing.search(query, max_results=max_results - len(all_results))
+                all_results.extend(bing_results)
+            except Exception:
+                pass
+    
+    # Limit results
+    all_results = all_results[:max_results]
+    
+    # Cache results
+    cache.set(cache_key, "aggregator", [r.__dict__ if hasattr(r, '__dict__') else r for r in all_results])
+    
+    return all_results

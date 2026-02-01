@@ -10,6 +10,7 @@ import {
     X,
 } from "lucide-react";
 import clsx from "clsx";
+import { ErrorDisplay } from "@/components/ErrorDisplay";
 
 import { BUSINESS_PLAN_TABS, API_BASE } from "./constants";
 
@@ -397,19 +398,12 @@ export const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: {
                             <p className="text-sm text-white/60">Téléchargement et préparation du PDF</p>
                         </div>
                     ) : pdfError ? (
-                        <div className="text-center text-white/60">
-                            <FileSpreadsheet size={64} className="mx-auto mb-4 text-red-400" />
-                            <p className="text-lg font-bold text-red-400">Erreur de chargement</p>
-                            <p className="text-sm">{pdfError}</p>
-                            {pitchDeckPdfUrl && (
-                                <button
-                                    onClick={() => fetchPdfAsBlob(pitchDeckPdfUrl)}
-                                    className="mt-4 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
-                                >
-                                    Réessayer
-                                </button>
-                            )}
-                        </div>
+                        <ErrorDisplay 
+                            error={pdfError}
+                            title="Erreur de chargement du Pitch Deck"
+                            onRetry={() => pitchDeckPdfUrl && fetchPdfAsBlob(pitchDeckPdfUrl)}
+                            compact={true}
+                        />
                     ) : pdfBlobUrl ? (
                         <iframe
                             src={`${pdfBlobUrl}#page=${currentPage}&toolbar=0&navpanes=0&scrollbar=0&view=FitH`}

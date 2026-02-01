@@ -24,6 +24,7 @@ from routes.module7 import bp_module7
 from routes.module9 import bp_module9
 from routes.email_service import bp_email_service
 from routes.validation import bp_validation
+from routes.health import health_bp
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -43,6 +44,7 @@ app.register_blueprint(bp_module7)
 app.register_blueprint(bp_module9)
 app.register_blueprint(bp_email_service)
 app.register_blueprint(bp_validation)
+app.register_blueprint(health_bp)
 
 if __name__ == "__main__":
     app.run(

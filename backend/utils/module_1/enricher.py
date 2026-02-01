@@ -8,9 +8,19 @@ from vertex_utils import generate_message
 from utils.web_search.agentic import agentic_search
 from utils.web_search.sourcing_agent import sourcing_agent
 from utils.module_1.helpers import safe_json_loader, normalize_headers
+from utils.module_1.zero_shot_enricher import ZeroShotEnricher
+from utils.normalization import normalize_numeric, canonicalize_key
+from utils.quota_manager import (
+    with_quota_check, with_rate_limit, with_retry,
+    is_quota_error, get_user_friendly_error, get_quota_tracker
+)
+from utils.pipeline_metrics import create_pipeline_metrics
 from config import WEB_SEARCH_ENABLED
 
 logger = get_logger(__name__)
+
+# Enable zero-shot enrichment mode
+ENABLE_ZERO_SHOT = True
 
 # Shared worker pool for Module 1 enrichment
 SHARED_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=7)
@@ -34,26 +44,22 @@ Your task is to ENRICH and COMPLETE a raw extraction of an industrial project.
 STRICT_JSON_HEADER = "OUTPUT RULES: Return ONLY a valid JSON object. No markdown. No commentary.\n"
 
 ROUTING_PROMPT = """
-GOAL: Create a production routing for each product family.
+GOAL: Create a production routing for each product family USING ONLY THE MACHINES ALREADY EXTRACTED.
 INPUT JSON: {raw_json}
+
+CRITICAL: DO NOT add or suggest new machines. Use ONLY the machines listed in stage_4_machines_equipements.
 
 REQUIREMENTS for Stage 5 (processus_production):
 For each product family, define:
 - Inputs (raw materials)
 - Ordered Steps (ordered)
-- Key machines used
+- Key machines used (MUST be from existing machines list only)
 - Inline QC steps
 - Outputs (semi-finished / finished)
-- Packaging & warehousing (ASRS / AGV integration)
+- Packaging & warehousing (only if machines already exist)
 
-CREATE ROUTINGS FOR AT MINIMUM:
-1. SPC flooring
-2. Injection molded parts
-3. Extrusion (films/profiles)
-4. Thermoformed parts
-5. 3D membrane press / thermofoil panels
-6. Resin-based coatings (PU/polyurea/epoxy)
-7. Safety glass (laminated/tempered) + UTG
+CREATE ROUTINGS based on the products and machines found in the document.
+Use only machines that are already extracted in Stage 4.
 
 OUTPUT FORMAT for Stage 5:
 {{
@@ -64,7 +70,7 @@ OUTPUT FORMAT for Stage 5:
         {{ 
           "step": 1, 
           "name": "string", 
-          "machine": "string", 
+          "machine": "string (MUST match a machine from stage_4)", 
           "inputs": ["string"], 
           "qc": "string", 
           "outputs": ["string"],
@@ -99,17 +105,20 @@ OUTPUT FORMAT (Fragment):
 """
 
 NORMALIZATION_PROMPT = """
-GOAL: Final pass for normalization and consistency.
+GOAL: Final pass for normalization and consistency WITHOUT adding or removing machines.
 INPUT JSON: {full_json}
+
+CRITICAL: DO NOT add, remove, or suggest new machines. Keep the exact list from Stage 4.
 
 REQUIREMENTS:
 1. Normalize field names (consistent usage of French/English as per project context).
 2. Ensure units are consistent (kW, m, mm, kg, tons).
 3. Reconcile machine counts in Stage 4 with the routing in Stage 5.
-4. Fill any remaining "N/A" with educated estimates.
+4. Fill any remaining "N/A" with educated estimates WHERE APPROPRIATE (but do not change machine list).
 5. Add `value_source`, `confidence`, and `rationale` to every guessed/estimated field.
+6. Keep the EXACT same machines in stage_4_machines_equipements - DO NOT add or remove any.
 
-OUTPUT: Return the FULL COMPLETED JSON.
+OUTPUT: Return the FULL COMPLETED JSON with the SAME machines list.
 """
 
 # =========================================================
@@ -121,31 +130,132 @@ class RIBIFEnricher:
         pass
 
     def _call_llm_json(self, prompt: str, tag: str) -> Dict[str, Any]:
+        """
+        HARDENED: LLM call with quota checking, retry logic, and graceful error handling.
+        """
         try:
-            raw = generate_message(
-                prompt=STRICT_JSON_HEADER + prompt,
-                system_instruction=SYSTEM_INSTRUCTION,
-                temperature=0.2
-            )
+            @with_quota_check("vertex_ai", max_calls=100)
+            @with_retry(max_attempts=2, catch_quota_errors=True)
+            def _make_call():
+                raw = generate_message(
+                    prompt=STRICT_JSON_HEADER + prompt,
+                    system_instruction=SYSTEM_INSTRUCTION,
+                    temperature=0.2
+                )
+                if not raw:
+                    raise ValueError("Empty response from LLM")
+                return raw
+            
+            raw = _make_call()
             data = safe_json_loader(raw)
+            
             if not data and tag == "normalization":
                 # Retry once for normalization if it failed
                 logger.warning(f"Normalization failed, retrying once...")
-                raw_retry = generate_message(
-                    prompt="Your previous output was malformed. Return ONLY valid JSON.\n" + STRICT_JSON_HEADER + prompt,
-                    system_instruction=SYSTEM_INSTRUCTION,
-                    temperature=0.1
-                )
+                @with_retry(max_attempts=1, catch_quota_errors=True)
+                def _retry_call():
+                    raw_retry = generate_message(
+                        prompt="Your previous output was malformed. Return ONLY valid JSON.\n" + STRICT_JSON_HEADER + prompt,
+                        system_instruction=SYSTEM_INSTRUCTION,
+                        temperature=0.1
+                    )
+                    return raw_retry
+                
+                raw_retry = _retry_call()
                 data = safe_json_loader(raw_retry)
-            return data
+            
+            return data if data else {}
+            
         except Exception as e:
-            logger.error(f"Enricher LLM call '{tag}' failed: {e}")
+            if is_quota_error(e):
+                error_info = get_user_friendly_error(e)
+                logger.error(f"Task '{tag}' quota error: {error_info['message']}")
+            else:
+                logger.error(f"Task '{tag}' LLM call failed: {e}")
+            
+            # Graceful degradation
             return {}
+            logger.error(f"Enricher LLM call '{tag}' failed, falling back to zero-shot or legacy method.")
+            if ENABLE_ZERO_SHOT:
+                return self.enrich_machine_zero_shot(machine)
+            else:
+                return self.enrich_one_machine_global(machine)
 
-    def enrich_machine(self, machine: Dict[str, Any]) -> Dict[str, Any]:
-        """Deep enrichment for a single machine using agentic web search."""
-        # This is now a wrapper around the global enrichment strategy
-        return self.enrich_one_machine_global(machine)
+    def enrich_machine_zero_shot(self, machine: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Zero-shot intelligent enrichment:
+        - LLM generates smart web search queries
+        - Tracks query budget (max 2 per machine)
+        - Analyzes gaps and decides if more queries needed
+        - Fills remaining gaps with educated estimations
+        - Converts pricing to DZD with tariffs
+        """
+        try:
+            enricher = ZeroShotEnricher(max_queries_per_machine=2)
+            enriched = enricher.enrich_machine(machine)
+            
+            # Normalize to expected format
+            normalized = self._normalize_zero_shot_output(enriched, machine)
+            return normalized
+            
+        except Exception as e:
+            logger.error(f"Zero-shot enrichment failed for {machine.get('nom_machine')}: {e}")
+            # Fallback to original machine with error marker
+            machine["enrichment_error"] = f"Zero-shot failed: {str(e)}"
+            machine["value_source"] = "document_only"
+            return machine
+
+    def _normalize_zero_shot_output(self, enriched: Dict[str, Any], original: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize zero-shot output to match expected Module 1 format."""
+        # Start with original machine structure
+        result = original.copy()
+        
+        # Update with enriched data
+        result["nom_machine"] = enriched.get("nom_machine", original.get("nom_machine"))
+        result["type"] = enriched.get("type", original.get("type"))
+        result["specifications"] = enriched.get("specifications", {})
+        result["suppliers"] = enriched.get("suppliers", [])
+        
+        # Extract pricing
+        pricing = enriched.get("pricing", {})
+        if pricing:
+            result["prix_estime"] = {
+                "montant_dzd": pricing.get("amount_dzd"),
+                "fourchette_dzd": pricing.get("price_range_dzd"),
+                "inclut_tarif": pricing.get("includes_tariff", True),
+                "taux_tarif": pricing.get("tariff_rate", "15%"),
+                "source": pricing.get("source", "estimation")
+            }
+        
+        # Add metadata
+        result["value_source"] = "web_enriched" if enriched.get("search_sources") else "estimation"
+        result["confidence"] = enriched.get("confidence", "medium")
+        result["gaps_remaining"] = enriched.get("gaps", [])
+        
+        # Enrichment metadata
+        if "enrichment_metadata" in enriched:
+            result["_enrichment_metadata"] = enriched["enrichment_metadata"]
+        
+        # Selected models from manufacturers
+        specs = enriched.get("specifications", {})
+        manufacturer = specs.get("manufacturer", "Generic OEM")
+        alternatives = specs.get("manufacturer_alternatives", [])
+        
+        result["selected_models"] = [
+            {"brand": manufacturer, "model": "Recommended Model", "type": "primary"}
+        ]
+        for alt in alternatives[:2]:
+            result["selected_models"].append({"brand": alt, "model": "Alternative Model", "type": "alternative"})
+        
+        # Add web enrichment sources
+        search_sources = enriched.get("search_sources", [])
+        if search_sources:
+            result["_web_enrichment"] = {
+                "sources": search_sources[:10],
+                "method": "zero_shot_intelligent"
+            }
+        
+        return result
 
     def enrich_one_machine_global(self, machine: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -179,14 +289,36 @@ class RIBIFEnricher:
             
             suppliers = []
             for s in search_results:
+                # Handle both SupplierResult objects and dicts
+                if hasattr(s, '__dict__'):
+                    s_dict = s.__dict__ if hasattr(s, '__dict__') else s
+                    supplier_name = getattr(s, 'supplier_name', s_dict.get('supplier_name', 'Unknown'))
+                    price_type = getattr(s, 'price_type', s_dict.get('price_type', 'Supplier'))
+                    region = getattr(s, 'region', s_dict.get('region', 'Unknown'))
+                    website = getattr(s, 'website', s_dict.get('website', ''))
+                    source_url = getattr(s, 'source_url', s_dict.get('source_url', ''))
+                    relevance = getattr(s, 'relevance_score', s_dict.get('relevance_score', 0.5))
+                    customs_info = getattr(s, 'customs_algeria_info', s_dict.get('customs_algeria_info', ''))
+                else:
+                    supplier_name = s.get('supplier_name', 'Unknown')
+                    price_type = s.get('price_type', 'Supplier')
+                    region = s.get('region', 'Unknown')
+                    website = s.get('website', '')
+                    source_url = s.get('source_url', '')
+                    relevance = s.get('relevance_score', 0.5)
+                    customs_info = s.get('customs_algeria_info', '')
+                
+                # Ensure relevance is a number (HARDENED)
+                relevance = normalize_numeric(relevance, default=0.5)
+                
                 suppliers.append({
-                    "supplier_name": s.supplier_name,
-                    "role": s.price_type if "Distributor" not in s.price_type else "Distributor", # Heuristic if role not explicit
-                    "region": s.region,
-                    "website": s.website,
-                    "source_urls": [s.source_url] if s.source_url else [],
-                    "confidence": "high" if s.relevance_score > 0.6 else "medium",
-                    "notes": s.customs_algeria_info
+                    "supplier_name": supplier_name,
+                    "role": price_type if "Distributor" not in price_type else "Distributor",
+                    "region": region,
+                    "website": website,
+                    "source_urls": [source_url] if source_url else [],
+                    "confidence": "high" if relevance > 0.6 else "medium",
+                    "notes": customs_info
                 })
             
             # Use LLM to normalize/categorize suppliers if we have time/budget, 
@@ -236,8 +368,17 @@ class RIBIFEnricher:
         return machine
 
     def process(self, raw_json: Dict[str, Any]) -> Dict[str, Any]:
-        """Main entry point for enrichment."""
+        """
+        HARDENED: Main entry point for enrichment with comprehensive metrics tracking.
+        """
         logger.info("Starting Comprehensive Module 1 Enrichment...")
+        
+        # Initialize metrics tracking
+        metrics = create_pipeline_metrics("Module_1")
+        metrics.extraction.source_file = raw_json.get("_meta", {}).get("source_file", "Unknown")
+        metrics.extraction.entities_extracted = len(raw_json.get("stage_4_machines_equipements", {}).get("machines_production", []))
+        metrics.extraction.complete()
+        
         t0 = time.time()
 
         # Task D: Localization
@@ -261,14 +402,26 @@ class RIBIFEnricher:
         machines = raw_json.get("stage_4_machines_equipements", {}).get("machines_production", [])
         future_machines = [SHARED_EXECUTOR.submit(self.enrich_one_machine_global, m) for m in machines]
 
-        # Wait and Merge
+        # Wait and Merge with metrics tracking
+        llm_calls_made = 0
         try:
             routing_data = future_routing.result(timeout=120)
+            llm_calls_made += 1
             quantities_data = future_quantities.result(timeout=120)
+            llm_calls_made += 1
         except Exception as e:
-            logger.error(f"Enrichment task timed out or failed: {e}")
+            if is_quota_error(e):
+                error_info = get_user_friendly_error(e)
+                logger.error(f"Quota error during enrichment: {error_info['message']}")
+                metrics.enrichment.quota_errors += 1
+            else:
+                logger.error(f"Enrichment task timed out or failed: {e}")
+            
             routing_data = {}
             quantities_data = {}
+            metrics.enrichment.errors_encountered += 1
+        
+        metrics.enrichment.llm_calls_made += llm_calls_made
         
         enriched_machines = []
         for i, f in enumerate(future_machines):
@@ -276,11 +429,23 @@ class RIBIFEnricher:
             try:
                 result = f.result(timeout=MACHINE_ENRICHMENT_TIMEOUT_S)
                 enriched_machines.append(result)
+                
+                # Track enrichment stats
+                if result.get("suppliers"):
+                    metrics.enrichment.suppliers_found += len(result["suppliers"])
+                if result.get("value_source") == "web":
+                    metrics.enrichment.fields_enriched += 1
+                elif result.get("value_source") == "estimate":
+                    metrics.enrichment.fields_estimated += 1
+                    
             except Exception as e:
                 logger.warning(f"Machine enrichment failed or timed out for {original_machine.get('nom_machine')}: {e}")
                 # Fallback: use original machine and mark error
                 original_machine["enrichment_error"] = str(e)
                 enriched_machines.append(original_machine)
+                metrics.enrichment.errors_encountered += 1
+        
+        metrics.enrichment.items_found = len(enriched_machines)
 
         # Merge Results
         raw_json["stage_5_processus_production"] = routing_data
@@ -293,14 +458,52 @@ class RIBIFEnricher:
 
         raw_json["stage_4_machines_equipements"]["machines_production"] = enriched_machines
 
+        # Store original machine count before normalization
+        original_machine_count = len(enriched_machines)
+        original_machine_names = [m.get("nom_machine") for m in enriched_machines]
+
         # Task E: Final Pass Normalization
         final_json = self._call_llm_json(NORMALIZATION_PROMPT.format(full_json=json.dumps(raw_json)), "normalization")
         
         # Fallback if normalization failed
         if not final_json:
             final_json = raw_json
+        
+        # Safety check: Ensure normalization didn't add/remove machines
+        normalized_machines = final_json.get("stage_4_machines_equipements", {}).get("machines_production", [])
+        if len(normalized_machines) != original_machine_count:
+            logger.warning(
+                f"Normalization changed machine count from {original_machine_count} to {len(normalized_machines)}. "
+                f"Restoring original machines."
+            )
+            final_json["stage_4_machines_equipements"]["machines_production"] = enriched_machines
 
-        # Add enrichment summary
+        # Add enrichment summary with metrics
+        processing_time = round(time.time() - t0, 3)
+        
+        # Complete enrichment metrics
+        metrics.enrichment.complete()
+        
+        # Calculate final metrics
+        metrics.final.total_entities = len(enriched_machines)
+        metrics.final.total_fields = len(enriched_machines) * 10  # Rough estimate
+        metrics.final.fields_complete = metrics.enrichment.fields_enriched
+        metrics.final.fields_partial = metrics.enrichment.fields_estimated
+        metrics.final.fields_empty = metrics.enrichment.fields_missing
+        
+        # Determine status
+        if metrics.enrichment.errors_encountered == 0:
+            metrics.final.status = "success"
+            metrics.final.status_message = "All machines enriched successfully"
+        elif metrics.enrichment.errors_encountered < len(enriched_machines):
+            metrics.final.status = "partial"
+            metrics.final.status_message = f"{metrics.enrichment.errors_encountered} machines had errors"
+        else:
+            metrics.final.status = "failed"
+            metrics.final.status_message = "All machines failed enrichment"
+        
+        metrics.complete_pipeline()
+        
         final_json["enrichment_summary"] = {
             "assumptions": {
                 "shifts": 2,
@@ -316,10 +519,11 @@ class RIBIFEnricher:
                 "Request specific electrical layout from client",
                 "Verify import permits for Polyurethane/Isocyanates"
             ],
-            "processing_time": round(time.time() - t0, 3)
+            "processing_time": processing_time,
+            "metrics": metrics.to_dict()
         }
 
-        logger.info(f"Enrichment complete in {final_json['enrichment_summary']['processing_time']}s")
+        logger.info(f"Enrichment complete in {processing_time}s")
         return final_json
 
 enricher = RIBIFEnricher()

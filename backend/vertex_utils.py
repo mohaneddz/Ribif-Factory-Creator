@@ -9,6 +9,7 @@ from google import genai
 from google.genai import types
 
 from utils.logger import get_logger
+from utils.quota_manager import with_quota_check, with_retry, is_quota_error
 
 logger = get_logger(__name__)
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
@@ -19,6 +20,8 @@ if not api_key:
 
 client = genai.Client(api_key=api_key)
 
+@with_quota_check("vertex_ai", max_calls=1000)
+@with_retry(max_attempts=2, catch_quota_errors=True)
 def generate_message(
     prompt: str,
     system_instruction: Optional[str] = None,
@@ -31,7 +34,7 @@ def generate_message(
     top_p: float = 0.95,
 ) -> str:
     """
-    Generates text using Gemini 2.5 Flash with multimodal support.
+    HARDENED: Generates text using Gemini 2.5 Flash with quota checking and retries.
     
     Supports:
     - Images: png, jpeg, webp, heic, heif (max 3,000 per prompt)
@@ -47,10 +50,14 @@ def generate_message(
         documents: Optional list of document inputs
         videos: Optional list of video inputs  
         audio: Optional list of audio inputs
-        config: Optional MessageConfig for generation parameters
+        temperature: Generation temperature (0.0 - 2.0)
+        top_p: Nucleus sampling parameter
         
     Returns:
         Generated text response
+        
+    Raises:
+        RuntimeError: If quota exhausted or authentication fails
     """
     model_id = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     

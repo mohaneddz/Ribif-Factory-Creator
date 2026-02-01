@@ -20,6 +20,7 @@ from utils.app_helpers import (
 )
 from utils.module_2.main import run_pipeline
 from utils.logger import log_skip, get_logger
+from utils.request_lock import require_project_lock
 from utils.module_2 import config as module2_config
 
 logger = get_logger("module2")
@@ -221,6 +222,7 @@ def _download_url_for(path_str: Optional[str]) -> Optional[str]:
 
 
 @bp_module2.route("/api/module2/layout", methods=["POST"])
+@require_project_lock(timeout=1.0)
 def generate_layout():
     try:
         if SKIP_MODULE_2:

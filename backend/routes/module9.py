@@ -6,12 +6,14 @@ from supabase_utils import get_supabase, insert_catalog
 from utils.module_9.core import RIBIFModule9Catalog, CatalogInput
 from utils.app_helpers import get_request_user_id, load_template_payload, upload_and_register_file
 from utils.logger import log_skip, get_logger
+from utils.request_lock import require_project_lock
 
 logger = get_logger(__name__)
 bp_module9 = Blueprint("module9", __name__)
 
 
 @bp_module9.route("/api/module9/catalog", methods=["POST"])
+@require_project_lock(timeout=1.0)
 def generate_catalog_module9():
     try:
         if SKIP_MODULE_9:

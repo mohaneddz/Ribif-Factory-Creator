@@ -12,6 +12,7 @@ from .aggregator import (
     search_machine_images,
     search_pricing_info,
 )
+from . import search_bounded
 
 __all__ = [
     "SearchResult",
