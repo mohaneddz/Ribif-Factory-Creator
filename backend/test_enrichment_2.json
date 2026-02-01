@@ -1,0 +1,375 @@
+{
+  "nom_machine": "Injection Molding Machine",
+  "fabricant_recommande": "ARBURG",
+  "type_machine": "Plastic Processing",
+  "application": "Plastic part production",
+  "selected_models": [
+    {
+      "brand": "ARBURG",
+      "model": "Injection Molding Machine",
+      "type": "primary"
+    },
+    {
+      "brand": "Alternative OEM",
+      "model": "Equivalent Model",
+      "type": "alternative"
+    }
+  ],
+  "suppliers": [
+    {
+      "supplier_name": "ARBURG: Injection molding machine manufacturer",
+      "role": "OEM/Manufacturer",
+      "region": "USA",
+      "website": "https://www.arburg.com/en/us/",
+      "source_urls": [
+        "https://www.arburg.com/en/us/"
+      ],
+      "confidence": "high",
+      "notes": "Worldwide sourcing. Contact supplier for Algeria delivery."
+    },
+    {
+      "supplier_name": "ARBURG: Injection moulding machine manufacturer",
+      "role": "OEM/Manufacturer",
+      "region": "USA",
+      "website": "https://www.arburg.com/en/",
+      "source_urls": [
+        "https://www.arburg.com/en/"
+      ],
+      "confidence": "high",
+      "notes": "Worldwide sourcing. Contact supplier for Algeria delivery."
+    },
+    {
+      "supplier_name": "Injection molding machine",
+      "role": "Distributor",
+      "region": "USA",
+      "website": "https://www.arburg.com/en/us/product-world/injection-molding-machines/",
+      "source_urls": [
+        "https://www.arburg.com/en/us/product-world/injection-molding-machines/"
+      ],
+      "confidence": "high",
+      "notes": "Worldwide sourcing. Contact supplier for Algeria delivery."
+    },
+    {
+      "supplier_name": "We are here for you worldwide",
+      "role": "Distributor",
+      "region": "USA",
+      "website": "https://www.arburg.com/en/company/locations/",
+      "source_urls": [
+        "https://www.arburg.com/en/company/locations/"
+      ],
+      "confidence": "high",
+      "notes": "Worldwide sourcing. Contact supplier for Algeria delivery."
+    },
+    {
+      "supplier_name": "Modular injection moulding machine from Arburg",
+      "role": "Distributor",
+      "region": "USA",
+      "website": "https://www.arburg.com/en/product-world/injection-moulding-machines/",
+      "source_urls": [
+        "https://www.arburg.com/en/product-world/injection-moulding-machines/"
+      ],
+      "confidence": "high",
+      "notes": "Worldwide sourcing. Contact supplier for Algeria delivery."
+    },
+    {
+      "supplier_name": "Arburg Injection Molding Machines",
+      "role": "OEM/Manufacturer",
+      "region": "USA",
+      "website": "https://www.arlingtonmachinery.com/brands/pl.b.1022.0/arburg/",
+      "source_urls": [
+        "https://www.arlingtonmachinery.com/brands/pl.b.1022.0/arburg/"
+      ],
+      "confidence": "high",
+      "notes": "Worldwide sourcing. Contact supplier for Algeria delivery."
+    }
+  ],
+  "algeria_distributor_found": false,
+  "specifications": {
+    "machine": "Injection Molding Machine",
+    "manufacturer": "ARBURG",
+    "ARBURG_Injection_Molding_Machines_Specifications": [
+      {
+        "model": "ALLROUNDER 270 S",
+        "type": "Hydraulic",
+        "dimensions_LxWxH_machine_only": "approx. 3.00 x 1.00 x 1.90 m",
+        "dimensions_LxWxH_control_cabinet": "approx. 0.80 x 0.60 x 1.90 m",
+        "total_footprint_LxW": "approx. 3.80 x 1.60 m",
+        "weight_machine_only": "approx. 2,600 kg",
+        "connected_load": "22 kW",
+        "heating_capacity": "6.6 kW",
+        "clamping_force": "300 kN (30 tons)",
+        "injection_unit_capacity": [
+          {
+            "screw_diameter": "18 mm",
+            "shot_volume_theoretical": "21 cm³",
+            "shot_weight_PS": "19 g",
+            "plasticising_capacity_PS": "10 kg/h"
+          },
+          {
+            "screw_diameter": "25 mm",
+            "shot_volume_theoretical": "41 cm³",
+            "shot_weight_PS": "37 g",
+            "plasticising_capacity_PS": "15 kg/h"
+          },
+          {
+            "screw_diameter": "30 mm",
+            "shot_volume_theoretical": "59 cm³",
+            "shot_weight_PS": "54 g",
+            "plasticising_capacity_PS": "20 kg/h"
+          }
+        ]
+      },
+      {
+        "model": "ALLROUNDER 570 A",
+        "type": "Electric",
+        "dimensions_LxWxH_machine_only": "approx. 4.90 x 1.60 x 2.20 m",
+        "dimensions_LxWxH_control_cabinet": "approx. 0.80 x 0.60 x 2.20 m",
+        "total_footprint_LxW": "approx. 5.70 x 2.20 m",
+        "weight_machine_only": "approx. 8,200 kg",
+        "connected_load": "60 kW",
+        "heating_capacity": "12.5 kW",
+        "clamping_force": "2000 kN (200 tons)",
+        "injection_unit_capacity": [
+          {
+            "screw_diameter": "30 mm",
+            "shot_volume_theoretical": "71 cm³",
+            "shot_weight_PS": "65 g",
+            "plasticising_capacity_PS": "25 kg/h"
+          },
+          {
+            "screw_diameter": "35 mm",
+            "shot_volume_theoretical": "97 cm³",
+            "shot_weight_PS": "89 g",
+            "plasticising_capacity_PS": "35 kg/h"
+          },
+          {
+            "screw_diameter": "40 mm",
+            "shot_volume_theoretical": "127 cm³",
+            "shot_weight_PS": "117 g",
+            "plasticising_capacity_PS": "45 kg/h"
+          },
+          {
+            "screw_diameter": "45 mm",
+            "shot_volume_theoretical": "161 cm³",
+            "shot_weight_PS": "148 g",
+            "plasticising_capacity_PS": "55 kg/h"
+          },
+          {
+            "screw_diameter": "50 mm",
+            "shot_volume_theoretical": "198 cm³",
+            "shot_weight_PS": "182 g",
+            "plasticising_capacity_PS": "65 kg/h"
+          }
+        ]
+      },
+      {
+        "model": "ALLROUNDER 320 C GOLDEN EDITION",
+        "type": "Hydraulic",
+        "dimensions_LxWxH_machine_only": "approx. 3.40 x 1.20 x 2.00 m",
+        "dimensions_LxWxH_control_cabinet": "approx. 0.80 x 0.60 x 2.00 m",
+        "total_footprint_LxW": "approx. 4.20 x 1.80 m",
+        "weight_machine_only": "approx. 3,500 kg",
+        "connected_load": "22 kW",
+        "heating_capacity": "8.2 kW",
+        "clamping_force": "500 kN (50 tons)",
+        "injection_unit_capacity": [
+          {
+            "screw_diameter": "25 mm",
+            "shot_volume_theoretical": "41 cm³",
+            "shot_weight_PS": "37 g",
+            "plasticising_capacity_PS": "15 kg/h"
+          },
+          {
+            "screw_diameter": "30 mm",
+            "shot_volume_theoretical": "59 cm³",
+            "shot_weight_PS": "54 g",
+            "plasticising_capacity_PS": "20 kg/h"
+          },
+          {
+            "screw_diameter": "35 mm",
+            "shot_volume_theoretical": "80 cm³",
+            "shot_weight_PS": "73 g",
+            "plasticising_capacity_PS": "25 kg/h"
+          }
+        ]
+      },
+      {
+        "model": "ALLROUNDER 720 S (Multi-component)",
+        "type": "Hydraulic",
+        "dimensions_LxWxH_machine_only": "approx. 6.20 x 2.00 x 2.30 m",
+        "dimensions_LxWxH_control_cabinet": "approx. 0.80 x 0.60 x 2.30 m",
+        "total_footprint_LxW": "approx. 7.00 x 2.60 m",
+        "weight_machine_only": "approx. 14,000 kg",
+        "connected_load": "75 kW",
+        "heating_capacity": "20.2 kW",
+        "clamping_force": "3200 kN (320 tons)",
+        "injection_unit_1_capacity": [
+          {
+            "screw_diameter": "40 mm",
+            "shot_volume_theoretical": "127 cm³",
+            "shot_weight_PS": "117 g",
+            "plasticising_capacity_PS": "45 kg/h"
+          },
+          {
+            "screw_diameter": "45 mm",
+            "shot_volume_theoretical": "161 cm³",
+            "shot_weight_PS": "148 g",
+            "plasticising_capacity_PS": "55 kg/h"
+          },
+          {
+            "screw_diameter": "50 mm",
+            "shot_volume_theoretical": "198 cm³",
+            "shot_weight_PS": "182 g",
+            "plasticising_capacity_PS": "65 kg/h"
+          }
+        ],
+        "injection_unit_2_capacity": [
+          {
+            "screw_diameter": "25 mm",
+            "shot_volume_theoretical": "41 cm³",
+            "shot_weight_PS": "37 g",
+            "plasticising_capacity_PS": "15 kg/h"
+          },
+          {
+            "screw_diameter": "30 mm",
+            "shot_volume_theoretical": "59 cm³",
+            "shot_weight_PS": "54 g",
+            "plasticising_capacity_PS": "20 kg/h"
+          },
+          {
+            "screw_diameter": "35 mm",
+            "shot_volume_theoretical": "80 cm³",
+            "shot_weight_PS": "73 g",
+            "plasticising_capacity_PS": "25 kg/h"
+          }
+        ]
+      },
+      {
+        "model": "ALLROUNDER 370 A",
+        "type": "Electric",
+        "dimensions_LxWxH_machine_only": "approx. 3.70 x 1.30 x 2.00 m",
+        "dimensions_LxWxH_control_cabinet": "approx. 0.80 x 0.60 x 2.00 m",
+        "total_footprint_LxW": "approx. 4.50 x 1.90 m",
+        "weight_machine_only": "approx. 4,500 kg",
+        "connected_load": "30 kW",
+        "heating_capacity": "8.2 kW",
+        "clamping_force": "600 kN (60 tons)",
+        "injection_unit_capacity": [
+          {
+            "screw_diameter": "25 mm",
+            "shot_volume_theoretical": "41 cm³",
+            "shot_weight_PS": "37 g",
+            "plasticising_capacity_PS": "15 kg/h"
+          },
+          {
+            "screw_diameter": "30 mm",
+            "shot_volume_theoretical": "59 cm³",
+            "shot_weight_PS": "54 g",
+            "plasticising_capacity_PS": "20 kg/h"
+          },
+          {
+            "screw_diameter": "35 mm",
+            "shot_volume_theoretical": "80 cm³",
+            "shot_weight_PS": "73 g",
+            "plasticising_capacity_PS": "25 kg/h"
+          }
+        ]
+      },
+      {
+        "model": "ALLROUNDER 720 E GOLDEN ELECTRIC",
+        "type": "Electric",
+        "dimensions_LxWxH_machine_only": "approx. 5.90 x 1.90 x 2.30 m",
+        "dimensions_LxWxH_control_cabinet": "approx. 0.80 x 0.60 x 2.30 m",
+        "total_footprint_LxW": "approx. 6.70 x 2.50 m",
+        "weight_machine_only": "approx. 12,000 kg",
+        "connected_load": "60 kW",
+        "heating_capacity": "17.5 kW",
+        "clamping_force": "2900 kN (290 tons)",
+        "injection_unit_capacity": [
+          {
+            "screw_diameter": "40 mm",
+            "shot_volume_theoretical": "127 cm³",
+            "shot_weight_PS": "117 g",
+            "plasticising_capacity_PS": "45 kg/h"
+          },
+          {
+            "screw_diameter": "45 mm",
+            "shot_volume_theoretical": "161 cm³",
+            "shot_weight_PS": "148 g",
+            "plasticising_capacity_PS": "55 kg/h"
+          },
+          {
+            "screw_diameter": "50 mm",
+            "shot_volume_theoretical": "198 cm³",
+            "shot_weight_PS": "182 g",
+            "plasticising_capacity_PS": "65 kg/h"
+          }
+        ]
+      },
+      {
+        "model": "ALLROUNDER 470 C GOLDEN EDITION",
+        "type": "Hydraulic",
+        "dimensions_LxWxH_machine_only": "approx. 4.20 x 1.40 x 2.10 m",
+        "dimensions_LxWxH_control_cabinet": "approx. 0.80 x 0.60 x 2.10 m",
+        "total_footprint_LxW": "approx. 5.00 x 2.00 m",
+        "weight_machine_only": "approx. 5,500 kg",
+        "connected_load": "30 kW",
+        "heating_capacity": "10.5 kW",
+        "clamping_force": "1000 kN (100 tons)",
+        "injection_unit_capacity": [
+          {
+            "screw_diameter": "30 mm",
+            "shot_volume_theoretical": "59 cm³",
+            "shot_weight_PS": "54 g",
+            "plasticising_capacity_PS": "20 kg/h"
+          },
+          {
+            "screw_diameter": "35 mm",
+            "shot_volume_theoretical": "80 cm³",
+            "shot_weight_PS": "73 g",
+            "plasticising_capacity_PS": "25 kg/h"
+          },
+          {
+            "screw_diameter": "40 mm",
+            "shot_volume_theoretical": "104 cm³",
+            "shot_weight_PS": "96 g",
+            "plasticising_capacity_PS": "30 kg/h"
+          },
+          {
+            "screw_diameter": "45 mm",
+            "shot_volume_theoretical": "132 cm³",
+            "shot_weight_PS": "121 g",
+            "plasticising_capacity_PS": "35 kg/h"
+          }
+        ]
+      }
+    ]
+  },
+  "quantite_necessaire": 1,
+  "quantite_rationale": "Defaulted to 1 unit as baseline.",
+  "_web_enrichment": {
+    "datasheets": [
+      "https://www.arburg.com/media/daten/publications/technical_data/hydraulic_machines/golden_edition/ARBURG_ALLROUNDER_470C_GOLDEN_EDITION_TD_529453_en_US.pdf",
+      "https://www.arburg.com/media/daten/publications/technical_data/hybrid_machines/ARBURG_ALLROUNDER_720H_TD_682662_en_GB.pdf",
+      "https://www.scribd.com/document/861165281/Datasheet-a-S300iA-3",
+      "https://www.arburg.com/media/daten/publications/technical_data/electric_machines/ARBURG_ALLROUNDER_570A_multi-component_TD_680291_en_US.pdf"
+    ],
+    "images": [],
+    "sources": [
+      "https://www.arburg.com/en/us/technical-data/injection-molding-machines/",
+      "https://www.arburg.com/en/technical-data/",
+      "https://www.arburg.com/media/daten/publications/technical_data/hydraulic_machines/golden_edition/ARBURG_ALLROUNDER_470C_GOLDEN_EDITION_TD_529453_en_US.pdf",
+      "https://www.arburg.com/media/daten/publications/technical_data/hybrid_machines/ARBURG_ALLROUNDER_720H_TD_682662_en_GB.pdf",
+      "https://www.arburg.com/en/technical-data/injection-moulding-machines/page-4/",
+      "https://www.scribd.com/document/861165281/Datasheet-a-S300iA-3",
+      "https://www.arburg.com/en/us/technical-data/injection-moulding-machines/electric-machines/series/allrounder-alldrive/",
+      "https://www.arburg.com/media/daten/publications/technical_data/electric_machines/ARBURG_ALLROUNDER_570A_multi-component_TD_680291_en_US.pdf",
+      "https://www.plasticportal.eu/articles/arburg-how-feed-rate-injection-volume-and-filling-time-correlate-with-injection-unit-performance",
+      "https://www.exapro.com/arburg-320k-700-250-p220407140/"
+    ],
+    "agentic_notes": "Enriched via non-phased global sourcing."
+  },
+  "value_source": "web",
+  "confidence": "high",
+  "rationale": "Technical data and suppliers aggregated via global search for Injection Molding Machine."
+}

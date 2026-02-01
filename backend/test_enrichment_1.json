@@ -1,0 +1,163 @@
+{
+  "nom_machine": "CNC Vertical Machining Center",
+  "fabricant_recommande": "Haas Automation",
+  "type_machine": "CNC Machining",
+  "application": "Precision metal cutting",
+  "selected_models": [
+    {
+      "brand": "Haas Automation",
+      "model": "CNC Vertical Machining Center",
+      "type": "primary"
+    },
+    {
+      "brand": "Alternative OEM",
+      "model": "Equivalent Model",
+      "type": "alternative"
+    }
+  ],
+  "suppliers": [
+    {
+      "supplier_name": "Haas Automation Inc.",
+      "role": "OEM/Manufacturer",
+      "region": "USA",
+      "website": "https://www.haascnc.com/index.html",
+      "source_urls": [
+        "https://www.haascnc.com/index.html"
+      ],
+      "confidence": "high",
+      "notes": "Worldwide sourcing. Contact supplier for Algeria delivery."
+    },
+    {
+      "supplier_name": "Europe",
+      "role": "OEM/Manufacturer",
+      "region": "USA",
+      "website": "https://www.haascnc.com/whyhaas/Europe.html",
+      "source_urls": [
+        "https://www.haascnc.com/whyhaas/Europe.html"
+      ],
+      "confidence": "high",
+      "notes": "Worldwide sourcing. Contact supplier for Algeria delivery."
+    },
+    {
+      "supplier_name": "CNC machines specially made for Europe",
+      "role": "OEM/Manufacturer",
+      "region": "USA",
+      "website": "https://www.haascnc.com/whyhaas/cnc-machines-europe.html",
+      "source_urls": [
+        "https://www.haascnc.com/whyhaas/cnc-machines-europe.html"
+      ],
+      "confidence": "high",
+      "notes": "Worldwide sourcing. Contact supplier for Algeria delivery."
+    },
+    {
+      "supplier_name": "Vertical Milling Machines",
+      "role": "OEM/Manufacturer",
+      "region": "USA",
+      "website": "https://www.haascnc.com/machines/vertical-mills.html",
+      "source_urls": [
+        "https://www.haascnc.com/machines/vertical-mills.html"
+      ],
+      "confidence": "high",
+      "notes": "Worldwide sourcing. Contact supplier for Algeria delivery."
+    },
+    {
+      "supplier_name": "EU Series",
+      "role": "OEM/Manufacturer",
+      "region": "USA",
+      "website": "https://www.haascnc.com/machines/Special-Series/eu-series.html",
+      "source_urls": [
+        "https://www.haascnc.com/machines/Special-Series/eu-series.html"
+      ],
+      "confidence": "high",
+      "notes": "Worldwide sourcing. Contact supplier for Algeria delivery."
+    }
+  ],
+  "algeria_distributor_found": false,
+  "specifications": {
+    "machine": "CNC Vertical Machining Center",
+    "manufacturer": "Haas Automation",
+    "model_series": "VF Series",
+    "dimensions_footprint_range_imperial": "From 88\" x 85\" x 102\" (VF-1) to 260\" x 120\" x 130\" (VF-12) (L x W x H)",
+    "dimensions_footprint_range_metric": "From 2235 x 2159 x 2591 mm (VF-1) to 6604 x 3048 x 3302 mm (VF-12) (L x W x H)",
+    "spindle_power_peak_range_hp": "From 15 hp to 30 hp (standard, options may vary)",
+    "spindle_power_peak_range_kw": "From 11.2 kW to 22.4 kW (standard, options may vary)",
+    "machine_weight_range_imperial": "From 6500 lb (VF-1) to 35000 lb (VF-12)",
+    "machine_weight_range_metric": "From 2948 kg (VF-1) to 15876 kg (VF-12)",
+    "work_envelope_x_travel_range_imperial": "From 20\" (VF-1) to 150\" (VF-12)",
+    "work_envelope_x_travel_range_metric": "From 508 mm (VF-1) to 3810 mm (VF-12)",
+    "work_envelope_y_travel_range_imperial": "From 16\" (VF-1) to 32\" (VF-12)",
+    "work_envelope_y_travel_range_metric": "From 406 mm (VF-1) to 813 mm (VF-12)",
+    "work_envelope_z_travel_range_imperial": "From 20\" (VF-1) to 30\" (VF-12)",
+    "work_envelope_z_travel_range_metric": "From 508 mm (VF-1) to 762 mm (VF-12)",
+    "max_weight_on_table_range_imperial": "From 1500 lb (VF-1) to 4000 lb (VF-12)",
+    "max_weight_on_table_range_metric": "From 680 kg (VF-1) to 1814 kg (VF-12)",
+    "table_size_range_imperial": "From 26\" x 14\" (VF-1) to 150\" x 28\" (VF-12)",
+    "table_size_range_metric": "From 660 x 356 mm (VF-1) to 3810 x 711 mm (VF-12)",
+    "vf_2_specifications": {
+      "model": "VF-2",
+      "dimensions_footprint_imperial": "88\" x 85\" x 102\" (L x W x H)",
+      "dimensions_footprint_metric": "2235 x 2159 x 2591 mm (L x W x H)",
+      "spindle_power_peak_hp": "30 hp",
+      "spindle_power_peak_kw": "22.4 kW",
+      "machine_weight_imperial": "7500 lb",
+      "machine_weight_metric": "3402 kg",
+      "work_envelope_x_travel_imperial": "30\"",
+      "work_envelope_x_travel_metric": "762 mm",
+      "work_envelope_y_travel_imperial": "16\"",
+      "work_envelope_y_travel_metric": "406 mm",
+      "work_envelope_z_travel_imperial": "20\"",
+      "work_envelope_z_travel_metric": "508 mm",
+      "max_weight_on_table_imperial": "3000 lb",
+      "max_weight_on_table_metric": "1361 kg",
+      "table_size_imperial": "36\" x 14\"",
+      "table_size_metric": "914 x 356 mm"
+    },
+    "vf_3_specifications": {
+      "model": "VF-3",
+      "dimensions_footprint_imperial": "112\" x 90\" x 110\" (L x W x H)",
+      "dimensions_footprint_metric": "2845 x 2286 x 2794 mm (L x W x H)",
+      "spindle_power_peak_hp": "30 hp",
+      "spindle_power_peak_kw": "22.4 kW",
+      "machine_weight_imperial": "12000 lb",
+      "machine_weight_metric": "5443 kg",
+      "work_envelope_x_travel_imperial": "40\"",
+      "work_envelope_x_travel_metric": "1016 mm",
+      "work_envelope_y_travel_imperial": "20\"",
+      "work_envelope_y_travel_metric": "508 mm",
+      "work_envelope_z_travel_imperial": "25\"",
+      "work_envelope_z_travel_metric": "635 mm",
+      "max_weight_on_table_imperial": "3500 lb",
+      "max_weight_on_table_metric": "1588 kg",
+      "table_size_imperial": "48\" x 18\"",
+      "table_size_metric": "1219 x 457 mm"
+    }
+  },
+  "quantite_necessaire": 1,
+  "quantite_rationale": "Defaulted to 1 unit as baseline.",
+  "_web_enrichment": {
+    "datasheets": [
+      "https://portalimages.blob.core.windows.net/products/pdfs/0n1glfif_Haas-CNC-Verticals.pdf",
+      "https://www.haascnc.com/content/dam/haascnc/assets/pre-install-guide/es0428_rev_dn.pdf",
+      "https://www.haas.co.uk/wp-content/uploads/2021/06/Haas-CNC-Guide-2021-Issue-7.pdf",
+      "https://www.scribd.com/document/744591716/VF-2-I-Specification",
+      "https://avbo.it/wp-content/uploads/2020/09/Scheda_HAAS_VF2ss.pdf"
+    ],
+    "images": [],
+    "sources": [
+      "https://www.haascnc.com/machines/vertical-mills/vf-series/models/small/vf-2.html",
+      "https://www.haascnc.com/machines/vertical-mills/vf-series/models/small/vf-2ss.html",
+      "https://portalimages.blob.core.windows.net/products/pdfs/0n1glfif_Haas-CNC-Verticals.pdf",
+      "https://www.haascnc.com/machines/vertical-mills/vf-series/models/small/vf-1.html",
+      "https://cncmachines.com/m/haas/vf2yt?srsltid=AfmBOorXglpBW8KFQLxUX0oNUgd_SeKiP794x2wLnHPU4R84clD5SqS_",
+      "https://www.haascnc.com/content/dam/haascnc/assets/pre-install-guide/es0428_rev_dn.pdf",
+      "https://www.haas.co.uk/wp-content/uploads/2021/06/Haas-CNC-Guide-2021-Issue-7.pdf",
+      "https://www.scribd.com/document/744591716/VF-2-I-Specification",
+      "https://www.haascnc.com/machines/vertical-mills/vf-series/models/medium/vf-3.html",
+      "https://avbo.it/wp-content/uploads/2020/09/Scheda_HAAS_VF2ss.pdf"
+    ],
+    "agentic_notes": "Enriched via non-phased global sourcing."
+  },
+  "value_source": "web",
+  "confidence": "high",
+  "rationale": "Technical data and suppliers aggregated via global search for CNC Vertical Machining Center."
+}

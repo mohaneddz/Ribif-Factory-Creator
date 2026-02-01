@@ -146,13 +146,69 @@ def search_machine_suppliers(
         except Exception:
             return []
     
-    # Execute searches in parallel
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    def search_with_serper():
+        """Search worldwide using Serper/Google - PRIMARY SOURCE"""
+        suppliers = []
+        if not _serper_available:
+            return []
+        
+        try:
+            # Multiple targeted queries for better coverage
+            queries = [
+                f"{machine_name} manufacturer official website",
+                f"{machine_name} distributor {region}",
+                f"{machine_name} supplier Europe USA",
+                f"{machine_name} OEM authorized dealer"
+            ]
+            
+            for q in queries[:2]:  # Limit to 2 queries to save API calls
+                search_results = serper.search_google(q, num_results=max_results_per_source)
+                
+                for result in search_results:
+                    # Extract company name from title or URL
+                    title_parts = result.title.split('-')[0].split('|')[0].strip()
+                    domain = result.url.split('/')[2] if len(result.url.split('/')) > 2 else ""
+                    
+                    # Determine region from domain or content
+                    region_guess = "Unknown"
+                    if any(x in domain for x in ['.cn', 'alibaba', 'made-in-china']):
+                        region_guess = "China"
+                    elif any(x in domain for x in ['.us', '.com']):
+                        region_guess = "USA"
+                    elif any(x in domain for x in ['.de', '.fr', '.it', '.uk', '.eu']):
+                        region_guess = "Europe"
+                    elif '.in' in domain:
+                        region_guess = "India"
+                    
+                    # Determine if OEM/Manufacturer or Distributor
+                    role = "Distributor"
+                    if any(x in result.title.lower() for x in ['manufacturer', 'oem', 'industrial', 'machines', 'automation']):
+                        role = "OEM/Manufacturer"
+                    
+                    suppliers.append(SupplierResult(
+                        supplier_name=title_parts[:100],
+                        website=result.url,
+                        region=region_guess,
+                        price_estimate="Contact for quote",
+                        price_type=role,
+                        source="serper",
+                        source_url=result.url,
+                        customs_algeria_info=f"Worldwide sourcing. Contact supplier for {region} delivery.",
+                        relevance_score=0.85,  # Higher score for real Google results
+                    ))
+        except Exception as e:
+            print(f"Serper search error: {e}")
+        
+        return suppliers
+    
+    # Execute searches in parallel - SERPER FIRST
+    with ThreadPoolExecutor(max_workers=6) as executor:
         futures = {
+            executor.submit(search_with_serper): "serper",
+            executor.submit(search_europages): "europages",
             executor.submit(search_alibaba): "alibaba",
             executor.submit(search_made_in_china): "made_in_china",
             executor.submit(search_indiamart): "indiamart",
-            executor.submit(search_europages): "europages",
         }
         
         for future in as_completed(futures):

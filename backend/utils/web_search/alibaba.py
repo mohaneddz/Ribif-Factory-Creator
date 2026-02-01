@@ -31,6 +31,20 @@ class AlibabaSearch(SearchProvider):
     name = "alibaba"
     requires_api_key = False
 
+    def search(self, query: str, max_results: int = 10) -> List[SearchResult]:
+        """Implement abstract search method (delegates to search_products)."""
+        products = self.search_products(query, max_results)
+        # Convert ProductResult to SearchResult for compatibility
+        return [
+            SearchResult(
+                title=p.name,
+                url=p.url,
+                snippet=f"Price: {p.price} | Supplier: {p.supplier_name}",
+                source="alibaba"
+            )
+            for p in products
+        ]
+
     @rate_limit(min_gap_s=3.0)  # Be polite to Alibaba
     def search_products(self, query: str, max_results: int = 10) -> List[ProductResult]:
         """Search Alibaba for products."""
