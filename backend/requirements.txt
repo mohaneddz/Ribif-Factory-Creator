@@ -7,16 +7,12 @@ Werkzeug==3.1.4
 python-dotenv==1.2.1
 
 # AI/LLM APIs
-openai==2.14.0
-google-generativeai==0.8.6
-google-ai-generativelanguage==0.6.15
 google-genai==1.56.0
 replicate==1.0.7
 
 # Document Processing
 PyMuPDF==1.26.7
 python-docx==1.2.0
-google-cloud-documentai==3.8.0
 
 # PDF & Imaging
 pypdf==6.5.0
@@ -47,6 +43,12 @@ aiohttp==3.13.2
 
 # Supabase
 supabase==2.27.2
+
+# Google Cloud (for GCS video downloads)
+google-cloud-storage
+
+# Image Processing
+rembg
 
 # Utilities
 certifi==2025.11.12
