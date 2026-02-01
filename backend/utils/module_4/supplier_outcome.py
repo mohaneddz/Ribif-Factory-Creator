@@ -18,24 +18,35 @@ class SupplierOutcomeStatus(Enum):
     """Explicit supplier outcome states."""
     
     # Success states
-    SUPPLIERS_FOUND = "suppliers_found"  # Found 1+ suppliers
+    SUPPLIERS_FOUND = "suppliers_found"  # Found 1+ suppliers (legacy - use SUPPLIERS_VERIFIED)
+    SUPPLIERS_VERIFIED = "suppliers_verified"  # Found 1+ suppliers that passed quality filter
+    BEST_EFFORT_UNVERIFIED = "best_effort_unverified"  # Found candidates but none passed filter (fallback only)
+    FALLBACK_ONLY = "fallback_only"  # AI-generated fallback suppliers when no public suppliers found
     
     # Skip states (explicit reasons why search wasn't attempted)
     SKIPPED_NO_BUDGET = "skipped_no_budget"  # Global budget exhausted
+    SKIPPED_CORE_STABLE = "skipped_core_stable"  # Core stable + high confidence, no web validation needed
     SKIPPED_GENERIC = "skipped_generic"  # Generic/standard machine, no OEM needed
     SKIPPED_BASIC = "skipped_basic"  # Simple/basic machine, local suppliers sufficient
     SKIPPED_TIMEOUT = "skipped_timeout"  # Machine processing timed out before search
+    BUDGET_LIMITED = "budget_limited"  # Phase C stopped early due to global budget
     
     # Failure states (search was attempted but failed)
     SEARCH_FAILED_API_ERROR = "search_failed_api_error"  # API/network error
     SEARCH_FAILED_NO_RESULTS = "search_failed_no_results"  # Search returned 0 results
     SEARCH_FAILED_ALL_FILTERED = "search_failed_all_filtered"  # All results filtered out
+    NO_VERIFIED_SUPPLIERS = "no_verified_suppliers"  # No suppliers passed quality filter
     SEARCH_FAILED_TIMEOUT = "search_failed_timeout"  # Search exceeded timeout
     SEARCH_FAILED_EXCEPTION = "search_failed_exception"  # Unexpected exception
     
     def is_success(self) -> bool:
         """Check if this is a success outcome."""
-        return self == SupplierOutcomeStatus.SUPPLIERS_FOUND
+        return self in (
+            SupplierOutcomeStatus.SUPPLIERS_FOUND,
+            SupplierOutcomeStatus.SUPPLIERS_VERIFIED,
+            SupplierOutcomeStatus.BEST_EFFORT_UNVERIFIED,
+            SupplierOutcomeStatus.FALLBACK_ONLY
+        )
     
     def is_skipped(self) -> bool:
         """Check if this is a skip outcome."""

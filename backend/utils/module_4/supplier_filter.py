@@ -231,11 +231,12 @@ def score_supplier_signals(
             signal_counts[signal_type] += matches
     
     # Evidence-based weights (NOT flat percentages)
+    # business_presence lowered to 0.05 to avoid penalizing OEMs
     weights = {
-        'company_identity': 0.4,
-        'commercial': 0.3,
-        'product_service': 0.2,
-        'business_presence': 0.1,
+        'company_identity': 0.45,
+        'commercial': 0.30,
+        'product_service': 0.20,
+        'business_presence': 0.05,  # Lowered - distributor signals shouldn't penalize OEMs
     }
     
     # Calculate base score from signals
@@ -367,23 +368,290 @@ def filter_suppliers(
     return filtered
 
 
+def extract_domain(url: str) -> str:
+    """Extract normalized domain from URL."""
+    if not url:
+        return ""
+    # Remove protocol and www
+    domain = re.sub(r'^https?://(www\.)?', '', url.lower())
+    # Take only domain part (before first /)
+    domain = domain.split('/')[0]
+    # Remove port if present
+    domain = domain.split(':')[0]
+    return domain
+
+
+def normalize_supplier_key(supplier: Dict) -> str:
+    """
+    Generate normalized key for supplier deduplication.
+    Combines domain + canonical name for better matching.
+    """
+    name = supplier.get('supplier_name', '').strip().lower()
+    name = re.sub(r'[^a-z0-9]', '', name)  # Remove special chars
+    
+    # Extract domain from URL/website
+    url = supplier.get('website', '') or supplier.get('source_url', '')
+    domain = extract_domain(url)
+    
+    # Combine for unique key
+    if domain and name:
+        return f"{domain}::{name}"
+    elif domain:
+        return f"{domain}::"
+    elif name:
+        return f"::{name}"
+    else:
+        return ""
+
+
 def deduplicate_suppliers(suppliers: List[Dict]) -> List[Dict]:
     """
-    Deduplicate suppliers by normalized name.
-    Keeps highest scoring version.
+    Deduplicate suppliers by normalized domain + name.
+    Keeps highest scoring version and merges evidence.
     """
     seen = {}
+    dedup_count = 0
     
     for supplier in suppliers:
-        name = supplier.get('supplier_name', '').strip().lower()
-        name = re.sub(r'[^a-z0-9]', '', name)  # Remove special chars for matching
+        key = normalize_supplier_key(supplier)
         
-        if not name:
+        if not key:
             continue
         
         score = supplier.get('quality_score', 0.0)
         
-        if name not in seen or score > seen[name].get('quality_score', 0.0):
-            seen[name] = supplier
+        if key not in seen:
+            seen[key] = supplier
+        else:
+            dedup_count += 1
+            # Keep higher scoring version, but merge notes
+            existing = seen[key]
+            if score > existing.get('quality_score', 0.0):
+                # Merge notes from lower-scored duplicate
+                existing_notes = existing.get('notes', '')
+                if existing_notes and existing_notes not in supplier.get('notes', ''):
+                    supplier['notes'] = f"{supplier.get('notes', '')} | {existing_notes}".strip(' |')
+                seen[key] = supplier
+            else:
+                # Merge notes into existing
+                new_notes = supplier.get('notes', '')
+                if new_notes and new_notes not in existing.get('notes', ''):
+                    existing['notes'] = f"{existing.get('notes', '')} | {new_notes}".strip(' |')
+    
+    if dedup_count > 0:
+        logger.info(f"Deduplicated {dedup_count} duplicate suppliers")
     
     return list(seen.values())
+
+
+# =========================================================
+# ENHANCED QUALITY SCORING WITH EVIDENCE SIGNALS
+# =========================================================
+
+# Known manufacturer/OEM domains (expandable)
+KNOWN_OEM_DOMAINS = [
+    # Glass machinery
+    'glaston.net', 'bystronic-glass.com', 'hegla.com', 'lisec.com',
+    'bottero.com', 'intermac.com', 'neptune-glass.com',
+    # Plastic machinery  
+    'engel.at', 'arburg.com', 'krauss-maffei.com', 'sumitomo-shi-demag.eu',
+    'battenfeld-cincinnati.com', 'milacron.com', 'haitian.com',
+    'husky.com', 'boy.de', 'netstal.com', 'fanuc.com',
+    # Packaging/thermoforming
+    'illig.de', 'kiefel.com', 'geiss-ag.de', 'multivac.com', 
+    'cfs-group.com', 'gabler-thermoform.de',
+    # Recycling/granulation
+    'erema.at', 'starlinger.com', 'pallmann.de', 'vecoplan.com',
+    'rapid-granulator.com', 'wittmann-group.com', 'zerma.com',
+    # Automation/robotics
+    'kuka.com', 'abb.com', 'staubli.com', 'yaskawa.com',
+    'comau.com', 'duerr.com', 'eisenmann.com',
+    # Edge banding/woodworking
+    'ima.it', 'homag.com', 'biesse.com', 'scm-group.com',
+]
+
+
+def compute_quality_score(
+    supplier: Dict,
+    canonical_name: str = "",
+    typical_manufacturers: List[str] = None
+) -> Tuple[float, List[str]]:
+    """
+    Compute comprehensive quality score (0.0-1.0) based on evidence signals.
+    
+    Scoring Rules:
+    - +0.35: Official manufacturer domain or brand-known domain
+    - +0.20: Clear manufacturer/OEM/official product page indicators
+    - +0.15: Contact information present (email or phone)
+    - +0.10: Address or company imprint found
+    - -0.30: Clearly unrelated page (materials-only, wrong category)
+    - -0.20: Generic directory listing with no product relevance
+    
+    Args:
+        supplier: Supplier dictionary with name, website, notes, etc.
+        canonical_name: Canonical machine name for relevance checking
+        typical_manufacturers: Known manufacturers for this machine type
+        
+    Returns:
+        (quality_score: float, evidence: List[str])
+    """
+    score = 0.0
+    evidence = []
+    
+    supplier_name = supplier.get('supplier_name', '').lower()
+    website = supplier.get('website', '') or supplier.get('source_url', '')
+    notes = supplier.get('notes', '').lower()
+    domain = extract_domain(website)
+    
+    # OEM SIGNAL SEEDING: Force minimum signals for named manufacturers with websites
+    # If supplier has real company name + website, ensure at least company_identity=1 and product_service=1
+    has_real_company_name = bool(supplier_name and len(supplier_name) > 3 and supplier_name not in ['unknown', 'n/a', 'tbd'])
+    has_website = bool(website and len(website) > 10)
+    
+    if has_real_company_name and has_website:
+        # Seed signals to prevent 0/4 for real manufacturers
+        if 'company_identity' not in str(evidence):
+            score += 0.15
+            evidence.append("OEM SEED: company_identity (real name + website)")
+        if 'product_service' not in str(evidence):
+            score += 0.10
+            evidence.append("OEM SEED: product_service (real name + website)")
+    
+    # +0.35: Official manufacturer domain
+    is_known_oem = any(oem_domain in domain for oem_domain in KNOWN_OEM_DOMAINS)
+    if is_known_oem:
+        score += 0.35
+        evidence.append("Known OEM domain")
+    
+    # Check if supplier name matches typical manufacturers
+    if typical_manufacturers:
+        for mfr in typical_manufacturers:
+            if mfr.lower() in supplier_name or mfr.lower() in domain:
+                score += 0.35
+                evidence.append(f"Matches known manufacturer: {mfr}")
+                break
+    
+    # +0.20: Clear manufacturer/OEM indicators
+    oem_patterns = [
+        r'\bmanufacturer\b', r'\bfactory\b', r'\boem\b',
+        r'\boriginal equipment\b', r'\bmade by\b', r'\bproduced by\b',
+        r'\bofficial\b.*\b(page|site|website)\b',
+        r'\b(official|authorized)\b.*\b(dealer|distributor)\b'
+    ]
+    oem_match = any(re.search(pattern, notes, re.IGNORECASE) for pattern in oem_patterns)
+    if oem_match:
+        score += 0.20
+        evidence.append("Clear OEM/manufacturer indicators")
+    
+    # +0.15: Contact information present
+    has_email = bool(supplier.get('emails'))
+    has_phone = bool(supplier.get('phones'))
+    has_contact_page = bool(supplier.get('contact_pages'))
+    
+    if has_email or has_phone:
+        score += 0.15
+        evidence.append(f"Contact info present (email: {has_email}, phone: {has_phone})")
+    elif has_contact_page:
+        score += 0.07  # Partial credit for contact page
+        evidence.append("Contact page available")
+    
+    # +0.10: Address or company imprint
+    address_patterns = [
+        r'\baddress\b', r'\blocation\b', r'\bheadquarters\b',
+        r'\bimprint\b', r'\bimpressum\b', r'\blegal\b',
+        r'\d{4,5}\s+[A-Z][a-z]+',  # ZIP code + city pattern
+    ]
+    has_address = any(re.search(pattern, notes, re.IGNORECASE) for pattern in address_patterns)
+    if has_address:
+        score += 0.10
+        evidence.append("Address/imprint found")
+    
+    # -0.30: Clearly unrelated (materials-only, wrong category)
+    unrelated_patterns = [
+        r'\bmaterial(s)?\s+only\b', r'\braw\s+material\b',
+        r'\bconsumables?\s+supplier\b', r'\bspare\s+parts\s+only\b',
+        r'\bchemical\s+supplier\b', r'\bresin\s+supplier\b',
+        r'\b(not|no)\s+(machine|equipment)\b'
+    ]
+    is_unrelated = any(re.search(pattern, notes, re.IGNORECASE) for pattern in unrelated_patterns)
+    if is_unrelated:
+        score -= 0.30
+        evidence.append("PENALTY: Clearly unrelated content")
+    
+    # -0.20: Generic directory listing
+    directory_patterns = [
+        r'\bdirectory\s+listing\b', r'\bgeneric\s+catalog\b',
+        r'\baggregator\b', r'\b(list|listing)\s+of\s+suppliers\b'
+    ]
+    is_directory = any(re.search(pattern, notes, re.IGNORECASE) for pattern in directory_patterns)
+    if is_directory:
+        score -= 0.20
+        evidence.append("PENALTY: Generic directory listing")
+    
+    # Additional bonus: Strong product relevance
+    if canonical_name:
+        name_in_supplier = canonical_name.lower() in supplier_name
+        name_in_notes = canonical_name.lower() in notes
+        if name_in_supplier or name_in_notes:
+            score += 0.10
+            evidence.append(f"Product name relevance: {canonical_name}")
+    
+    # Normalize score to [0.0, 1.0]
+    final_score = max(0.0, min(1.0, score))
+    
+    return round(final_score, 3), evidence
+
+
+def apply_quality_threshold(
+    suppliers: List[Dict],
+    min_quality_score: float = 0.55,
+    canonical_name: str = "",
+    typical_manufacturers: List[str] = None,
+    allow_fallback: bool = False
+) -> List[Dict]:
+    """
+    Apply quality score threshold to suppliers.
+    
+    Computes quality_score for each supplier and filters by threshold.
+    If allow_fallback=True and no suppliers pass, returns suppliers above 0.40.
+    
+    Args:
+        suppliers: List of supplier dictionaries
+        min_quality_score: Minimum quality score (default 0.55)
+        canonical_name: Machine canonical name for relevance
+        typical_manufacturers: Known manufacturers for bonus scoring
+        allow_fallback: Allow lower threshold (0.40) if no suppliers pass
+        
+    Returns:
+        Filtered suppliers with quality_score and evidence fields
+    """
+    scored_suppliers = []
+    
+    for supplier in suppliers:
+        quality_score, evidence = compute_quality_score(
+            supplier,
+            canonical_name,
+            typical_manufacturers
+        )
+        
+        supplier['quality_score'] = quality_score
+        supplier['evidence'] = evidence
+        scored_suppliers.append(supplier)
+    
+    # Filter by threshold
+    passing_suppliers = [s for s in scored_suppliers if s['quality_score'] >= min_quality_score]
+    
+    # Fallback to lower threshold if enabled and no suppliers pass
+    if allow_fallback and not passing_suppliers:
+        logger.warning(
+            f"No suppliers passed quality threshold {min_quality_score}. "
+            f"Using fallback threshold 0.40"
+        )
+        passing_suppliers = [s for s in scored_suppliers if s['quality_score'] >= 0.40]
+    
+    logger.info(
+        f"Quality filtering: {len(passing_suppliers)}/{len(suppliers)} suppliers passed "
+        f"(threshold: {min_quality_score}, fallback: {allow_fallback})"
+    )
+    
+    return passing_suppliers

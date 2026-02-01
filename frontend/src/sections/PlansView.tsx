@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Simple3DViewer from "@/components/Simple3DViewer";
 import SimpleDxfViewer from "@/components/SimpleDxfViewer";
 import InteractiveImageViewer from "@/components/InteractiveImageViewer";
@@ -47,11 +48,15 @@ interface Model3DPanelProps {
 }
 
 const Model3DPanel = ({ heightClass = "h-1/2", pipelineModelUrl }: Model3DPanelProps) => {
+    const [factoryVersion, setFactoryVersion] = React.useState<1 | 2>(1);
+    
     // Pipeline model URL from Supabase - no local fallback since it's dynamically generated
     const modelUrl = pipelineModelUrl || undefined;
     const modelName = pipelineModelUrl!
         ? pipelineModelUrl.split('/').pop() || "pipeline.glb"
         : null;
+
+    const factoryModel = `/models/factory${factoryVersion}.glb`;
 
     return (
         <div className={`${heightClass} relative rounded-4xl overflow-hidden border border-slate-200 dark:border-white/10 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 transition-colors`}>
@@ -59,17 +64,39 @@ const Model3DPanel = ({ heightClass = "h-1/2", pipelineModelUrl }: Model3DPanelP
             <div className="absolute top-6 left-6 bg-white/90 dark:bg-white/10 backdrop-blur text-slate-800 dark:text-white px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
                 VUE 3D ISOMÉTRIQUE (GLB)
             </div>
+            <div className="absolute top-6 right-6 flex gap-2 z-10">
+                <button
+                    onClick={() => setFactoryVersion(1)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                        factoryVersion === 1
+                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/50'
+                            : 'bg-white/90 dark:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-white dark:hover:bg-white/20'
+                    }`}
+                >
+                    Version 1
+                </button>
+                <button
+                    onClick={() => setFactoryVersion(2)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                        factoryVersion === 2
+                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/50'
+                            : 'bg-white/90 dark:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-white dark:hover:bg-white/20'
+                    }`}
+                >
+                    Version 2
+                </button>
+            </div>
             <div className="h-full w-full relative">
                 <Simple3DViewer
                     boundingboxStart={{ x: -10, y: 0, z: -5 }}
                     boundingboxEnd={{ x: 10, y: 5, z: 5 }}
-                    factoryModel="/models/factory1.glb"
+                    factoryModel={factoryModel}
                     pipelineModel={modelUrl}
                 />
                 <div className="absolute bottom-6 left-6 bg-slate-900/80 dark:bg-black/50 text-white px-3 py-1.5 rounded-lg text-[10px] font-semibold border border-white/10">
                     {modelName
-                        ? `factory1.glb + ${modelName}`
-                        : "factory1.glb (awaiting pipeline model...)"
+                        ? `factory${factoryVersion}.glb + ${modelName}`
+                        : `factory${factoryVersion}.glb (awaiting pipeline model...)`
                     }
                 </div>
             </div>

@@ -61,6 +61,80 @@ NEGOTIATION_IMAP_PORT = int(os.getenv("NEGOTIATION_IMAP_PORT", os.getenv("IMAP_P
 TEST_RECIPIENT_EMAIL = os.getenv("TEST_RECIPIENT_EMAIL", "").strip()
 
 
+# ================================
+# Module 4 → Module 5 Compatibility Layer
+# ================================
+
+def transform_module4_suppliers(suppliers: list) -> list:
+    """
+    Transform Module 4 supplier schema to Module 5 negotiation schema.
+    
+    Module 4 suppliers have:
+    - emails: string[] (new field)
+    - phones: string[] (new field)
+    - contact_pages: string[] (new field)
+    
+    Module 5 expects:
+    - email_address: string (required for negotiations)
+    - phone: string (optional)
+    
+    Args:
+        suppliers: List of supplier dicts from Module 4
+        
+    Returns:
+        List of transformed supplier dicts compatible with Module 5
+    """
+    transformed = []
+    
+    for supplier in suppliers:
+        # Create a copy to avoid modifying original
+        supplier_copy = supplier.copy()
+        
+        # Transform emails array to single email_address
+        emails = supplier.get('emails', [])
+        if emails and len(emails) > 0:
+            # Use first email
+            supplier_copy['email_address'] = emails[0]
+        elif 'email' in supplier:
+            # Fallback: check for legacy 'email' field
+            supplier_copy['email_address'] = supplier['email']
+        else:
+            # No email available - mark as unavailable
+            supplier_copy['email_address'] = ""
+            logger.warning(
+                f"Supplier '{supplier.get('supplier_name', 'Unknown')}' has no email - "
+                f"cannot be used for email negotiations"
+            )
+        
+        # Transform phones array to single phone
+        phones = supplier.get('phones', [])
+        if phones and len(phones) > 0:
+            supplier_copy['phone'] = phones[0]
+        elif 'phone' not in supplier_copy:
+            supplier_copy['phone'] = ""
+        
+        # Preserve all original fields for reference
+        # (emails, phones, contact_pages arrays remain for future use)
+        
+        transformed.append(supplier_copy)
+    
+    # Filter out suppliers without email (cannot negotiate via email)
+    negotiable = [s for s in transformed if s.get('email_address')]
+    
+    if len(negotiable) < len(transformed):
+        logger.warning(
+            f"Filtered out {len(transformed) - len(negotiable)} suppliers without email addresses. "
+            f"{len(negotiable)} suppliers available for negotiation."
+        )
+    
+    return negotiable
+
+
+# ================================
+# Utilities
+# ================================
+
+
 def _get_email_config(payload: dict = None) -> dict:
     """Get email configuration from payload or env"""
     payload = payload or {}
@@ -235,6 +309,14 @@ def start_negotiation():
             return jsonify({"error": "No suppliers provided"}), 400
         if not buyer_email:
             return jsonify({"error": "buyer_email is required"}), 400
+        
+        # NEW: Transform Module 4 suppliers to Module 5 schema
+        suppliers = transform_module4_suppliers(suppliers)
+        
+        if not suppliers:
+            return jsonify({
+                "error": "No suppliers with email addresses available for negotiation"
+            }), 400
         
         email_config = _get_email_config(payload)
         

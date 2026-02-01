@@ -219,6 +219,124 @@ def insert_module1_extraction(
     return project_id
 
 
+def validate_module4_output(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Validate and sanitize Module 4 output before saving to Supabase.
+    
+    Ensures:
+    - Arrays (emails, phones, contact_pages, evidence) are proper arrays
+    - Strings are strings
+    - No null values inside arrays
+    - Deduplication performed
+    - All required fields present with defaults
+    
+    Args:
+        data: Module 4 output dictionary
+        
+    Returns:
+        Validated and sanitized data
+    """
+    from utils.logger import get_logger
+    logger = get_logger("supabase_utils")
+    
+    def sanitize_array(value, field_name="array"):
+        """Ensure value is a proper array with no nulls."""
+        if value is None:
+            return []
+        if isinstance(value, str):
+            # Shouldn't happen, but handle gracefully
+            logger.warning(f"Converting string to array for {field_name}: {value}")
+            return [value] if value else []
+        if not isinstance(value, list):
+            logger.warning(f"Converting non-list to array for {field_name}: {type(value)}")
+            return [value] if value else []
+        
+        # Remove nulls and deduplicate
+        cleaned = []
+        seen = set()
+        for item in value:
+            if item is not None and item not in seen:
+                cleaned.append(item)
+                seen.add(item)
+        
+        return cleaned
+    
+    def sanitize_string(value, default=""):
+        """Ensure value is a string."""
+        if value is None:
+            return default
+        if isinstance(value, str):
+            return value
+        return str(value)
+    
+    # Validate top-level structure
+    if not isinstance(data, dict):
+        logger.error("Module 4 output is not a dictionary")
+        return data
+    
+    machines_enriched = data.get("machines_enriched", [])
+    if not isinstance(machines_enriched, list):
+        logger.error("machines_enriched is not a list")
+        return data
+    
+    # Validate each machine
+    for i, machine in enumerate(machines_enriched):
+        if not isinstance(machine, dict):
+            logger.warning(f"Machine {i} is not a dictionary")
+            continue
+        
+        # Validate suppliers array
+        suppliers = machine.get("suppliers", [])
+        if not isinstance(suppliers, list):
+            logger.warning(f"Machine {i} suppliers is not a list")
+            machine["suppliers"] = []
+            suppliers = []
+        
+        # Validate each supplier
+        for j, supplier in enumerate(suppliers):
+            if not isinstance(supplier, dict):
+                logger.warning(f"Machine {i} supplier {j} is not a dictionary")
+                continue
+            
+            # Sanitize array fields
+            supplier["emails"] = sanitize_array(supplier.get("emails"), f"emails[{i}][{j}]")
+            supplier["phones"] = sanitize_array(supplier.get("phones"), f"phones[{i}][{j}]")
+            supplier["contact_pages"] = sanitize_array(supplier.get("contact_pages"), f"contact_pages[{i}][{j}]")
+            supplier["evidence"] = sanitize_array(supplier.get("evidence"), f"evidence[{i}][{j}]")
+            
+            # Sanitize string fields
+            supplier["supplier_name"] = sanitize_string(supplier.get("supplier_name"), "Unknown")
+            supplier["region"] = sanitize_string(supplier.get("region"), "Unknown")
+            supplier["website"] = sanitize_string(supplier.get("website", ""))
+            supplier["price_estimate"] = sanitize_string(supplier.get("price_estimate"), "Contact for quote")
+            supplier["price_type"] = sanitize_string(supplier.get("price_type"), "Indicative")
+            supplier["notes"] = sanitize_string(supplier.get("notes"), "")
+            supplier["availability_note"] = sanitize_string(supplier.get("availability_note", ""))
+            
+            # Sanitize boolean
+            supplier["ai_star"] = bool(supplier.get("ai_star", False))
+            
+            # Sanitize numeric fields
+            try:
+                supplier["relevance_score"] = float(supplier.get("relevance_score", 0.5))
+            except (TypeError, ValueError):
+                supplier["relevance_score"] = 0.5
+            
+            try:
+                supplier["quality_score"] = float(supplier.get("quality_score", 0.5))
+            except (TypeError, ValueError):
+                supplier["quality_score"] = 0.5
+        
+        # Sanitize machine-level fields
+        if "no_public_suppliers_subtext" in machine:
+            machine["no_public_suppliers_subtext"] = sanitize_string(
+                machine.get("no_public_suppliers_subtext", "")
+            )
+    
+    logger.info(f"Validated Module 4 output: {len(machines_enriched)} machines")
+    return data
+
+
 def insert_module4_sourcing(
     client: Client,
     project_id: str,
@@ -228,6 +346,9 @@ def insert_module4_sourcing(
 ) -> Optional[str]:
     if not project_id:
         return None
+
+    # NEW: Validate and sanitize Module 4 output
+    data = validate_module4_output(data)
 
     # 1. Fetch current project
     res = client.table("projects").select("completed_modules, metadata").eq("id", project_id).single().execute()

@@ -139,6 +139,13 @@ class PerMachineBudget:
         """Check if machine can fetch another page."""
         return self.pages_fetched < self.max_pages
     
+    def can_fetch_page(self) -> bool:
+        """Check if machine can fetch another page (alias for can_fetch).
+        
+        Used during contact extraction to ensure page fetches are allowed.
+        """
+        return self.can_fetch()
+    
     def can_llm(self) -> bool:
         """Check if machine can make another LLM call."""
         return self.llm_calls_used < self.max_llm_calls

@@ -89,14 +89,14 @@ class ExternalServiceConfig:
     """Centralized configuration for all external services."""
     
     def __init__(self):
-        # Supabase
+        # Supabase - NOW with trailing slash for consistency with storage
         self.supabase_url = normalize_base_url(
             os.getenv("SUPABASE_URL", ""),
-            ensure_trailing_slash=False
+            ensure_trailing_slash=True  # Changed from False - ensures consistency
         )
         self.supabase_key = os.getenv("SUPABASE_KEY", "")
         
-        # Storage
+        # Storage - uses supabase_url as base if not specified
         self.storage_base_url = normalize_base_url(
             os.getenv("STORAGE_BASE_URL", self.supabase_url),
             ensure_trailing_slash=True
