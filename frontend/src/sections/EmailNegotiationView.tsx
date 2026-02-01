@@ -330,6 +330,7 @@ export const EmailNegotiationView = ({
     const [isStarting, setIsStarting] = useState(false);
     const [isPolling, setIsPolling] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [testRecipientEmail, setTestRecipientEmail] = useState<string>("");
     const pollingRef = useRef<NodeJS.Timeout | null>(null);
     const initializationDone = useRef(false);  // Tracks if we've done initial setup
 
@@ -360,14 +361,13 @@ export const EmailNegotiationView = ({
 
         try {
             // Build suppliers list from module4 data
-            // Email override is handled by backend via TEST_RECIPIENT_EMAIL env variable
             const suppliers = module4Data.machines_enriched.flatMap(machine =>
                 machine.suppliers.map(supplier => ({
                     machine_name: machine.machine_input.nom_machine,
                     machine_type: machine.machine_input.type,
                     quantity_needed: machine.machine_input.quantite_necessaire,
                     supplier_name: supplier.supplier_name,
-                    email_address: supplier.email_address || "", // Backend will override if TEST_RECIPIENT_EMAIL is set
+                    email_address: supplier.email_address || "",
                     price_estimate: supplier.price_estimate,
                     price_type: supplier.price_type,
                     region: supplier.region,
@@ -376,15 +376,23 @@ export const EmailNegotiationView = ({
                 }))
             );
 
+            // Build request body with optional test_recipient_email
+            const requestBody: Record<string, unknown> = {
+                suppliers,
+                send_emails: true,
+                buyer_email: "blib645@gmail.com",
+                buyer_company: "SARL ALLO MAISON"
+            };
+            
+            // Add test recipient email if specified (for testing purposes)
+            if (testRecipientEmail.trim()) {
+                requestBody.test_recipient_email = testRecipientEmail.trim();
+            }
+
             const res = await fetch(`${API_BASE}/api/module5/negotiations/start`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    suppliers,
-                    send_emails: true,
-                    buyer_email: "blib645@gmail.com",
-                    buyer_company: "SARL ALLO MAISON"
-                })
+                body: JSON.stringify(requestBody)
             });
 
             const data = await res.json();
@@ -402,7 +410,7 @@ export const EmailNegotiationView = ({
         } finally {
             setIsStarting(false);
         }
-    }, [module4Data, isStarting]);
+    }, [module4Data, isStarting, testRecipientEmail]);
 
     // Check for replies
     const checkReplies = useCallback(async () => {
@@ -569,6 +577,36 @@ export const EmailNegotiationView = ({
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
+                    {/* Test Email Input for Testing */}
+                    <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-full px-3 py-1.5">
+                        <Mail size={14} className="text-amber-600 dark:text-amber-400" />
+                        <input
+                            type="email"
+                            value={testRecipientEmail}
+                            onChange={(e) => setTestRecipientEmail(e.target.value)}
+                            placeholder="Test email (optional)"
+                            className="bg-transparent text-xs text-amber-700 dark:text-amber-300 placeholder:text-amber-400 dark:placeholder:text-amber-500/60 w-40 focus:outline-none"
+                        />
+                        {testRecipientEmail && (
+                            <button
+                                onClick={() => setTestRecipientEmail("")}
+                                className="text-amber-500 hover:text-amber-700 dark:hover:text-amber-300"
+                            >
+                                <X size={12} />
+                            </button>
+                        )}
+                    </div>
+                    {/* Manual Start Button (useful when test email is set) */}
+                    {threads.length === 0 && !isStarting && (
+                        <button
+                            onClick={startNegotiations}
+                            disabled={isStarting || !module4Data?.machines_enriched}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-xs font-bold flex items-center gap-2 transition-colors disabled:opacity-50"
+                        >
+                            <Send size={14} />
+                            Start Negotiations
+                        </button>
+                    )}
                     <button
                         onClick={togglePolling}
                         className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-colors ${isPolling

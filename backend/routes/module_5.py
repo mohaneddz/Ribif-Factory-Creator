@@ -63,7 +63,20 @@ NEGOTIATION_IMAP_PORT = int(os.getenv("NEGOTIATION_IMAP_PORT", os.getenv("IMAP_P
 
 # Test email override - if set, ALL supplier emails will be replaced with this address
 # Leave empty to use the original supplier emails from JSON
+# NOTE: This can be overridden per-request via the "test_recipient_email" payload parameter
 TEST_RECIPIENT_EMAIL = os.getenv("TEST_RECIPIENT_EMAIL", "").strip()
+
+
+def _get_test_recipient_email(payload: dict = None) -> str:
+    """
+    Get test recipient email from payload.
+    Returns empty string if not provided, which means use original supplier emails.
+    
+    Note: This replaces the old .env TEST_RECIPIENT_EMAIL approach.
+    The env variable is no longer used.
+    """
+    payload = payload or {}
+    return (payload.get("test_recipient_email") or "").strip()
 
 
 def _get_email_config(payload: dict = None) -> dict:
@@ -242,18 +255,19 @@ def start_negotiation():
             return jsonify({"error": "buyer_email is required"}), 400
         
         email_config = _get_email_config(payload)
+        test_email = _get_test_recipient_email(payload)
         
         created_threads = []
         send_results = []
         
         # Log if using test email override
-        if TEST_RECIPIENT_EMAIL:
-            logger.info(f"TEST MODE: All emails will be sent to {TEST_RECIPIENT_EMAIL}")
+        if test_email:
+            logger.info(f"TEST MODE: All emails will be sent to {test_email}")
         
         for supplier in suppliers:
             # Get original email, then apply test override if configured
             original_email = supplier.get("email_address", "")
-            supplier_email = TEST_RECIPIENT_EMAIL if TEST_RECIPIENT_EMAIL else original_email
+            supplier_email = test_email if test_email else original_email
             
             if not supplier_email:
                 logger.warning(f"Skipping supplier {supplier.get('supplier_name')} - no email")
@@ -1009,8 +1023,9 @@ def save_voice_negotiation():
         email_result = None
         if send_confirmation_email and payload.get("final_status") == "ACCEPTED":
             try:
-                # Apply test email override if configured
-                recipient_email = TEST_RECIPIENT_EMAIL if TEST_RECIPIENT_EMAIL else thread.supplier_email
+                # Apply test email override if configured (payload takes precedence)
+                test_email = _get_test_recipient_email(payload)
+                recipient_email = test_email if test_email else thread.supplier_email
                 
                 # Generate email content
                 subject = generate_voice_call_confirmation_subject(thread)
@@ -1169,8 +1184,9 @@ def send_negotiation_link(negotiation_id: str):
         if not supplier_email:
             return jsonify({"error": "Supplier email not set"}), 400
         
-        # Apply test override if configured
-        recipient_email = TEST_RECIPIENT_EMAIL if TEST_RECIPIENT_EMAIL else supplier_email
+        # Apply test override if configured (payload takes precedence)
+        test_email = _get_test_recipient_email(payload)
+        recipient_email = test_email if test_email else supplier_email
         
         # Build negotiation link
         link_token = negotiation.get("link_token")
@@ -1373,7 +1389,9 @@ def save_negotiation_result_v2(negotiation_id: str):
             try:
                 supplier_email = negotiation.get("supplier_email")
                 if supplier_email:
-                    recipient_email = TEST_RECIPIENT_EMAIL if TEST_RECIPIENT_EMAIL else supplier_email
+                    # Apply test email override if configured (payload takes precedence)
+                    test_email = _get_test_recipient_email(payload)
+                    recipient_email = test_email if test_email else supplier_email
                     
                     # Create a minimal thread-like object for the email generator
                     class MinimalThread:
