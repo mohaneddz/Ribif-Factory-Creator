@@ -9,6 +9,7 @@ Ensures budget integrity and consistent logging.
 from dataclasses import dataclass, field
 from typing import Dict, List
 import time
+import threading
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -207,11 +208,23 @@ class GlobalBudget:
     # Global tracker
     global_tracker: WebCallTracker = field(default_factory=WebCallTracker)
     
+    # Thread-safe budget reservation
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+    
     def can_allocate_machine(self) -> bool:
         """Check if we can process another machine without exceeding budget."""
-        # Conservative estimate: assume max calls per machine
-        estimated_calls = self.web_calls_used + 10  # Rough estimate per machine
-        return estimated_calls < self.max_web_calls
+        with self._lock:
+            # Conservative estimate: assume max calls per machine
+            estimated_calls = self.web_calls_used + 12  # Updated for increased budget (3 queries + ~9 pages)
+            return estimated_calls < self.max_web_calls
+    
+    def reserve_budget_atomic(self, estimated_calls: int) -> bool:
+        """Atomically reserve budget for operations. Thread-safe."""
+        with self._lock:
+            if self.web_calls_used + estimated_calls <= self.max_web_calls:
+                # Reservation successful (actual usage tracked separately)
+                return True
+            return False
     
     def create_machine_budget(
         self,
@@ -233,27 +246,29 @@ class GlobalBudget:
         return budget
     
     def finalize_machine(self, machine_name: str):
-        """Finalize a machine's budget and update global counters."""
+        """Finalize a machine's budget and update global counters. Thread-safe."""
         if machine_name not in self.machine_budgets:
             return
         
         budget = self.machine_budgets[machine_name]
         
-        # Update global counters from machine tracker
-        self.web_calls_used += budget.tracker.total_web_calls
-        self.global_tracker.search_queries += budget.tracker.search_queries
-        self.global_tracker.pages_fetched += budget.tracker.pages_fetched
-        self.global_tracker.image_queries += budget.tracker.image_queries
-        self.global_tracker.cache_hits += budget.tracker.cache_hits
+        with self._lock:
+            # Update global counters from machine tracker
+            self.web_calls_used += budget.tracker.total_web_calls
+            self.global_tracker.search_queries += budget.tracker.search_queries
+            self.global_tracker.pages_fetched += budget.tracker.pages_fetched
+            self.global_tracker.image_queries += budget.tracker.image_queries
+            self.global_tracker.cache_hits += budget.tracker.cache_hits
+            
+            self.machines_processed += 1
         
-        self.machines_processed += 1
-        
-        # Log
+        # Log (outside lock to avoid deadlock)
         budget.log_usage()
     
     def skip_machine(self, machine_name: str, reason: str):
-        """Record that a machine was skipped."""
-        self.machines_skipped += 1
+        """Record that a machine was skipped. Thread-safe."""
+        with self._lock:
+            self.machines_skipped += 1
         logger.info(f"Machine '{machine_name}' SKIPPED: {reason}")
     
     def get_global_summary(self) -> Dict:

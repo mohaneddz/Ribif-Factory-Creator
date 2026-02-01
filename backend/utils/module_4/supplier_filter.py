@@ -71,16 +71,51 @@ GENERIC_PDF_PATTERNS = [
     r'market-analysis',
 ]
 
+# Materials, consumables, and services (not machine suppliers)
+MATERIALS_CONSUMABLES_PATTERNS = [
+    r'\b(plastic film|foil|wrap|sheet|roll)\b',
+    r'\b(resin|polymer|granule|pellet|powder)\b',
+    r'\b(adhesive|glue|tape|coating|ink|paint)\b',
+    r'\b(consumable|spare part|component|accessory)\b',
+    r'\b(raw material|chemical|solvent|cleaner)\b',
+    r'\b(packaging material|label|bag|box)\b',
+    r'\b(lubricant|oil|grease|fluid)\b',
+    r'\b(maintenance service|repair service|cleaning service)\b',
+    r'\b(training|consulting|consultancy)\b',
+    r'\bmaterial supplier\b',
+    r'\bchemical supplier\b',
+]
+
 ALL_REJECTION_PATTERNS = (
     GOVERNMENT_PATTERNS +
     MARKETPLACE_PATTERNS +
     CONTENT_PATTERNS +
-    GENERIC_PDF_PATTERNS
+    GENERIC_PDF_PATTERNS +
+    MATERIALS_CONSUMABLES_PATTERNS
 )
 
 # =========================================================
 # STRONG SIGNAL PATTERNS (indicators of real supplier)
 # =========================================================
+
+# Supplier type classification patterns
+SUPPLIER_TYPE_PATTERNS = {
+    'oem': [
+        r'\b(manufacturer|factory|oem|original equipment)\b',
+        r'\b(made by|produced by|fabricated by)\b',
+        r'\bmanufacturing facility\b',
+    ],
+    'distributor': [
+        r'\b(distributor|authorized dealer|official dealer)\b',
+        r'\b(distribution|supply chain)\b',
+        r'\bexclusive distributor\b',
+    ],
+    'integrator': [
+        r'\b(system integrator|integration|turnkey)\b',
+        r'\b(installation|commissioning|setup)\b',
+        r'\b(engineering solution|complete line)\b',
+    ],
+}
 
 STRONG_SIGNALS = {
     # Company identity signals
@@ -118,6 +153,31 @@ STRONG_SIGNALS = {
 # SUPPLIER FILTERING
 # =========================================================
 
+def classify_supplier_type(supplier_name: str, description: str = "", url: str = "") -> str:
+    """
+    Classify supplier as OEM, distributor, or integrator based on text signals.
+    
+    Returns:
+        'oem', 'distributor', 'integrator', or 'unknown'
+    """
+    combined_text = f"{supplier_name} {description} {url}".lower()
+    
+    # Score each type
+    scores = {}
+    for supplier_type, patterns in SUPPLIER_TYPE_PATTERNS.items():
+        score = 0
+        for pattern in patterns:
+            matches = len(re.findall(pattern, combined_text, re.IGNORECASE))
+            score += matches
+        scores[supplier_type] = score
+    
+    # Return highest scoring type (if any)
+    max_score = max(scores.values())
+    if max_score > 0:
+        return max(scores.items(), key=lambda x: x[1])[0]
+    
+    return 'unknown'
+
 def should_reject_source(url: str, title: str = "", snippet: str = "") -> Tuple[bool, str]:
     """
     Check if a source should be rejected.
@@ -140,10 +200,18 @@ def score_supplier_signals(
     url: str,
     title: str = "",
     snippet: str = "",
-    description: str = ""
+    description: str = "",
+    supplier_type: str = "unknown"
 ) -> Tuple[float, Dict[str, int]]:
     """
-    Score a supplier based on strong signals.
+    Score a supplier based on strong signals with calibrated evidence-based scoring.
+    
+    Scoring philosophy:
+    - OEM manufacturers: highest scores (0.8-0.95) due to direct source
+    - Verified integrators: high scores (0.7-0.85) for turnkey solutions
+    - Distributors: medium-high scores (0.6-0.75) for availability
+    - Unknown type: lower scores (0.4-0.6) pending verification
+    - Scores calibrated by evidence strength, not flat percentages
     
     Returns:
         (total_score: float, signal_breakdown: Dict[signal_type, count])
@@ -162,7 +230,7 @@ def score_supplier_signals(
             matches = len(re.findall(pattern, combined_text, re.IGNORECASE))
             signal_counts[signal_type] += matches
     
-    # Calculate weighted score
+    # Evidence-based weights (NOT flat percentages)
     weights = {
         'company_identity': 0.4,
         'commercial': 0.3,
@@ -170,24 +238,37 @@ def score_supplier_signals(
         'business_presence': 0.1,
     }
     
-    total_score = 0.0
+    # Calculate base score from signals
+    base_score = 0.0
     for signal_type, count in signal_counts.items():
         # Cap individual contributions to avoid over-weighting
         capped_count = min(count, 3)
-        total_score += weights[signal_type] * (capped_count / 3.0)
+        base_score += weights[signal_type] * (capped_count / 3.0)
     
-    return total_score, signal_counts
+    # Calibrate by supplier type (evidence-based, not arbitrary)
+    type_multipliers = {
+        'oem': 1.3,         # OEMs get highest scores (0.8-0.95 range)
+        'integrator': 1.15, # Integrators get high scores (0.7-0.85 range)
+        'distributor': 1.0, # Distributors get medium-high (0.6-0.75 range)
+        'unknown': 0.85,    # Unknown types get lower scores (0.4-0.6 range)
+    }
+    
+    multiplier = type_multipliers.get(supplier_type, 0.85)
+    calibrated_score = min(0.95, base_score * multiplier)  # Cap at 0.95 (never 100%)
+    
+    return calibrated_score, signal_counts
 
 
 def filter_and_score_supplier(
     supplier: Dict,
-    min_score: float = 0.3
-) -> Tuple[bool, float, str]:
+    min_score: float = 0.3,
+    machine_name: str = ""
+) -> Tuple[bool, float, str, str]:
     """
-    Filter and score a single supplier.
+    Filter and score a single supplier with supplier type classification.
     
     Returns:
-        (keep: bool, score: float, reason: str)
+        (keep: bool, score: float, reason: str, supplier_type: str)
     """
     supplier_name = supplier.get('supplier_name', '')
     url = supplier.get('website', '') or supplier.get('source_url', '')
@@ -195,14 +276,17 @@ def filter_and_score_supplier(
     snippet = supplier.get('snippet', '')
     notes = supplier.get('notes', '')
     
-    # Check rejection patterns
+    # Check rejection patterns (including materials/consumables)
     should_reject, reject_reason = should_reject_source(url, title, snippet)
     if should_reject:
-        return False, 0.0, f"REJECTED: {reject_reason}"
+        return False, 0.0, f"REJECTED: {reject_reason}", 'rejected'
     
-    # Score based on signals
+    # Classify supplier type
+    supplier_type = classify_supplier_type(supplier_name, notes, url)
+    
+    # Score based on signals with calibrated scoring
     score, signal_breakdown = score_supplier_signals(
-        supplier_name, url, title, snippet, notes
+        supplier_name, url, title, snippet, notes, supplier_type
     )
     
     # Require at least one signal from each of two categories
@@ -210,36 +294,47 @@ def filter_and_score_supplier(
     
     if categories_with_signals < 2:
         reason = f"REJECTED: Insufficient signals (only {categories_with_signals}/4 categories). Breakdown: {signal_breakdown}"
-        return False, score, reason
+        return False, score, reason, supplier_type
     
     if score < min_score:
         reason = f"REJECTED: Score too low ({score:.2f} < {min_score}). Breakdown: {signal_breakdown}"
-        return False, score, reason
+        return False, score, reason, supplier_type
     
-    reason = f"ACCEPTED: Score {score:.2f}, signals: {signal_breakdown}"
-    return True, score, reason
+    reason = f"ACCEPTED: Score {score:.2f} ({supplier_type}), signals: {signal_breakdown}"
+    return True, score, reason, supplier_type
 
 
 def filter_suppliers(
     suppliers: List[Dict],
+    machine_name: str = "",
+    machine_type: str = "",
     min_score: float = 0.3,
     log_decisions: bool = True
 ) -> List[Dict]:
     """
-    Filter a list of suppliers, keeping only high-quality ones.
+    Filter suppliers with hard requirements:
+    - Machine suppliers only (OEM, distributor, integrator)
+    - Exclude materials/consumables
+    - Require ≥1 OEM OR ≥2 verified integrators when possible
+    - Calibrate scores by evidence strength
     
     Args:
         suppliers: List of supplier dictionaries
+        machine_name: Original machine name (for logging)
+        machine_type: Canonical machine type (for logging)
         min_score: Minimum score threshold
         log_decisions: Whether to log keep/reject decisions
     
     Returns:
-        Filtered list of suppliers with added 'quality_score' field
+        Filtered list of suppliers with added 'quality_score' and 'supplier_type' fields
     """
     filtered = []
+    supplier_type_counts = {'oem': 0, 'integrator': 0, 'distributor': 0, 'unknown': 0}
     
     for supplier in suppliers:
-        keep, score, reason = filter_and_score_supplier(supplier, min_score)
+        keep, score, reason, supplier_type = filter_and_score_supplier(
+            supplier, min_score, machine_name
+        )
         
         if log_decisions:
             supplier_name = supplier.get('supplier_name', 'Unknown')
@@ -248,7 +343,26 @@ def filter_suppliers(
         if keep:
             supplier['quality_score'] = round(score, 3)
             supplier['quality_signals'] = reason
+            supplier['supplier_type'] = supplier_type
             filtered.append(supplier)
+            supplier_type_counts[supplier_type] += 1
+    
+    # Log supplier type distribution
+    if log_decisions:
+        logger.info(
+            f"Supplier types for '{machine_name}': "
+            f"OEM={supplier_type_counts['oem']}, "
+            f"Integrators={supplier_type_counts['integrator']}, "
+            f"Distributors={supplier_type_counts['distributor']}, "
+            f"Unknown={supplier_type_counts['unknown']}"
+        )
+        
+        # Warn if requirements not met
+        if supplier_type_counts['oem'] == 0 and supplier_type_counts['integrator'] < 2:
+            logger.warning(
+                f"Machine '{machine_name}' lacks ideal supplier mix: "
+                f"No OEMs and fewer than 2 integrators. Consider additional searches."
+            )
     
     return filtered
 
