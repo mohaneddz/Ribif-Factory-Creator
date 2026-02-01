@@ -9,3 +9,4 @@ logs/
 backend/cache/search/**
 backend/utils/module_2/assets_cache/**
 backend/cache/negotiations/**
+backend/cache/module_4/**

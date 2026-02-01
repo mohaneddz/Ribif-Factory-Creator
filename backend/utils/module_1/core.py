@@ -277,18 +277,8 @@ SCHEMA_STAGE_5 = {
         {
             "numero_etape": 1,
             "nom_etape": "string",
-            "type_operation": "string",
             "description": "string",
             "machines_utilisees": ["string"],
-            "inputs": ["string"],
-            "outputs": ["string"],
-            "parametres_process": {
-                "temperature": "string",
-                "pression": "string",
-                "vitesse": "string",
-                "temps_cycle": "string",
-                "tolerances": "string",
-            },
         }
     ],
     "kpi_production": {
@@ -343,7 +333,16 @@ def build_stage_prompt(stage_key: str, schema_example: Dict[str, Any], excerpt: 
     if stage_key == "stage_4_machines_equipements":
         return (
             "You are an industrial engineer.\n"
-            "Task: Extract ONLY machines explicitly mentioned in the document.\n"
+            "Task: Extract ONLY the MANDATORY/ESSENTIAL production machines explicitly mentioned in the document.\n"
+            "CRITICAL: Only include machines that are:\n"
+            "1. EXPLICITLY required for core production processes\n"
+            "2. Directly mentioned with specific production purposes\n"
+            "3. NOT optional, auxiliary, or support equipment (unless explicitly essential)\n\n"
+            "EXCLUDE:\n"
+            "- Generic support equipment (AGVs, ASRS) unless explicitly stated as mandatory\n"
+            "- Machines only vaguely implied or suggested\n"
+            "- Auxiliary systems (unless explicitly required)\n\n"
+            "For quantite_necessaire: Use the exact number if stated in the document, otherwise use 0.\n"
             "If specs (dimensions, power, etc.) are NOT in the document, output 'N/A'.\n"
             "Do NOT guess or fabricate specifications.\n\n"
             + base

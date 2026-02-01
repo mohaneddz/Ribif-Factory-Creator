@@ -7,12 +7,14 @@ from utils.module_7.business_plan import RIBIFModule7BusinessPlan, BusinessPlanI
 from utils.module_7.pitch_deck import RIBIFModule8PitchDeck, PitchDeckInput
 from utils.app_helpers import get_request_user_id, load_template_payload, upload_and_register_file
 from utils.logger import log_skip, get_logger
+from utils.request_lock import require_project_lock
 
 logger = get_logger(__name__)
 bp_module7 = Blueprint("module7", __name__)
 
 
 @bp_module7.route("/api/module7/business-plan", methods=["POST"])
+@require_project_lock(timeout=1.0)
 def generate_business_plan():
     try:
         if SKIP_MODULE_7:
@@ -100,6 +102,7 @@ def generate_business_plan():
 
 
 @bp_module7.route("/api/module7/pitch-deck", methods=["POST"])
+@require_project_lock(timeout=1.0)
 def generate_pitch_deck():
     try:
         if SKIP_MODULE_8:

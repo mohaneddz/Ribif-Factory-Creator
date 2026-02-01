@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { THEME_COOKIE } from "@/utils/theme";
 
 export const metadata: Metadata = {
@@ -20,9 +21,11 @@ export default async function RootLayout({
     return (
         <html lang="en" className={theme}>
             <body className={`min-h-screen `}>
-                <ThemeProvider>
-                    <main className="">{children}</main>
-                </ThemeProvider>
+                <ErrorBoundary>
+                    <ThemeProvider>
+                        <main className="">{children}</main>
+                    </ThemeProvider>
+                </ErrorBoundary>
             </body>
         </html>
     );

@@ -26,6 +26,7 @@ import { SourcingView } from "@/sections/SourcingView";
 import { TcoView } from "@/sections/TcoView";
 import { VideoView } from "@/sections/VideoView";
 import { DigitalTwinView } from "@/sections/DigitalTwinView";
+import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { API_BASE, MODULES, fontStyle } from "@/sections/constants";
 import { supabase } from "@/lib/supabaseClient";
 import { loadPipelineSettings } from "@/utils/pipelineSettings";
@@ -66,6 +67,9 @@ export default function FactoryCopilot() {
     const [videoData, setVideoData] = useState<any>(null);
     const [videoLoading, setVideoLoading] = useState(false);
 
+    // Error state
+    const [error, setError] = useState<string | Error | null>(null);
+
     // Refs for tracking workflow state
     const runHasData = useRef(false);
     const projectLoadedRef = useRef(false);
@@ -91,11 +95,13 @@ export default function FactoryCopilot() {
 
         if (error || !data) {
             console.warn("⚠️ Could not load project:", error?.message);
+            setError(error?.message || "Impossible de charger le projet");
             setStatus('idle');
             projectLoadedRef.current = false;
             return;
         }
 
+        setError(null);
         console.log("✅ Project loaded:", data);
         setProjectData(data);
 
@@ -652,6 +658,7 @@ export default function FactoryCopilot() {
 
         } catch (e) {
             console.error("Workflow Error", e);
+            setError(e instanceof Error ? e : String(e));
             setStatus('idle');
             setModule4Loading(false);
             setTcoLoading(false);
@@ -686,6 +693,9 @@ export default function FactoryCopilot() {
     }, [shouldAutoResume, pendingResumeData]);
 
     const regenerateOne = async (idx: number) => {
+        // Clear error state
+        setError(null);
+        
         // Clear local state for the module to trigger UI updates
         const moduleType = MODULES[idx]?.type;
         const updates: Partial<ProjectRecord> = {};
@@ -712,6 +722,9 @@ export default function FactoryCopilot() {
     };
 
     const regenerateAll = async () => {
+        // Clear error state
+        setError(null);
+        
         if (!projectId) return;
 
         try {
@@ -909,7 +922,19 @@ export default function FactoryCopilot() {
                     </header>
 
                     <div className="flex-1 p-6 relative overflow-y-auto">
-                        {status === 'uploading' || status === 'loading' || status === 'resuming' || status === 'idle' ? (
+                        {error ? (
+                            <ErrorDisplay 
+                                error={error}
+                                onRetry={() => {
+                                    setError(null);
+                                    if (projectId) {
+                                        projectLoadedRef.current = false;
+                                        loadExistingProject(projectId);
+                                    }
+                                }}
+                                compact={true}
+                            />
+                        ) : status === 'uploading' || status === 'loading' || status === 'resuming' || status === 'idle' ? (
                             <div className="h-full w-full flex flex-col items-center justify-center">
                                 <Loader2 size={48} className="text-indigo-600 dark:text-indigo-500 animate-spin mb-4" />
                                 <h3 className="text-xl font-bold text-slate-800 dark:text-white">

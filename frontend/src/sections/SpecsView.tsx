@@ -344,9 +344,14 @@ export const SpecsView = ({ data }: any) => {
                                     </div>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{step.description}</p>
                                     <div className="flex flex-wrap gap-1 mb-2">
-                                        {(step.machines_utilisees || []).map((m: string, j: number) => (
-                                            <span key={j} className="px-2 py-0.5 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 rounded text-xs">{m}</span>
-                                        ))}
+                                        {(step.machines_utilisees || []).map((m: any, j: number) => {
+                                            // Handle both string and object formats
+                                            const machineName = typeof m === 'string' ? m : 
+                                                              (m?.nom_machine || m?.name || JSON.stringify(m));
+                                            return (
+                                                <span key={j} className="px-2 py-0.5 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 rounded text-xs">{machineName}</span>
+                                            );
+                                        })}
                                     </div>
                                     <div className="grid grid-cols-3 gap-2 text-xs text-slate-600 dark:text-slate-400">
                                         <span><strong>Temp:</strong> {renderValue(step.parametres_process?.temperature, true)}</span>

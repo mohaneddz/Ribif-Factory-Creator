@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import HTMLFlipBook from "react-pageflip";
 import { BookOpen, ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react";
 import clsx from "clsx";
+import { ErrorDisplay } from "@/components/ErrorDisplay";
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
@@ -243,11 +244,18 @@ export const CatalogueTechniqueView = ({ pdfUrl, htmlUrl, loading = false }: { p
 
     if (loadError) {
         return (
-            <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-[#0b0c10] bg-none dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 transition-colors">
-                <div className="text-center">
-                    <p className="text-slate-800 dark:text-white font-bold">{loadError}</p>
-                </div>
-            </div>
+            <ErrorDisplay 
+                error={loadError}
+                title="Erreur de chargement du catalogue"
+                onRetry={() => {
+                    setLoadError(null);
+                    setIsLoadingPdf(true);
+                    // Re-trigger PDF load
+                    if (resolvedPdfUrl) {
+                        window.location.reload();
+                    }
+                }}
+            />
         );
     }
 

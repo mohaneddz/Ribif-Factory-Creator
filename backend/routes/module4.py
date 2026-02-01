@@ -7,8 +7,9 @@ from datetime import datetime, timezone
 
 from config import OUTPUT_DIRS, SKIP_MODULE_4, BASE_URL
 from supabase_utils import get_supabase, insert_module4_sourcing
-from utils.module_4.core import build_machines_enriched
+from utils.module_4.core_v2 import process_module_4_bounded  # NEW: Use bounded version
 from utils.logger import log_skip, get_logger
+from utils.request_lock import require_project_lock
 from utils.app_helpers import (
     get_request_project_id,
     get_request_user_id,
@@ -46,6 +47,7 @@ bp_module4 = Blueprint("module4", __name__)
 
 
 @bp_module4.route("/api/module4/enrich", methods=["POST"])
+@require_project_lock(timeout=1.0)
 def enrich_machines_module4():
     try:
         if SKIP_MODULE_4:
@@ -74,23 +76,17 @@ def enrich_machines_module4():
         if not machines:
             return jsonify({"error": "No machines found in input."}), 400
 
-        input_path = OUTPUT_DIRS["module4"] / "module_4_input.json"
-        input_path.parent.mkdir(parents=True, exist_ok=True)
-        input_path.write_text(json.dumps(input_data, ensure_ascii=False, indent=2), encoding="utf-8")
-
-        output_path = OUTPUT_DIRS["module4"] / "module_4.json"
-        
-        # Budget is consistent at 60s
-        result = build_machines_enriched(
-            input_path=str(input_path),
-            output_path=str(output_path),
-            max_workers=4,
-            per_machine_timeout_s=75,
-            domain_gap_s=1.5,
-            llm_call_timeout_s=30,
-            total_machine_budget_s=60,
-            generated_images_dir=str(OUTPUT_DIRS["module4"] / "module_4_images"),
+        # NEW: Use bounded enrichment with 4-phase pipeline
+        # Process directly with bounded approach (no intermediate files needed)
+        result = process_module_4_bounded(
+            machines=machines,
+            max_workers=8,  # Parallel processing
         )
+
+        # Save output
+        output_path = OUTPUT_DIRS["module4"] / "module_4.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
 
         if project_id:
             result["project_id"] = project_id
@@ -101,46 +97,11 @@ def enrich_machines_module4():
         client = get_supabase()
         owner_id = get_request_user_id()
         
-        # Post-process: Handle generated images and DB sync
+        # Post-process: Handle DB sync (no generated images in bounded version)
         warnings = []
         if client and project_id:
             try:
-                # 1. Upload generated images & update URLs
-                machines_enriched = result.get("machines_enriched", []) or []
-                for entry in machines_enriched:
-                    try:
-                        m_input = entry.get("machine_input", {})
-                        assets = m_input.get("assets", {})
-                        gen = assets.get("generated_image")
-                        
-                        if gen and isinstance(gen, dict) and gen.get("local_path"):
-                            local_p = gen.get("local_path")
-                            fname = gen.get("filename")
-                            
-                            # Upload to storage
-                            fid, url, ob_path = upload_with_name_timestamp(
-                                client=client,
-                                project_id=project_id,
-                                owner_id=owner_id,
-                                local_path=local_p,
-                                category="module4-generated",
-                                label=fname,
-                            )
-                            
-                            # Update JSON with public URL
-                            gen["public_url"] = url
-                            gen["file_id"] = fid
-                            
-                            # Fallback best_image_url if N/A
-                            if m_input.get("best_image_url") in [None, "N/A", ""]:
-                                m_input["best_image_url"] = url
-                                
-                    except Exception as img_err:
-                        warnings.append(f"Image upload fail for item: {img_err}")
-                        logger.error("Image upload post-process failed: %s", img_err)
-
-                # 2. Insert Module 4 Record
-                # Stats
+                # 1. Insert Module 4 Record
                 processing_time = int(time.time() - start_time)
                 run_id = str(uuid.uuid4())
                 enrichment_date = datetime.now(timezone.utc).isoformat()
@@ -148,7 +109,7 @@ def enrich_machines_module4():
                 proj_meta = {
                     "last_run_id": run_id,
                     "last_enrichment_date": enrichment_date,
-                    "model_used": "vertex-gemini-pro",
+                    "model_used": "vertex-gemini-bounded",
                     "last_processing_time_seconds": processing_time
                 }
 
@@ -156,7 +117,7 @@ def enrich_machines_module4():
                 result.setdefault("ribif_metadata", {})
                 result["ribif_metadata"]["module4_id"] = module4_id
                 
-                # 3. Upload Output JSON
+                # 2. Upload Output JSON
                 if output_path.exists():
                     output_file_id, output_file_url = upload_and_register_file(
                         client=client,
@@ -169,37 +130,50 @@ def enrich_machines_module4():
                     result["ribif_metadata"]["module4_output_file_id"] = output_file_id
                     result["ribif_metadata"]["module4_output_file_url"] = output_file_url
 
-                # 4. Sync Suppliers & Machines
+                # 3. Sync Suppliers & Machines (NEW: adapted for new structure)
                 machines_map = get_project_machines(client, project_id)
-                for entry in machines_enriched:
+                for enriched_machine in result.get("machines_enriched", []):
                     try:
-                        machine_input = entry.get("machine_input", {})
-                        machine_name = machine_input.get("nom_machine") or machine_input.get("name")
-                        machine_id = machines_map.get(machine_name)
+                        # Extract from new structure
+                        machine_input = enriched_machine.get("machine_input", {})
+                        suppliers_list = enriched_machine.get("suppliers", [])
+                        
+                        original_name = machine_input.get("nom_machine")
+                        machine_id = machines_map.get(original_name)
                         
                         if not machine_id:
                             continue
                             
-                        # Insert suppliers
-                        for supplier in entry.get("suppliers", []) or []:
+                        # Insert validated suppliers with full information
+                        for supplier in suppliers_list or []:
                             supplier_id = upsert_supplier(
                                 client,
-                                supplier.get("supplier_name") or supplier.get("name") or "Unknown",
+                                supplier.get("supplier_name") or "Unknown",
                                 supplier.get("website"),
                                 supplier.get("region"),
-                                metadata={"source": "module4"},
+                                metadata={
+                                    "source": "module4_bounded",
+                                    "price_estimate": supplier.get("price_estimate"),
+                                    "price_type": supplier.get("price_type"),
+                                },
                             )
                             if supplier_id:
                                 insert_machine_supplier(
                                     client,
                                     machine_id,
                                     supplier_id,
-                                    supplier,
-                                    metadata={"source": "module4"},
+                                    {
+                                        "confidence": machine_input.get("confidence"),
+                                        "relevance_score": supplier.get("relevance_score"),
+                                        "note": supplier.get("notes"),
+                                        "price_estimate": supplier.get("price_estimate"),
+                                        "price_type": supplier.get("price_type"),
+                                    },
+                                    metadata={"source": "module4_bounded"},
                                 )
                                 
                     except Exception as inner_e:
-                        warnings.append(f"DB sync fail for {machine_name}: {inner_e}")
+                        warnings.append(f"DB sync fail for {machine_input.get('nom_machine', 'unknown')}: {inner_e}")
                         logger.error("DB sync failed: %s", inner_e)
                         
             except Exception as e:

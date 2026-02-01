@@ -6,6 +6,7 @@ from config import OUTPUT_DIRS, SKIP_MODULE_6, write_json
 from supabase_utils import get_supabase, insert_tco_run
 from utils.module_6.core import RIBIFModule6TCO, ProductTCO, RawMaterialTCO
 from utils.logger import log_skip, get_logger
+from utils.request_lock import require_project_lock
 from utils.app_helpers import (
     get_request_project_id,
     get_request_user_id,
@@ -21,6 +22,7 @@ bp_module6 = Blueprint("module6", __name__)
 
 
 @bp_module6.route("/api/module6/tco-from-sourcing", methods=["POST"])
+@require_project_lock(timeout=1.0)
 def calculate_tco_from_sourcing():
     try:
         if SKIP_MODULE_6:
@@ -228,6 +230,7 @@ def calculate_tco_from_sourcing():
 
 
 @bp_module6.route("/api/module6/tco", methods=["POST"])
+@require_project_lock(timeout=1.0)
 def calculate_tco():
     try:
         data = request.get_json()

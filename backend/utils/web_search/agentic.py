@@ -1,14 +1,7 @@
-
 """
 Agentic Web Search Module
 -------------------------
-Implements an AI-driven search loop that:
-1. Analyzes the search goal (e.g. "Find specs for Machine X").
-2. Decides on a search query.
-3. Executes the search.
-4. Evaluates results using LLM.
-5. Decides if more info is needed or if the results are satisfactory.
-6. Repeats until done or max steps reached.
+HARDENED: Implements quota-aware AI-driven search loop with rate limiting.
 """
 
 from __future__ import annotations
@@ -24,6 +17,8 @@ from . import aggregator
 from .base import SupplierResult, MachineSpecsResult, ImageResult
 from vertex_utils import generate_message
 from utils.logger import get_logger
+from utils.quota_manager import with_rate_limit, with_retry, is_quota_error, get_user_friendly_error
+from utils.normalization import normalize_numeric
 
 logger = get_logger(__name__)
 
@@ -31,7 +26,7 @@ logger = get_logger(__name__)
 # Configuration
 # =========================================================
 
-MAX_STEPS = 3  # Increased to 3 per user request to ensure better coverage without looping forever
+MAX_STEPS = 1  # Reduced to 1 for speed (was 3)
 LLM_TIMEOUT = 60
 TEMPERATURE = 0.2
 
@@ -53,21 +48,22 @@ SEARCH HISTORY:
 {history}
 
 TIPS:
-- Use diverse and specific queries (e.g. 'distributor', 'dealer', 'OEM', 'official catalog', 'price list').
-- If finding few results, broaden the region or use synonyms for the machine name.
-- Early steps: Explore broad terms. Late steps: Verify specific company details.
+- Use ONE broad query that can find manufacturer names
+- Prefer general searches over specific model lookups
+- If you have ANY manufacturer name or machine category, choose FINISH
 
 DECISION:
 Determine the next best step.
-- If you have enough INFORMATION to satisfy the goal with high confidence, choose "FINISH".
-- If you need to search for something, choose "SEARCH" and provide the *exact* query strings (up to 3).
-- If you have partial info but need verified details, refine your search.
+- If you have a manufacturer name OR machine type, choose "FINISH" (we can estimate everything else)
+- If you have ANY useful information, choose "FINISH" (estimation is faster)
+- Only choose "SEARCH" if you have absolutely ZERO information
+- If searching, provide only 1 query
 
 OUTPUT FORMAT (JSON ONLY):
 {{
   "action": "SEARCH" or "FINISH",
   "reasoning": "Why you made this decision",
-  "search_queries": ["query 1", "query 2"] (if action is SEARCH, max 3),
+  "search_queries": ["query 1"] (if action is SEARCH, only 1 query),
   "final_answer": {{ ... }} (if action is FINISH, provide the structured answer matching the goal)
 }}
 """
@@ -114,15 +110,23 @@ class AgenticSearch:
         self.model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
     
     def _call_llm(self, prompt: str, tag: str) -> Dict[str, Any]:
-        """Helper to call LLM and parse JSON robustly."""
+        """
+        HARDENED: Helper to call LLM with retry logic and quota awareness.
+        """
         raw = ""
         try:
-            # Using vertex_utils.generate_message directly
-            raw = generate_message(
-                prompt=prompt,
-                temperature=TEMPERATURE,
-                system_instruction="You are a helpful industrial research assistant. meaningful/valid JSON only.",
-            )
+            @with_retry(max_attempts=2, catch_quota_errors=True)
+            def _make_call():
+                result = generate_message(
+                    prompt=prompt,
+                    temperature=TEMPERATURE,
+                    system_instruction="You are a helpful industrial research assistant. meaningful/valid JSON only.",
+                )
+                if not result:
+                    raise ValueError("Empty response from LLM")
+                return result
+            
+            raw = _make_call()
             
             # 1. Robust cleanup
             cleaned = (raw or "").strip()
@@ -150,14 +154,24 @@ class AgenticSearch:
             
             logger.error(f"Agentic LLM call '{tag}' failed to parse JSON. Raw (truncated): {cleaned[:1000]}")
             return {}
+            
         except Exception as e:
-            logger.error(f"Agentic LLM call '{tag}' failed: {e}")
+            if is_quota_error(e):
+                error_info = get_user_friendly_error(e)
+                logger.error(f"Agentic '{tag}' quota error: {error_info['message']}")
+            else:
+                logger.error(f"Agentic LLM call '{tag}' failed: {e}")
+            
             if raw:
                 logger.error(f"Raw output (truncated): {raw[:1000]}")
+            
             return {}
 
+    @with_rate_limit("web_search", min_delay=0.5)
     def _execute_search(self, queries: List[str], search_type: str) -> str:
-        """Executes search using aggregator - now parallelized."""
+        """
+        HARDENED: Executes search using aggregator with rate limiting.
+        """
         from concurrent.futures import ThreadPoolExecutor, as_completed
         
         def _search_one(q: str) -> str:
