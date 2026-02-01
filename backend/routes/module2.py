@@ -352,25 +352,26 @@ def generate_layout():
             if success:
                 layout_2d = str(converted_png)
             else:
-                layout_2d = _copy_output(module2_config.OUTPUT_PNG, output_dir / "layout_square.png")
+                # Fallback removed as per user request to avoid returning "realistic/green-screen" png
+                layout_2d = None 
         else:
-            layout_2d = _copy_output(module2_config.OUTPUT_PNG, output_dir / "layout_square.png")
+            layout_2d = None
 
         layout_dxf = _copy_output(module2_config.OUTPUT_DXF, output_dir / "layout_square.dxf")
-        layout_realistic = _copy_output(module2_config.REALISTIC_PNG, output_dir / "realistic_layout.png")
-        layout_realistic_clean = _copy_output(module2_config.REALISTIC_CLEAN_PNG, output_dir / "realistic_clean.png")
+        # layout_realistic = _copy_output(module2_config.REALISTIC_PNG, output_dir / "realistic_layout.png")
+        # layout_realistic_clean = _copy_output(module2_config.REALISTIC_CLEAN_PNG, output_dir / "realistic_clean.png")
         layout_3d = _copy_output(module2_config.FINAL_GLB_PATH, output_dir / "factory_model.glb")
         pipeline_links = str(links_path) if links_path.exists() else None
 
-        if not any([layout_2d, layout_realistic, layout_3d, pipeline_links]):
+        if not any([layout_2d, layout_3d, layout_dxf, pipeline_links]):
             return jsonify({"error": "Pipeline completed but no outputs were generated."}), 500
 
         result = {
             "layout_2d": layout_2d,
             "layout_3d": layout_3d,
             "layout_dxf": layout_dxf,
-            "layout_realistic": layout_realistic,
-            "layout_realistic_clean": layout_realistic_clean,
+            # "layout_realistic": layout_realistic,
+            # "layout_realistic_clean": layout_realistic_clean,
             "product": product,
             "pipeline_stop_at": stop_at,
             "pipeline_links": pipeline_links,
@@ -385,8 +386,8 @@ def generate_layout():
             "layout_2d",
             "layout_3d",
             "layout_dxf",
-            "layout_realistic",
-            "layout_realistic_clean",
+            # "layout_realistic",
+            # "layout_realistic_clean",
             "pipeline_links",
         ):
             url = _download_url_for(result.get(key))
@@ -402,8 +403,8 @@ def generate_layout():
                     ("layout_2d", layout_2d, "layout-2d", "image/png"),
                     ("layout_3d", layout_3d, "layout-3d", "model/gltf-binary"),
                     ("layout_dxf", layout_dxf, "layout-dxf", "application/dxf"),
-                    ("layout_realistic", layout_realistic, "layout-realistic", "image/png"),
-                    ("layout_realistic_clean", layout_realistic_clean, "layout-realistic-clean", "image/png"),
+                    # ("layout_realistic", layout_realistic, "layout-realistic", "image/png"),
+                    # ("layout_realistic_clean", layout_realistic_clean, "layout-realistic-clean", "image/png"),
                 ]
 
                 file_ids = {}

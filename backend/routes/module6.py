@@ -5,14 +5,17 @@ from flask import Blueprint, jsonify, request
 from config import OUTPUT_DIRS, SKIP_MODULE_6, write_json
 from supabase_utils import get_supabase, insert_tco_run
 from utils.module_6.core import RIBIFModule6TCO, ProductTCO, RawMaterialTCO
-from utils.logger import log_skip
+from utils.logger import log_skip, get_logger
 from utils.app_helpers import (
     get_request_project_id,
     get_request_user_id,
     insert_tco_details,
     load_template_payload,
     upload_and_register_file,
+    sanitize_for_json,
 )
+
+logger = get_logger("module6")
 
 bp_module6 = Blueprint("module6", __name__)
 
@@ -218,8 +221,9 @@ def calculate_tco_from_sourcing():
         if tco_run_id:
             result["tco_run_id"] = tco_run_id
 
-        return jsonify(result)
+        return jsonify(sanitize_for_json(result))
     except Exception as e:
+        logger.exception("Module 6 failed with critical error")
         return jsonify({"error": str(e), "status": "error"}), 500
 
 

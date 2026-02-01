@@ -18,6 +18,22 @@ from supabase_utils import (
 )
 from config import TEMPLATE_DIR
 from utils.logger import get_logger
+import math
+
+def sanitize_for_json(obj: Any) -> Any:
+    """
+    Recursively replace NaN and Infinity with None to ensure JSON compliance.
+    """
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    elif isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_for_json(v) for v in obj]
+    return obj
+
 
 
 def get_request_user_id() -> Optional[str]:
@@ -153,142 +169,30 @@ def load_template_payload(name: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+
 def insert_machine_assets(client, machine_id: str, file_id: str, asset_type: str, label: Optional[str] = None) -> None:
-    if not client or not machine_id or not file_id:
-        return
-    client.table("machine_assets").insert({
-        "machine_id": machine_id,
-        "file_id": file_id,
-        "asset_type": asset_type,
-        "label": label,
-        "metadata": {},
-    }).execute()
+    # No-op: Data is stored in JSONB columns in projects table
+    pass
 
 
 def insert_machines_from_stage(client, project_id: str, machines: list, image_meta: dict) -> Dict[str, str]:
-    if not client or not machines:
-        return {}
-    rows = []
-    for m in machines:
-        name = m.get("nom_machine") or m.get("name") or "Machine"
-        meta = image_meta.get(name, {}) if image_meta else {}
-        rows.append({
-            "project_id": project_id,
-            "name": name,
-            "machine_type": m.get("type"),
-            "manufacturer": m.get("fabricant_recommande"),
-            "quantity": m.get("quantite_necessaire", 1),
-            "use": m.get("use"),
-            "specifications": m.get("specifications", {}) or {},
-            "performance": m.get("performance", {}) or {},
-            "source_reference": m.get("source_reference"),
-            "metadata": meta or {},
-        })
-    res = client.table("machines").insert(rows).execute()
-    data = getattr(res, "data", None) or []
-    return {row.get("name"): row.get("id") for row in data if row.get("name")}
+    # No-op: Data is stored in projects.module1_data
+    return {}
 
 
 def insert_tco_details(client, tco_run_id: str, tco_data: dict) -> None:
-    if not client or not tco_run_id:
-        return
-    machine_rows = []
-    for m in tco_data.get("machine_tco", []) or []:
-        machine_rows.append({
-            "tco_run_id": tco_run_id,
-            "machine_name": m.get("machine_name") or m.get("name"),
-            "category": m.get("category"),
-            "manufacturer": m.get("manufacturer"),
-            "initial_cost": m.get("initial_cost"),
-            "operations_cost": m.get("operations_cost"),
-            "maintenance_cost": m.get("maintenance_cost"),
-            "downtime_cost": m.get("downtime_cost"),
-            "resale_value": m.get("resale_value"),
-            "total_tco": m.get("total_tco"),
-            "annual_tco": m.get("annual_tco"),
-            "lifetime_years": m.get("lifetime_years"),
-            "cost_breakdown": m.get("cost_breakdown"),
-            "metadata": {},
-        })
-    if machine_rows:
-        client.table("tco_machines").insert(machine_rows).execute()
-
-    product_rows = []
-    for p in tco_data.get("product_tco", []) or []:
-        product_rows.append({
-            "tco_run_id": tco_run_id,
-            "product_name": p.get("nom_produit") or p.get("product_name"),
-            "category": p.get("categorie") or p.get("category"),
-            "landing_cost": p.get("landing_cost"),
-            "holding_cost": p.get("holding_cost"),
-            "quality_cost": p.get("quality_cost"),
-            "administrative_cost": p.get("administrative_cost"),
-            "total_tco": p.get("total_tco"),
-            "metadata": {},
-        })
-    if product_rows:
-        client.table("tco_products").insert(product_rows).execute()
-
-    raw_rows = []
-    for r in tco_data.get("raw_materials_tco", []) or []:
-        raw_rows.append({
-            "tco_run_id": tco_run_id,
-            "material_name": r.get("nom_materiau") or r.get("material_name"),
-            "material_type": r.get("type_materiau") or r.get("material_type"),
-            "total_tco": r.get("total_tco"),
-            "annual_cost": r.get("annual_cost"),
-            "transport_cost": r.get("transport_cost"),
-            "storage_cost": r.get("storage_cost"),
-            "wastage_cost": r.get("wastage_cost"),
-            "estimation_confidence": r.get("estimation_confidence"),
-            "metadata": {},
-        })
-    if raw_rows:
-        client.table("tco_raw_materials").insert(raw_rows).execute()
-
-    annual_rows = []
-    for a in tco_data.get("annual_tco", []) or []:
-        annual_rows.append({
-            "tco_run_id": tco_run_id,
-            "year": a.get("year"),
-            "machines_tco": a.get("machines_tco"),
-            "products_tco": a.get("products_tco"),
-            "raw_materials_tco": a.get("raw_materials_tco"),
-            "total_tco": a.get("total_tco"),
-            "cumulative_tco": a.get("cumulative_tco"),
-            "metadata": {},
-        })
-    if annual_rows:
-        client.table("tco_annual").insert(annual_rows).execute()
+    # No-op: Data is stored in projects.module6_data
+    pass
 
 
 def get_project_machines(client, project_id: str) -> Dict[str, str]:
-    if not client or not project_id:
-        return {}
-    res = client.table("machines").select("id,name").eq("project_id", project_id).execute()
-    data = getattr(res, "data", None) or []
-    return {row.get("name"): row.get("id") for row in data if row.get("name")}
+    # No-op
+    return {}
 
 
 def upsert_supplier(client, name: str, website: Optional[str], region: Optional[str], metadata: Optional[dict] = None) -> Optional[str]:
-    if not client or not name:
-        return None
-    query = client.table("suppliers").select("id").eq("name", name)
-    if website:
-        query = query.eq("website", website)
-    res = query.execute()
-    data = getattr(res, "data", None) or []
-    if data:
-        return data[0].get("id")
-    payload = {
-        "name": name,
-        "website": website,
-        "region": region,
-        "metadata": metadata or {},
-    }
-    res = client.table("suppliers").insert(payload).execute()
-    data = getattr(res, "data", None) or []
-    return data[0].get("id") if data else None
+    # No-op: data stored in module4_data
+    return None
 
 
 def insert_machine_supplier(
@@ -298,17 +202,5 @@ def insert_machine_supplier(
     supplier_payload: dict,
     metadata: Optional[dict] = None,
 ) -> None:
-    if not client or not machine_id or not supplier_id:
-        return
-    payload = {
-        "machine_id": machine_id,
-        "supplier_id": supplier_id,
-        "price_estimate": supplier_payload.get("price_estimate"),
-        "price_type": supplier_payload.get("price_type"),
-        "price_currency": supplier_payload.get("price_currency"),
-        "lead_time_days": supplier_payload.get("lead_time_days"),
-        "relevance_score": supplier_payload.get("relevance_score"),
-        "notes": supplier_payload.get("notes"),
-        "metadata": metadata or {},
-    }
-    client.table("machine_suppliers").upsert(payload, on_conflict="machine_id,supplier_id").execute()
+    # No-op
+    pass

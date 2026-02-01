@@ -126,7 +126,8 @@ export default function CreateProjectPage() {
       });
       const fileHash = await computeFileHash(file);
 
-      // Step 2: Check for duplicates
+      // Step 2: Check for duplicates - SKIPPED per user request
+      /*
       setWorkflow({
         step: "checking-duplicate",
         progress: 25,
@@ -146,6 +147,7 @@ export default function CreateProjectPage() {
         });
         return;
       }
+      */
 
       // Step 3: Create project record first (to get ID for storage path)
       setWorkflow({

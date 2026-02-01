@@ -1159,6 +1159,126 @@
       "taux_rebut_acceptable": "1.5%",
       "temps_changement_serie": "30 minutes"
     },
+    "processes": [
+      {
+        "product_family": "Revêtements de sol SPC",
+        "group_id": "group_1",
+        "steps": [
+          {
+            "nom_etape": "Extrusion de Polymères",
+            "numero_etape": 1,
+            "type_operation": "Transformation / Mise en forme",
+            "description": "Transformation de granulés polymères en profilés, feuilles ou films continus par extrusion, pour la fabrication de matériaux polymères et revêtements.",
+            "machines_utilisees": [
+              "Extrudeuse monovis/bivis",
+              "Filière d'extrusion",
+              "Calandre",
+              "Système de refroidissement",
+              "Coupeuse automatique"
+            ],
+            "inputs": [
+              "Granulés polymères (PE, PP, PVC, etc.)",
+              "Additifs",
+              "Colorants"
+            ],
+            "outputs": [
+              "Profilés polymères",
+              "Feuilles polymères",
+              "Films polymères"
+            ],
+            "parametres_process": {
+              "temperature": {
+                "value": 215.0,
+                "unit": "°C",
+                "source": "document_extracted",
+                "confidence": "high"
+              },
+              "pressure": {
+                "value": 125.0,
+                "unit": "bar",
+                "source": "document_extracted",
+                "confidence": "medium"
+              },
+              "cycle_time": {
+                "value": null,
+                "unit": null,
+                "source": "estimated",
+                "confidence": "high"
+              },
+              "cycle_mode": "continuous",
+              "speed": {
+                "value": 27.5,
+                "unit": "m/min",
+                "source": "document_extracted",
+                "confidence": "medium"
+              },
+              "tolerances": "+/- 0.1 mm (épaisseur/dimension)"
+            }
+          }
+        ]
+      }
+    ],
+    "ui_steps": [
+      {
+        "group_id": "group_1",
+        "product_family": "Revêtements de sol SPC",
+        "local_step_no": 1,
+        "global_step_no": 1,
+        "nom_etape": "[Revêtements de sol SPC] Extrusion de Polymères",
+        "numero_etape": 1,
+        "type_operation": "Transformation / Mise en forme",
+        "description": "Transformation de granulés polymères en profilés, feuilles ou films continus par extrusion, pour la fabrication de matériaux polymères et revêtements.",
+        "machines_utilisees": [
+          "Extrudeuse monovis/bivis",
+          "Filière d'extrusion",
+          "Calandre",
+          "Système de refroidissement",
+          "Coupeuse automatique"
+        ],
+        "inputs": [
+          "Granulés polymères (PE, PP, PVC, etc.)",
+          "Additifs",
+          "Colorants"
+        ],
+        "outputs": [
+          "Profilés polymères",
+          "Feuilles polymères",
+          "Films polymères"
+        ],
+        "parametres_process": {
+          "temperature": {
+            "value": 215.0,
+            "unit": "°C",
+            "source": "document_extracted",
+            "confidence": "high"
+          },
+          "pressure": {
+            "value": 125.0,
+            "unit": "bar",
+            "source": "document_extracted",
+            "confidence": "medium"
+          },
+          "cycle_time": {
+            "value": null,
+            "unit": null,
+            "source": "estimated",
+            "confidence": "high"
+          },
+          "cycle_mode": "continuous",
+          "speed": {
+            "value": 27.5,
+            "unit": "m/min",
+            "source": "document_extracted",
+            "confidence": "medium"
+          },
+          "tolerances": "+/- 0.1 mm (épaisseur/dimension)"
+        }
+      }
+    ],
+    "total_steps": 1,
+    "total_ui_steps": 1,
+    "total_groups": 1,
+    "steps_view": "ui_flattened",
     "processus_production": [
       {
         "inputs": [
@@ -1335,7 +1455,8 @@
           "temps_cycle": "10-30 minutes par unité"
         }
       }
-    ]
+    ],
+    "_note": "processus_production array above is an alias to ui_steps for backward compatibility. Use 'processes' for nested hierarchy or 'ui_steps' for flat display with group metadata."
   },
   "stage_1_informations_generales": {
     "informations_generales": {

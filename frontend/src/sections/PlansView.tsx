@@ -61,8 +61,8 @@ const Model3DPanel = ({ heightClass = "h-1/2", pipelineModelUrl }: Model3DPanelP
             </div>
             <div className="h-full w-full relative">
                 <Simple3DViewer
-                    boundingboxStart={{ x: -5, y: 0, z: -5 }}
-                    boundingboxEnd={{ x: 5, y: 5, z: 0 }}
+                    boundingboxStart={{ x: -10, y: 0, z: -5 }}
+                    boundingboxEnd={{ x: 10, y: 5, z: 5 }}
                     factoryModel="/models/factory1.glb"
                     pipelineModel={modelUrl}
                 />

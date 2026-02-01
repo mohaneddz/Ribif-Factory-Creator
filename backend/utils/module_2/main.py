@@ -12,18 +12,21 @@ from typing import Any, Dict, List, Tuple
 
 import requests
 
+
 try:
     from .config import (
         BASE_DIR,
         OUTPUT_DIR,
         OUTPUT_DXF,
         OUTPUT_PNG,
+        OUTPUT_VIDEO,
         REALISTIC_PNG,
         REALISTIC_CLEAN_PNG,
         FINAL_GLB_PATH,
         PUBLIC_MODELS_DIR,
         TOP_VIEW_REALISTIC_BELTS,
         MACHINE_PIPELINE_PROMPT,
+        VIDEO_PROMPT_GENERATION_PROMPT,
         format_machine_list,
     )
     from .ai_manager import (
@@ -36,6 +39,7 @@ try:
         process_machine_images,
         generate_message,
         generate_image,
+        generate_video,
         remove_background,
         generate_3d_model,
     )
@@ -48,12 +52,14 @@ except ImportError:  # Fallback for running as a script.
         OUTPUT_DIR,
         OUTPUT_DXF,
         OUTPUT_PNG,
+        OUTPUT_VIDEO,
         REALISTIC_PNG,
         REALISTIC_CLEAN_PNG,
         FINAL_GLB_PATH,
         PUBLIC_MODELS_DIR,
         TOP_VIEW_REALISTIC_BELTS,
         MACHINE_PIPELINE_PROMPT,
+        VIDEO_PROMPT_GENERATION_PROMPT,
         format_machine_list,
     )
     from ai_manager import (
@@ -177,7 +183,7 @@ def _ask_stop_step() -> int:
         info("2) After layout generation")
         info("3) After base DXF+PNG export")
         info("4) After enhanced images (base + realistic)")
-        info("5) After background removal (rembg)")
+        info("5) After background removal (rembg) + VIDEO")
         info("6) After 3D model")
         choice = input("Choose (1-6): ").strip()
         if choice in ("1", "2", "3", "4", "5", "6"):
@@ -377,6 +383,9 @@ def run_pipeline(
                 with open(REALISTIC_CLEAN_PNG, "wb") as f:
                     f.write(clean)
             _run_step(timer, "Background removal", _bg_remove)
+
+            _run_step(timer, "Background removal", _bg_remove)
+
 
         if stop_at == 5:
             info("Stopped after step 5")

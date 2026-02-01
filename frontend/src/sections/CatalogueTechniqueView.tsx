@@ -3,7 +3,7 @@ import HTMLFlipBook from "react-pageflip";
 import { BookOpen, ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react";
 import clsx from "clsx";
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
 const Page = React.forwardRef<HTMLDivElement, { pageNum: number; pdfDoc: any; scale: number }>(
     ({ pageNum, pdfDoc, scale }, ref) => {
@@ -112,7 +112,7 @@ export const CatalogueTechniqueView = ({ pdfUrl, htmlUrl, loading = false }: { p
     const [isLoadingPdf, setIsLoadingPdf] = useState(false);
     const [pdfJsLoaded, setPdfJsLoaded] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
-    
+
     // Resolve URLs - handle relative paths
     const resolvedPdfUrl = useMemo(() => {
         if (!pdfUrl) return null;
@@ -121,7 +121,7 @@ export const CatalogueTechniqueView = ({ pdfUrl, htmlUrl, loading = false }: { p
         const filename = pdfUrl.split(/[/\\]/).pop();
         return filename ? `${API_BASE}/download/${filename}` : null;
     }, [pdfUrl]);
-    
+
     const resolvedHtmlUrl = useMemo(() => {
         if (!htmlUrl) return null;
         if (htmlUrl.startsWith("http://") || htmlUrl.startsWith("https://")) return htmlUrl;

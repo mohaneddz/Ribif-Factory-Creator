@@ -225,6 +225,29 @@ Return ONE PNG of the machine in true TOP VIEW on #00FF00. Do not add any text o
 """.strip()
 
 
+OUTPUT_VIDEO = os.path.join(OUTPUT_DIR, "simulation_video.mp4")
+
+# =========================
+# PROMPTS
+# =========================
+VIDEO_PROMPT_GENERATION_PROMPT = """
+You are a cinematic director for industrial films.
+I will provide you with a list of machines and a factory layout description.
+Your task is to write a SHORT, VISUAL prompt for an AI video generator (Veo) to create a cinematic drone shot of this factory.
+
+INPUT CONTEXT:
+{machine_summary}
+{layout_summary}
+
+REQUIREMENTS:
+- The prompt must be in English.
+- Focus on the visual style: "Cinematic drone shot, photorealistic, 4k, industrial lighting".
+- Describe the movement: "Slow smooth camera pan over the...".
+- Mention specific machines visible (e.g., "robotic arms", "conveyor belts moving").
+- Keep it under 60 words.
+- OUTPUT RAW TEXT ONLY. NO MARKDOWN.
+""".strip()
+
 def format_machine_list(machines):
     lines = []
     for m in machines:

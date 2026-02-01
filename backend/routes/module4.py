@@ -18,6 +18,7 @@ from utils.app_helpers import (
     upsert_supplier,
     upload_and_register_file,
     upload_with_name_timestamp,
+    sanitize_for_json,
 )
 
 logger = get_logger("module4")
@@ -212,9 +213,9 @@ def enrich_machines_module4():
             if isinstance(existing, list):
                 result["ribif_metadata"]["warnings"] = existing + warnings
             else:
-                 result["ribif_metadata"]["warning_note"] = (existing if isinstance(existing, str) else "") + " | " + "; ".join(warnings)
-
-        return jsonify(result)
+                result["ribif_metadata"]["warning_note"] = (existing if isinstance(existing, str) else "") + " | " + "; ".join(warnings)
+ 
+        return jsonify(sanitize_for_json(result))
     except Exception as e:
         logger.error("Module 4 global failure: %s", e)
         return jsonify({"error": str(e), "status": "error"}), 500

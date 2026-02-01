@@ -327,9 +327,29 @@ export default function FactoryCopilot() {
                     });
                 }
 
-                const res = await fetch(`${API_BASE}/api/module1/process`, { method: 'POST', headers, body });
-                const json = await res.json();
-                if (!res.ok) throw new Error(json.error || "Module 1 failed");
+                let res;
+                try {
+                    res = await fetch(`${API_BASE}/api/module1/process`, { method: 'POST', headers, body });
+                } catch (fetchError: any) {
+                    console.error("❌ Network Error (Module 1):", fetchError);
+                    throw new Error(`Backend connection failed: ${fetchError.message || 'Network error'}. Please ensure the backend server is running on ${API_BASE}`);
+                }
+
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error("❌ HTTP Error (Module 1):", res.status, res.statusText, text.substring(0, 500));
+                    throw new Error(`Module 1 failed with status ${res.status}: ${text.substring(0, 200) || res.statusText}`);
+                }
+
+                const text = await res.text();
+                let json;
+                try {
+                    json = JSON.parse(text);
+                } catch (e) {
+                    console.error("❌ JSON Parse Failed (Module 1). Raw response:", text.substring(0, 1000));
+                    throw new Error("Server response was not valid JSON. The backend may have crashed or returned an error page.");
+                }
+                
                 m1Data = json.data || json;
 
                 await updateProject(currentProjectId, { module1_data: m1Data, status: "specs_complete" });
@@ -351,12 +371,35 @@ export default function FactoryCopilot() {
                     setCurrentModule(idxSourcing);
                     setSelectedModule(idxSourcing);
 
-                    const res = await fetch(`${API_BASE}/api/module4/enrich`, {
-                        method: 'POST', headers: jsonHeaders,
-                        body: JSON.stringify({ ...m1Data, project_id: currentProjectId, pipeline_settings: activeSettings })
-                    });
-                    const json = await res.json();
-                    if (!res.ok) throw new Error(json.error);
+                    let res;
+                    try {
+                        res = await fetch(`${API_BASE}/api/module4/enrich`, {
+                            method: 'POST', headers: jsonHeaders,
+                            body: JSON.stringify({ ...m1Data, project_id: currentProjectId, pipeline_settings: activeSettings })
+                        });
+                    } catch (fetchError: any) {
+                        setModule4Loading(false);
+                        console.error("❌ Network Error (Module 4):", fetchError);
+                        throw new Error(`Module 4: Backend connection failed - ${fetchError.message || 'Network error'}`);
+                    }
+                    
+                    if (!res.ok) {
+                        const text = await res.text();
+                        setModule4Loading(false);
+                        console.error("❌ HTTP Error (Module 4):", res.status, text.substring(0, 500));
+                        throw new Error(`Module 4 failed with status ${res.status}`);
+                    }
+
+                    const text = await res.text();
+                    let json;
+                    try {
+                        json = JSON.parse(text);
+                    } catch (e) {
+                         setModule4Loading(false);
+                         console.error("❌ JSON Parse Failed (Module 4). Raw response:", text.substring(0, 1000));
+                         throw new Error("Module 4: Server response not valid JSON.");
+                    }
+
                     m4Data = json;
                     await updateProject(currentProjectId, { module4_data: m4Data, status: "sourcing_complete" });
                     setModule4Loading(false);
@@ -384,11 +427,36 @@ export default function FactoryCopilot() {
                     setTcoLoading(true);
                     setCurrentModule(idxTco);
                     setSelectedModule(idxTco);
-                    const res = await fetch(`${API_BASE}/api/module6/tco-from-sourcing`, {
-                        method: 'POST', headers: jsonHeaders,
-                        body: JSON.stringify({ ...m1Data, ...m4Data, project_id: currentProjectId })
-                    });
-                    const json = await res.json();
+                    
+                    let res;
+                    try {
+                        res = await fetch(`${API_BASE}/api/module6/tco-from-sourcing`, {
+                            method: 'POST', headers: jsonHeaders,
+                            body: JSON.stringify({ ...m1Data, ...m4Data, project_id: currentProjectId })
+                        });
+                    } catch (fetchError: any) {
+                        setTcoLoading(false);
+                        console.error("❌ Network Error (Module 6):", fetchError);
+                        throw new Error(`Module 6: Backend connection failed - ${fetchError.message || 'Network error'}`);
+                    }
+                    
+                    if (!res.ok) {
+                        const text = await res.text();
+                        setTcoLoading(false);
+                        console.error("❌ HTTP Error (Module 6):", res.status, text.substring(0, 500));
+                        throw new Error(`Module 6 failed with status ${res.status}`);
+                    }
+
+                    const text = await res.text();
+                    let json;
+                    try {
+                        json = JSON.parse(text);
+                    } catch (e) {
+                        setTcoLoading(false);
+                        console.error("❌ JSON Parse Failed (Module 6). Raw response:", text.substring(0, 1000));
+                        throw new Error("Module 6: Server response not valid JSON.");
+                    }
+
                     tcoJson = json;
                     await updateProject(currentProjectId, { module6_data: tcoJson, status: "tco_complete" });
                     setTcoLoading(false);
@@ -412,13 +480,18 @@ export default function FactoryCopilot() {
 
                     if (activeSettings.enableBusinessPlan && !bpJson) {
                         const res = await fetch(`${API_BASE}/api/module7/business-plan`, { method: 'POST', headers: jsonHeaders, body: JSON.stringify(tcoJson) });
-                        bpJson = await res.json();
-                        await updateProject(currentProjectId, { module7_business: bpJson });
+                        // Simple robust parsing for these too
+                         try {
+                             bpJson = await res.json();
+                             await updateProject(currentProjectId, { module7_business: bpJson });
+                         } catch (e) { console.error("BP parse error", e); throw new Error("Business Plan API invalid JSON"); }
                     }
                     if (activeSettings.enablePitchDeck && !pitchJson) {
                         const res = await fetch(`${API_BASE}/api/module7/pitch-deck`, { method: 'POST', headers: jsonHeaders, body: JSON.stringify(tcoJson) });
-                        pitchJson = await res.json();
-                        await updateProject(currentProjectId, { module7_pitch: pitchJson });
+                         try {
+                              pitchJson = await res.json();
+                              await updateProject(currentProjectId, { module7_pitch: pitchJson });
+                         } catch (e) { console.error("Pitch parse error", e); throw new Error("Pitch Deck API invalid JSON"); }
                     }
                     setBusinessPlanLoading(false);
                 }
@@ -442,8 +515,11 @@ export default function FactoryCopilot() {
                         method: 'POST', headers: jsonHeaders,
                         body: JSON.stringify({ module1_data: m1Data, module4_data: m4Data, output_format: activeSettings.catalogFormat, project_id: currentProjectId })
                     });
-                    catalogJson = await res.json();
-                    await updateProject(currentProjectId, { module9_data: catalogJson });
+                    try {
+                         catalogJson = await res.json();
+                         await updateProject(currentProjectId, { module9_data: catalogJson });
+                    } catch (e) { console.error("Catalog parse error", e); throw new Error("Catalog API invalid JSON"); }
+                    
                     setCatalogLoading(false);
                 }
                 setCatalogData(catalogJson);
@@ -462,11 +538,37 @@ export default function FactoryCopilot() {
                     setLayoutLoading(true);
                     setCurrentModule(idxLayout2d);
                     setSelectedModule(idxLayout2d);
-                    const res = await fetch(`${API_BASE}/api/module2/layout`, {
-                        method: 'POST', headers: jsonHeaders,
-                        body: JSON.stringify({ ...m1Data, project_id: currentProjectId, pipeline_settings: activeSettings })
-                    });
-                    layoutJson = await res.json();
+                    
+                    let res;
+                    try {
+                        res = await fetch(`${API_BASE}/api/module2/layout`, {
+                            method: 'POST', headers: jsonHeaders,
+                            body: JSON.stringify({ ...m1Data, project_id: currentProjectId, pipeline_settings: activeSettings })
+                        });
+                    } catch (fetchError: any) {
+                        setLayoutLoading(false);
+                        console.error("❌ Network Error (Module 2):", fetchError);
+                        throw new Error(`Module 2: Backend connection failed - ${fetchError.message || 'Network error'}`);
+                    }
+                    
+                    if (!res.ok) {
+                        const text = await res.text();
+                        setLayoutLoading(false);
+                        console.error("❌ HTTP Error (Module 2):", res.status, text.substring(0, 500));
+                        throw new Error(`Module 2 failed with status ${res.status}`);
+                    }
+
+                    const text = await res.text();
+                    let json;
+                    try {
+                        json = JSON.parse(text);
+                    } catch (e) {
+                         setLayoutLoading(false);
+                         console.error("❌ JSON Parse Failed (Module 2). Raw response:", text.substring(0, 1000));
+                         throw new Error("Module 2: Server response not valid JSON.");
+                    }
+                    
+                    layoutJson = json;
 
                     // Backend now handles Supabase upload and returns the URLs in layoutJson
                     console.log("✅ Layout generated and uploaded by backend:", layoutJson);
@@ -495,11 +597,37 @@ export default function FactoryCopilot() {
                     setVideoLoading(true);
                     setCurrentModule(idxVideo);
                     setSelectedModule(idxVideo);
-                    const res = await fetch(`${API_BASE}/api/module3/video`, {
-                        method: 'POST', headers: jsonHeaders,
-                        body: JSON.stringify({ ...layoutJson, project_id: currentProjectId, pipeline_settings: activeSettings })
-                    });
-                    videoJson = await res.json();
+                    
+                    let res;
+                    try {
+                        res = await fetch(`${API_BASE}/api/module3/video`, {
+                            method: 'POST', headers: jsonHeaders,
+                            body: JSON.stringify({ ...layoutJson, project_id: currentProjectId, pipeline_settings: activeSettings })
+                        });
+                    } catch (fetchError: any) {
+                        setVideoLoading(false);
+                        console.error("❌ Network Error (Module 3):", fetchError);
+                        throw new Error(`Module 3: Backend connection failed - ${fetchError.message || 'Network error'}`);
+                    }
+                    
+                    if (!res.ok) {
+                        const text = await res.text();
+                        setVideoLoading(false);
+                        console.error("❌ HTTP Error (Module 3):", res.status, text.substring(0, 500));
+                        throw new Error(`Module 3 failed with status ${res.status}`);
+                    }
+
+                    const text = await res.text();
+                    let json;
+                    try {
+                        json = JSON.parse(text);
+                    } catch (e) {
+                         setVideoLoading(false);
+                         console.error("❌ JSON Parse Failed (Module 3). Raw response:", text.substring(0, 1000));
+                         throw new Error("Module 3: Server response not valid JSON.");
+                    }
+                    videoJson = json;
+                    
                     await updateProject(currentProjectId, { module3_data: videoJson, status: "complete" });
                     setVideoLoading(false);
                 }
@@ -777,9 +905,6 @@ export default function FactoryCopilot() {
                                     <RefreshCw size={14} /> Relancer
                                 </button>
                             )}
-                            <button onClick={() => router.push('/twin')} className="bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white px-6 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-200/50 dark:shadow-indigo-900/20">
-                                <BrainCircuit size={16} className="text-indigo-300 dark:text-indigo-200" /> Jumeau Numérique
-                            </button>
                         </div>
                     </header>
 

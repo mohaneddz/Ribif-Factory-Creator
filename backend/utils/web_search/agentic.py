@@ -31,8 +31,8 @@ logger = get_logger(__name__)
 # Configuration
 # =========================================================
 
-MAX_STEPS = 2  # Reduced from 4 for faster execution
-LLM_TIMEOUT = 30
+MAX_STEPS = 3  # Increased to 3 per user request to ensure better coverage without looping forever
+LLM_TIMEOUT = 60
 TEMPERATURE = 0.2
 
 # =========================================================
@@ -41,6 +41,7 @@ TEMPERATURE = 0.2
 
 PLANNER_PROMPT = """
 You are an expert industrial researcher. Your goal is: "{goal}".
+Step {step} of {max_steps} in the search process.
 
 CURRENT KNOWLEDGE:
 {knowledge}
@@ -50,6 +51,11 @@ MISSING / UNCERTAIN INFO:
 
 SEARCH HISTORY:
 {history}
+
+TIPS:
+- Use diverse and specific queries (e.g. 'distributor', 'dealer', 'OEM', 'official catalog', 'price list').
+- If finding few results, broaden the region or use synonyms for the machine name.
+- Early steps: Explore broad terms. Late steps: Verify specific company details.
 
 DECISION:
 Determine the next best step.
@@ -198,6 +204,8 @@ class AgenticSearch:
             # 1. PLAN
             prompt = PLANNER_PROMPT.format(
                 goal=state.goal,
+                step=step + 1,
+                max_steps=MAX_STEPS,
                 knowledge=json.dumps(state.knowledge, indent=2),
                 missing=json.dumps(state.missing),
                 history="\n".join(state.history)
@@ -295,6 +303,8 @@ class AgenticSearch:
             # 1. PLAN
             prompt = PLANNER_PROMPT.format(
                 goal=state.goal,
+                step=step + 1,
+                max_steps=MAX_STEPS,
                 knowledge=json.dumps(state.knowledge, indent=2),
                 missing=json.dumps(state.missing),
                 history="\n".join(state.history)
@@ -356,6 +366,22 @@ class AgenticSearch:
                 # Good enough
                 break
         
+        # Post-process: enrich contacts
+        logger.info(f"Enriching contacts for {len(suppliers_found)} found suppliers...")
+        for s in suppliers_found:
+            if not s.email_address or not s.phone_number:
+                try:
+                    c_info = aggregator.search_company_contacts(s.supplier_name, region)
+                    if c_info:
+                        if not s.email_address and c_info.get("email"):
+                            s.email_address = c_info["email"]
+                        if not s.phone_number and c_info.get("phone"):
+                            s.phone_number = c_info["phone"]
+                        if not s.website and c_info.get("website"):
+                            s.website = c_info["website"]
+                except Exception:
+                    pass
+
         return suppliers_found
 
 # Singleton instance

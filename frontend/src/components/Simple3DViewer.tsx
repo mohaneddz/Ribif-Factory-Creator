@@ -165,7 +165,7 @@ export default function Simple3DViewer({
                         targetCenter.z - originalCenter.z * scaleZ + (factoryModel ? 0 : 4)
                     );
 
-                    model.rotateX(Math.PI / 2);
+                    // model.rotateX(Math.PI / 2);
 
                     model.traverse((child) => {
                         if ((child as THREE.Mesh).isMesh) {

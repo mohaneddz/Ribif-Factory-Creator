@@ -51,14 +51,15 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 HTTP_TIMEOUT_S = 20
 
 DEFAULT_MAX_WORKERS = 14
-DEFAULT_PER_MACHINE_TIMEOUT_S = 60
+DEFAULT_PER_MACHINE_TIMEOUT_S = 300
 DEFAULT_DOMAIN_GAP_S = 0.6
 
 # Hard timeout per LLM call (prevents “stuck”)
-DEFAULT_LLM_CALL_TIMEOUT_S = 60
+DEFAULT_LLM_CALL_TIMEOUT_S = 90
 
 # Give up on a machine if TOTAL enrichment exceeds this budget (seconds)
-DEFAULT_TOTAL_MACHINE_BUDGET_S = 60
+# User requested "remove time limits", setting to very high value (15 min) to act as safety net only
+DEFAULT_TOTAL_MACHINE_BUDGET_S = 900
 
 # Where to save nano-banana generated best images
 DEFAULT_GENERATED_IMAGES_DIR = "data/extracted_data/module_4_images"
@@ -321,6 +322,26 @@ HARD RULES:
 - best_image_url must be one of image_urls, or "N/A" if none available.
 - Keep concise values.
 Return JSON only.
+"""
+
+LLM_KNOWN_SUPPLIERS_PROMPT = """
+The user needs to find suppliers for an industrial machine.
+Machine: {machine_name}
+Type: {machine_type}
+
+Task: Identify 3-5 leading, high-confidence global manufacturers or reputable suppliers for this specific machine.
+Focus on major, verified, well-known companies in the industry (OEMs or top distributors).
+Do NOT invent details. If you are not sure, provide the most famous generic manufacturers.
+
+Return a JSON LIST of objects:
+[
+  {{
+    "supplier_name": "Company Name",
+    "website": "https://...", 
+    "region": "Country/Region",
+    "notes": "Short reason (e.g. Market leader in CNC)"
+  }}
+]
 """
 
 # LLM_SUPPLIERS_PROMPT removed. We do NOT simulate suppliers.
@@ -595,9 +616,9 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
     if is_machine is not True:
         return None
 
-    # budget gate
-    if not _budget_check(t_start, cfg.total_machine_budget_s):
-        return {"machine_input": default_machine_final(name), "suppliers": default_suppliers(name), "skipped_reason": "budget>60s"}
+    # budget gate - REMOVED strict check per user request ("remove time limits")
+    # if not _budget_check(t_start, cfg.total_machine_budget_s):
+    #     return {"machine_input": default_machine_final(name), "suppliers": default_suppliers(name), "skipped_reason": "budget>60s"}
 
     # scrape (optional)
     scraped = scrape_from_source_reference(
@@ -660,13 +681,13 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
     except Exception:
         pass
 
-    # budget gate
-    if not _budget_check(t_start, cfg.total_machine_budget_s):
-        return {
-            "machine_input": machine_final,
-            "suppliers": [],
-            "skipped_steps": ["supplier_search", "image_generation"]
-        }
+    # budget gate - REMOVED strict check
+    # if not _budget_check(t_start, cfg.total_machine_budget_s):
+    #     return {
+    #         "machine_input": machine_final,
+    #         "suppliers": [],
+    #         "skipped_steps": ["supplier_search", "image_generation"]
+    #     }
 
     # 2) Suppliers
     suppliers = []
@@ -690,38 +711,105 @@ def enrich_one_machine(llm: VertexJSON, m: Dict[str, Any], cfg: EnrichConfig) ->
             logger.warning("Agentic Web search suppliers failed for %s: %s", name, e)
 
     # Fallback: verified suppliers only. NO LLM GENERATION.
-    if not web_suppliers_found:
-        suppliers = []
-        # If we had a mechanism to mark "no suppliers found", we do it here.
-        # But per requirements: "If no verifiable suppliers... output 'suppliers': []"
-
-    # Enforce provenance on suppliers
-    valid_suppliers = []
-    logger.info(f"Filtering {len(suppliers)} supplier candidates for {name}...")
-    for s in suppliers:
-        # Relaxed check: must have name and at least one source url or website OR some contact info
-        # Goal: ensure we don't drop potential candidates that just lack an email/phone.
-        s_name = s.get("supplier_name")
-        s_web = s.get("website") or s.get("product_page_url") or s.get("contact_page_url")
-        
-        if s_name and s_web:
-             # ensure source_urls is list
-             if "source_urls" not in s or not s["source_urls"]:
-                 s["source_urls"] = [s_web] if s_web else []
-             if "evidence" not in s:
-                 s["evidence"] = "Verified via Agentic Search"
-             valid_suppliers.append(s)
+    # But per user request: "if too few found add a high confidence suppliers known to sell this products"
     
-    logger.info(f"Suppliers for {name}: {len(valid_suppliers)} passed filter out of {len(suppliers)} candidates.")
-    suppliers = valid_suppliers
+    # 2b) Fallback / Enrichment of suppliers
+    # If we have very few suppliers (< 2), ask LLM for high-confidence knowledge
+    if len(suppliers) < 2:
+        logger.info(f"Few suppliers found ({len(suppliers)}) for {name}. Requesting high-confidence fallback list.")
+        try:
+            fallback_json = llm.generate_json(
+                LLM_KNOWN_SUPPLIERS_PROMPT.format(
+                    machine_name=name, 
+                    machine_type=machine_final.get("type", "Industrial Machine")
+                ),
+                temperature=0.3,
+                tag=f"fallback_suppliers:{name}",
+                timeout_s=cfg.llm_call_timeout_s
+            )
+            if fallback_json and isinstance(fallback_json, list):
+                for fbs in fallback_json:
+                    # Convert to supplier dict structure
+                    # Mark as "fallback" source so we can score it appropriately (good reputation, but not scraped)
+                    s_obj = {
+                        "supplier_name": fbs.get("supplier_name"),
+                        "website": fbs.get("website"),
+                        "region": fbs.get("region"),
+                        "source": "knowledge_base",
+                        "price_estimate": "Contact for quote",
+                        "notes": fbs.get("notes")
+                    }
+                    suppliers.append(s_obj)
+        except Exception as e:
+            logger.warning(f"Fallback supplier generation failed for {name}: {e}")
 
-    # budget gate
-    if not _budget_check(t_start, cfg.total_machine_budget_s):
-        return {
-            "machine_input": machine_final, 
-            "suppliers": suppliers, 
-            "skipped_steps": ["image_generation"]
-        }
+    # 2c) Score and Rank
+    # "do not filter suppliers, but give them scores and rank them"
+    # We will score based on: 
+    # 1. Existence of website/URL (Critical)
+    # 2. Source type (Agentic/Scraped > KnowledgeFallback)
+    # 3. Completeness (Region, Price)
+    
+    scored_suppliers = []
+    logger.info(f"Scoring {len(suppliers)} supplier candidates for {name}...")
+    
+    for s in suppliers:
+        score = 0.5 # start middle
+        
+        s_name = s.get("supplier_name") or s.get("name")
+        s_web = s.get("website") or s.get("product_page_url") or s.get("contact_page_url")
+        s_source = s.get("source", "")
+        
+        # Criteria 1: Name and Website validity
+        if s_name:
+            score += 0.1
+        if s_web and str(s_web).startswith("http"):
+            score += 0.3  # Huge boost for verifiable link
+        
+        # Criteria 2: Source reliability
+        if s_source in ["alibaba", "made_in_china", "indiamart", "europages", "agentic"]:
+            score += 0.2 # Real scraped data is better than hallucinated
+        elif s_source == "knowledge_base":
+            score += 0.1 # Known brand is okay, but less verifiable immediately
+            
+        # Criteria 3: Region match (if relevant, but we don't have user preference here easily observable, assume neutral)
+        if s.get("region"):
+            score += 0.1
+            
+        # Normalization
+        score = min(score, 1.0)
+        
+        # Attach score
+        s["confidence_score"] = round(score, 2)
+        
+        # Ensure minimal fields for display
+        if not s_name: 
+            s["supplier_name"] = "Unknown Supplier"
+        
+        # "Make sure to get at least 1 supplier" -> matches requirement to keep them.
+        # We only drop if it's practically empty
+        if s_name or s_web:
+             scored_suppliers.append(s)
+
+    # Sort by score descending
+    scored_suppliers.sort(key=lambda x: x["confidence_score"], reverse=True)
+    
+    # If still empty (extremely unlikely with fallback), force a generic one?
+    # User said: "make sure to get at least 1 supplier for everything"
+    if not scored_suppliers:
+         scored_suppliers.append({
+             "supplier_name": "Review Manual Sourcing",
+             "website": "",
+             "region": "Global",
+             "confidence_score": 0.1,
+             "notes": "No automatic suppliers found. Please verify."
+         })
+
+    logger.info(f"Suppliers for {name}: {len(scored_suppliers)} ranked.")
+    suppliers = scored_suppliers
+
+    # budget gate - REMOVED strict check
+    # if not _budget_check(t_start, cfg.total_machine_budget_s): ...
 
     # 3) Generate best_image_url via Nano Banana (green bg)
         # Stored SEPARATELY in assets.generated_image

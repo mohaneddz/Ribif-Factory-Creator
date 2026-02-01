@@ -455,3 +455,63 @@ def find_manufacturer_website(manufacturer_name: str) -> Optional[str]:
         return results[0].url
     
     return None
+
+
+def search_company_contacts(company_name: str, region: str = "") -> Dict[str, str]:
+    """
+    Search for contact information (email, phone) for a company.
+    """
+    cache = get_cache()
+    cache_key = f"contacts:{company_name}:{region}"
+    cached = cache.get(cache_key, "aggregator_contacts")
+    if cached:
+        return cached
+
+    query = f"{company_name} official website contact email phone {region}".strip()
+    
+    # Try web search
+    results: List[SearchResult] = []
+    
+    # Try Serper first
+    if _serper_available:
+        try:
+            results = serper.search_google(query, 5)
+        except Exception:
+            pass
+    
+    # Fallback to DDG
+    if not results:
+        try:
+            results = duckduckgo.web_search(query, 5)
+        except Exception:
+            pass
+            
+    contact_info = {"email": "", "phone": "", "website": ""}
+    
+    # Simple regex extraction from snippets
+    email_re = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+    
+    found_emails = []
+    
+    for r in results:
+        # Check snippet and title
+        text = (r.title + " " + r.snippet).lower()
+        
+        # Extract emails
+        import re
+        emails = re.findall(email_re, text)
+        for e in emails:
+            # Basic filter against dummy emails
+            if not e.endswith(".png") and not e.endswith(".jpg") and "example.com" not in e and "wix.com" not in e:
+                found_emails.append(e)
+                
+        # Refine website if not known
+        if not contact_info["website"] and company_name.lower().replace(" ", "") in r.url.lower():
+             contact_info["website"] = r.url
+
+    # Pick best candidates
+    if found_emails:
+        contact_info["email"] = found_emails[0] # Most relevant usually first
+        
+    cache.set(cache_key, "aggregator_contacts", contact_info)
+    return contact_info

@@ -8,7 +8,7 @@ import {
     MessageSquare, User, Building2, Loader2, Play, Pause, Phone
 } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
 // Types
 interface EmailRecord {

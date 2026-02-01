@@ -4,7 +4,9 @@ import { createClient } from "@supabase/supabase-js";
 const argv = process.argv.join(" ");
 const isLive = argv.includes("--live") || process.env.SUPABASE_TEST_LIVE === "1";
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+// Ensure trailing slash for storage endpoint
+const rawUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseUrl = rawUrl ? rawUrl.replace(/\/$/, "") + "/" : "";
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_TEST_SERVICE_KEY;
 
 const bucketName = process.env.SUPABASE_TEST_BUCKET || "project-files";

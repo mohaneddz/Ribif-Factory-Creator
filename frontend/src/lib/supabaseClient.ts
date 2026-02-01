@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+// Ensure trailing slash for storage endpoint
+const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseUrl = rawUrl ? rawUrl.replace(/\/$/, "") + "/" : "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const supabaseServiceRoleKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || "";
 
@@ -10,7 +12,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Client for auth operations (uses anon key with RLS)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  db: {
+    schema: 'public',
+  },
+  auth: {
+    persistSession: true,
+  },
+  global: {
+    headers: { 'x-client': 'ribif-web' },
+  },
+});
 
 // Admin client that bypasses RLS (uses service role key)
 // WARNING: Only use this for trusted server-side or development operations
@@ -18,6 +30,9 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
+  },
+  db: {
+    schema: 'public',
   },
 });
 

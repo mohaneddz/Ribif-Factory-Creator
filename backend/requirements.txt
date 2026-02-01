@@ -1,51 +1,53 @@
 # Core Web Framework
-Flask
-Flask-CORS
-Werkzeug
+Flask==3.1.2
+Flask-CORS==6.0.2
+Werkzeug==3.1.4
 
 # Environment & Configuration
-python-dotenv
+python-dotenv==1.2.1
 
 # AI/LLM APIs
-openai
-google-generativeai
-google-ai-generativelanguage
+openai==2.14.0
+google-generativeai==0.8.6
+google-ai-generativelanguage==0.6.15
+google-genai==1.56.0
+replicate==1.0.7
 
 # Document Processing
-PyMuPDF
-python-docx
-google-cloud-documentai
+PyMuPDF==1.26.7
+python-docx==1.2.0
+google-cloud-documentai==3.8.0
 
 # PDF & Imaging
-pypdf
-reportlab
-pillow
+pypdf==6.5.0
+reportlab==4.4.9
+pillow==11.3.0
 
 # CAD & Drawing
-ezdxf
-matplotlib
+ezdxf==1.4.3
+matplotlib==3.10.8
 
 # Data Processing & Validation
-Pydantic
-numpy
-numpy-financial
-pandas
+pydantic==2.12.5
+numpy==2.2.6
+numpy-financial==1.0.0
+pandas==2.3.3
 
 # HTTP & Web Scraping
-requests
-beautifulsoup4
-trafilatura
-lxml
+requests==2.32.5
+beautifulsoup4==4.14.3
+trafilatura==2.0.0
+lxml==6.0.2
 
 # Excel & Data Export
-XlsxWriter
+XlsxWriter==3.2.9
 
 # Async & Concurrency
-aiohttp
+aiohttp==3.13.2
 
 # Supabase
-supabase
+supabase==2.27.2
 
 # Utilities
-certifi
-moviepy
+certifi==2025.11.12
+moviepy==2.2.1

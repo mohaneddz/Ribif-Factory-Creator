@@ -96,7 +96,7 @@ export async function deleteProjectWithFiles(
     projectId: string
 ): Promise<{ success: boolean; error: Error | null; filesDeleted?: number }> {
     try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
         const response = await fetch(`${backendUrl}/api/projects/${projectId}`, {
             method: "DELETE",
             headers: {

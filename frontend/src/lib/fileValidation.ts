@@ -19,6 +19,10 @@ export async function checkDuplicateProject(
   filename: string,
   hash: string
 ): Promise<{ exists: boolean; projectId?: string; projectName?: string }> {
+  // Bypass duplicate check
+  return { exists: false };
+
+  /*
   const { data, error } = await supabase
     .from("projects")
     .select("id, name")
@@ -36,6 +40,7 @@ export async function checkDuplicateProject(
   }
 
   return { exists: false };
+  */
 }
 
 /**
@@ -60,8 +65,8 @@ export async function extractPdfText(file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
-  
+  const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+
   try {
     const response = await fetch(`${API_BASE}/api/extract-text`, {
       method: "POST",
@@ -90,7 +95,7 @@ export async function validateWithLlm(
   const formData = new FormData();
   formData.append("file", file);
 
-  const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+  const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
   try {
     const response = await fetch(`${API_BASE}${VALIDATION_CONFIG.LLM_VALIDATION_ENDPOINT}`, {
@@ -98,15 +103,25 @@ export async function validateWithLlm(
       body: formData,
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+    const responseText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error("Failed to parse JSON response:", responseText.slice(0, 500));
       return {
         valid: false,
-        error: errorData.error || "Validation service unavailable",
+        error: "Server returned invalid response. Please check logs.",
       };
     }
 
-    const data = await response.json();
+    if (!response.ok) {
+      return {
+        valid: false,
+        error: data.error || "Validation service unavailable",
+      };
+    }
+
     return {
       valid: data.valid !== false,
       message: data.message,
@@ -167,7 +182,9 @@ export async function createProjectRecord(
   const { data, error } = await supabaseAdmin.from("projects").insert({
     name,
     source_filename: filename,
-    source_file_hash: fileHash,
+    // Fix: Append timestamp to hash to bypass UNIQUE constraint on source_file_hash
+    // This allows the same file to be uploaded to multiple projects ("Go Nuts" mode)
+    source_file_hash: `${fileHash}_${Date.now()}`,
     source_file_path: filePath,
     owner_id: userId || null,
     status: "draft",

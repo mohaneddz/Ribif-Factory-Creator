@@ -533,6 +533,21 @@ def generate_image(
     )
 
 
+
+def generate_video(
+    prompt: str,
+    image: Optional[Union[bytes, str]] = None,
+    aspect_ratio: str = "16:9",
+    duration_seconds: int = 5,
+) -> str:
+    return vtx.generate_video(
+        prompt=prompt,
+        image=image,
+        aspect_ratio=aspect_ratio,
+        duration_seconds=duration_seconds,
+    )
+
+
 # =========================
 # Replicate
 # =========================
@@ -547,7 +562,10 @@ def generate_3d_model(
     """
     Generates a 3D model from a single image using Replicate.
     """
-    import replicate
+    try:
+        import replicate
+    except ImportError:
+        raise RuntimeError("The 'replicate' library is missing. Please run `pip install replicate` to enable 3D generation.")
 
     if not image_path or not os.path.exists(image_path):
         raise RuntimeError(f"Input image not found for 3D generation: {image_path}")
@@ -558,7 +576,7 @@ def generate_3d_model(
         raise RuntimeError("REPLICATE_API_TOKEN is missing. Add it to your .env file.")
 
     input_data = {
-        "image": open(image_path, "rb"),
+        "images": [open(image_path, "rb")],
         "texture_size": texture_size,
         "mesh_simplify": mesh_simplify,
         "generate_model": generate_model,

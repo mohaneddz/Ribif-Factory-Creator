@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
         "@react-three/drei",
         "three",
     ],
+    // Increase timeouts for long-running API operations (e.g., enrichment)
+    experimental: {
+        proxyTimeout: 600000, // 10 minutes for enrichment operations
+    },
     async rewrites() {
         return [
             {

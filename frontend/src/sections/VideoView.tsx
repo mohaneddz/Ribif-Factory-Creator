@@ -65,56 +65,24 @@ export const VideoView = ({ progress, videoUrl }: { progress: number; videoUrl?:
 
     return (
         <div className="h-full p-4 flex flex-col gap-4">
-        {/* Top Section - Exterior View */}
-        <div className="h-1/2 bg-white rounded-4xl relative overflow-hidden flex items-center justify-center group cursor-pointer border border-slate-200 hover:border-indigo-300 transition-all">
-            <div className="absolute top-6 left-6 bg-white/90 text-slate-800 px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200 shadow-sm flex items-center gap-2">
-                <Film size={12} className="text-indigo-600" />
-                VUE EXTÉRIEURE
-            </div>
-            <div className="absolute top-6 right-6 flex gap-2 z-10">
-                <button className="bg-white text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
-                    Façade Nord
-                </button>
-                <button className="bg-slate-50 text-slate-400 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
-                    Façade Sud
-                </button>
-            </div>
-            {renderContent()}
-            {!hasVideo && (
-                <div className="absolute bottom-6 left-6 right-6">
-                    <div className="flex items-center justify-between text-[10px] font-semibold text-white/80 mb-2">
-                        <span>Prévisualisation</span>
-                        <span>{Math.min(100, Math.round(progress))}%</span>
-                    </div>
-                    <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-                        <div className="h-full bg-white/80 rounded-full" style={{ width: `${Math.min(100, Math.max(12, progress))}%` }} />
-                    </div>
+            <div className="h-full bg-white rounded-4xl relative overflow-hidden flex items-center justify-center group cursor-pointer border border-slate-200 hover:border-indigo-300 transition-all">
+                <div className="absolute top-6 left-6 bg-white/90 text-slate-800 px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200 shadow-sm flex items-center gap-2">
+                    <Film size={12} className="text-indigo-600" />
+                    SIMULATION CINÉMATIQUE
                 </div>
-            )}
-        </div>
-
-        {/* Bottom Section - Interior View */}
-        <div className="h-1/2 bg-slate-50 rounded-4xl relative overflow-hidden flex items-center justify-center group cursor-pointer border border-slate-200 hover:border-indigo-300 transition-all">
-            <div className="absolute top-6 left-6 bg-white text-slate-700 px-4 py-2 rounded-full text-xs font-bold z-10 border border-slate-200 flex items-center gap-2">
-                <Sparkles size={12} className="text-indigo-500" />
-                VUE INTÉRIEURE
+                {renderContent()}
+                {!hasVideo && (
+                    <div className="absolute bottom-6 left-6 right-6">
+                        <div className="flex items-center justify-between text-[10px] font-semibold text-white/80 mb-2">
+                            <span>Génération de la vidéo</span>
+                            <span>{Math.min(100, Math.round(progress))}%</span>
+                        </div>
+                        <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                            <div className="h-full bg-white/80 rounded-full" style={{ width: `${Math.min(100, Math.max(12, progress))}%` }} />
+                        </div>
+                    </div>
+                )}
             </div>
-            <div className="absolute top-6 right-6 flex gap-2 z-10">
-                <button className="bg-white text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
-                    Zone Production
-                </button>
-                <button className="bg-slate-100 text-slate-400 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 hover:border-indigo-300 transition-colors">
-                    Stockage
-                </button>
-            </div>
-            {renderSecondaryContent()}
-            {!hasVideo && (
-                <div className="absolute bottom-6 right-6 bg-white/90 text-slate-600 text-[10px] font-semibold px-3 py-1.5 rounded-lg border border-slate-200 flex items-center gap-2">
-                    <Film size={12} className="text-indigo-500" />
-                    Storyboard placeholder
-                </div>
-            )}
         </div>
-    </div>
     );
 };

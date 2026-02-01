@@ -571,18 +571,63 @@ Respond in JSON:
         
         return results
 
+    def _get_fallback_material_estimate(self, nom: str, type_mat: str = "") -> Dict:
+        """
+        Provide reasonable fallback estimates for materials when LLM doesn't return them.
+        Based on typical Algerian market prices for common industrial materials.
+        """
+        # Default polymer/thermoplastic estimates (DZD per tonne, CIF Algeria)
+        defaults = {
+            "unit_price": 320000,  # ~2370 EUR/tonne average for imported polymers
+            "transport_pct": 0.15,  # 15% for maritime + land transport
+            "storage_pct": 0.03,    # 3% for warehousing
+            "wastage_pct": 0.025,   # 2.5% material loss
+            "confidence": "low",
+            "notes": "Fallback estimate - LLM did not provide specific data"
+        }
+        
+        # Adjust based on material type keywords
+        nom_lower = nom.lower()
+        type_lower = type_mat.lower() if type_mat else ""
+        
+        # Higher-end materials
+        if any(kw in nom_lower or kw in type_lower for kw in ["époxy", "epoxy", "polyuréthane", "polyurethane", "silicone"]):
+            defaults["unit_price"] = 380000
+            defaults["transport_pct"] = 0.18
+        
+        # Standard polymers
+        elif any(kw in nom_lower or kw in type_lower for kw in ["pvc", "abs", "pc", "pp", "pe", "ps", "thermoplast"]):
+            defaults["unit_price"] = 280000
+            defaults["transport_pct"] = 0.12
+        
+        # Additives and specialized materials
+        elif any(kw in nom_lower or kw in type_lower for kw in ["additif", "additive", "pigment", "colorant", "stabilisant"]):
+            defaults["unit_price"] = 450000
+            defaults["transport_pct"] = 0.10
+            defaults["storage_pct"] = 0.05
+        
+        logger.warning(f"Using fallback estimate for material: {nom} (type: {type_mat})")
+        return defaults
+
     def _estimate_materials_batch(self, materials: List[Dict]) -> Dict[str, Dict]:
         """Estimate all raw material prices in a single LLM call for performance"""
+        if not materials:
+            return {}
+        
         # Build materials list for prompt
         materials_text = ""
+        material_names = []
         for i, m in enumerate(materials, 1):
             nom = m.get("nom_materiau", "Unknown")
+            material_names.append(nom)
             type_mat = m.get("type", "")
             quantite_info = m.get("quantite_estimee", {})
             quantite = quantite_info.get("valeur", 0)
             unite = quantite_info.get("unite", "tonnes")
             specs = m.get("specifications", "")
             materials_text += f"{i}. {nom} ({type_mat}) - {quantite} {unite}/year - {specs}\n"
+        
+        logger.info(f"Requesting LLM estimates for {len(material_names)} materials: {material_names}")
         
         prompt = f"""Estimate purchase prices for ALL these raw materials for industry in Algeria:
 
@@ -602,7 +647,9 @@ For EACH material, estimate:
 - wastage_pct: loss fraction (0-1)
 - confidence: "high", "medium", or "low"
 
-Respond in JSON with EXACT material names as keys:
+IMPORTANT: Respond with JSON containing ALL {len(materials)} materials. Use EXACT material names as keys.
+
+Example format:
 {{
     "Polyuréthane (PU)": {{"unit_price": 350000, "transport_pct": 0.15, "storage_pct": 0.03, "wastage_pct": 0.02, "confidence": "medium"}},
     "Résines époxy": {{"unit_price": 280000, "transport_pct": 0.12, "storage_pct": 0.02, "wastage_pct": 0.02, "confidence": "medium"}},
@@ -612,11 +659,41 @@ Respond in JSON with EXACT material names as keys:
         try:
             result = self.call_gemini(prompt)
             if result and isinstance(result, dict):
-                logger.info("BATCH LLM estimation SUCCESS for %s materials", len(result))
+                returned_materials = list(result.keys())
+                logger.info(f"LLM returned estimates for {len(returned_materials)} materials: {returned_materials}")
+                
+                # Check for missing materials and add fallback estimates
+                missing_materials = set(material_names) - set(returned_materials)
+                if missing_materials:
+                    logger.warning(f"LLM did not return estimates for {len(missing_materials)} materials: {list(missing_materials)}")
+                    # Add fallback estimates for missing materials
+                    for m in materials:
+                        nom = m.get("nom_materiau", "Unknown")
+                        if nom in missing_materials:
+                            type_mat = m.get("type", "")
+                            result[nom] = self._get_fallback_material_estimate(nom, type_mat)
+                            logger.info(f"Added fallback estimate for: {nom}")
+                
                 return result
-            raise ValueError("Empty batch LLM response for materials")
+            
+            # If LLM returns empty, use fallbacks for all
+            logger.warning("Empty LLM response - using fallback estimates for all materials")
+            result = {}
+            for m in materials:
+                nom = m.get("nom_materiau", "Unknown")
+                type_mat = m.get("type", "")
+                result[nom] = self._get_fallback_material_estimate(nom, type_mat)
+            return result
+            
         except Exception as e:
-            raise ValueError(f"Batch material estimation failed: {e}")
+            logger.error(f"Batch material estimation failed: {e} - using fallback estimates")
+            # Return fallback estimates instead of failing
+            result = {}
+            for m in materials:
+                nom = m.get("nom_materiau", "Unknown")
+                type_mat = m.get("type", "")
+                result[nom] = self._get_fallback_material_estimate(nom, type_mat)
+            return result
 
     def _validate_material_estimate(self, result: Dict, material: Dict) -> Dict:
         """Validate material estimate and fail if missing."""

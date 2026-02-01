@@ -7,7 +7,9 @@ from typing import Any, Dict, Optional, Tuple
 from supabase import create_client, Client
 
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/") + "/"
+# Ensure trailing slash for storage endpoint
+raw_url = os.getenv("SUPABASE_URL", "")
+SUPABASE_URL = (raw_url.rstrip("/") + "/") if raw_url else ""
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
 # Log normalized storage/API endpoint at startup (safe extraction of domain)
@@ -36,7 +38,20 @@ def _safe_name(name: str) -> str:
 def get_supabase() -> Optional[Client]:
     if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or SUPABASE_URL == "/":
         return None
-    return create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    
+    # Suppress noisy logs from supabase dependencies
+    import logging
+    import warnings
+    logging.getLogger("supabase").setLevel(logging.ERROR)
+    logging.getLogger("storage3").setLevel(logging.ERROR)
+    logging.getLogger("gotrue").setLevel(logging.ERROR)
+    logging.getLogger("postgrest").setLevel(logging.ERROR)
+    logging.getLogger("httpx").setLevel(logging.ERROR)
+    
+    # Suppress storage endpoint warning
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="Storage endpoint URL should have a trailing slash")
+        return create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 
 def is_enabled() -> bool:
@@ -238,24 +253,52 @@ def insert_module4_sourcing(
     return project_id
 
 
+
 def insert_tco_run(
     client: Client,
     project_id: str,
     module4_id: Optional[str],
     data: Dict[str, Any],
 ) -> Optional[str]:
-    payload = {
+    if not project_id:
+        return None
+
+    import uuid
+    new_run_id = str(uuid.uuid4())
+    
+    res = client.table("projects").select("completed_modules, module6_data").eq("id", project_id).single().execute()
+    current_data = res.data or {}
+    
+    completed = current_data.get("completed_modules") or []
+    if "module6" not in completed:
+        completed.append("module6")
+    
+    # We can store TCO runs as a list or just the latest. 
+    # Current requirement says "module6_data". 
+    # Usually TCO is iterative. Let's store the latest in module6_data directly, 
+    # maybe keeping history if "runs" key exists.
+    # For simplicity and schema compliance: module6_data will hold the RUN DATA.
+    
+    payload_data = {
+        "id": new_run_id,
         "project_id": project_id,
         "module4_id": module4_id,
         "currency": data.get("currency") or "DZD",
         "total_tco": data.get("total_tco"),
         "average_annual_tco": data.get("average_annual_tco"),
         "tco_per_unit_revenue": data.get("tco_per_unit_revenue"),
-        "data": data,
+        "data": data, # The detailed breakdown
+        "created_at": _now_stamp(),
     }
-    res = client.table("tco_runs").insert(payload).execute()
-    data_rows = getattr(res, "data", None) or []
-    return data_rows[0]["id"] if data_rows else None
+    
+    client.table("projects").update({
+        "module6_data": payload_data,
+        "completed_modules": completed,
+        "current_module": "module6",
+        "updated_at": _now_stamp(),
+    }).eq("id", project_id).execute()
+    
+    return new_run_id
 
 
 def insert_business_plan(
@@ -329,6 +372,7 @@ def insert_catalog(
     client.table("projects").update({"module9_data": enriched_data}).eq("id", project_id).execute()
 
 
+
 def insert_layout(
     client: Client,
     project_id: str,
@@ -337,14 +381,29 @@ def insert_layout(
     layout_3d_file_id: Optional[str],
     data: Dict[str, Any],
 ) -> None:
+    if not project_id:
+        return
+        
+    res = client.table("projects").select("completed_modules, metadata, module2_data").eq("id", project_id).single().execute()
+    current_data = res.data or {}
+    
+    completed = current_data.get("completed_modules") or []
+    if "module2" not in completed:
+        completed.append("module2")
+        
     payload = {
-        "project_id": project_id,
-        "pipeline_id": pipeline_id,
-        "layout_2d_file_id": layout_2d_file_id,
-        "layout_3d_file_id": layout_3d_file_id,
-        "data": data,
+        "module2_data": {
+            **(current_data.get("module2_data") or {}),
+            **data,
+            "pipeline_id": pipeline_id,
+            "layout_2d_file_id": layout_2d_file_id,
+            "layout_3d_file_id": layout_3d_file_id,
+        },
+        "completed_modules": completed,
+        "current_module": "module2",
+        "updated_at": _now_stamp(),
     }
-    client.table("layouts").insert(payload).execute()
+    client.table("projects").update(payload).eq("id", project_id).execute()
 
 
 def insert_pipeline(
@@ -356,23 +415,40 @@ def insert_pipeline(
     layout_suggestion: Optional[Dict[str, Any]],
     metadata: Optional[Dict[str, Any]] = None,
 ) -> Optional[str]:
-    payload = {
+    if not project_id:
+        return None
+
+    import uuid
+    new_pipeline_id = str(uuid.uuid4())
+    
+    res = client.table("projects").select("pipelines").eq("id", project_id).single().execute()
+    current_pipelines = (res.data or {}).get("pipelines") or []
+    if not isinstance(current_pipelines, list):
+        current_pipelines = []
+
+    new_pipeline = {
+        "id": new_pipeline_id,
         "project_id": project_id,
         "generated_by": generated_by,
         "groups": groups,
         "flows": flows,
         "layout_suggestion": layout_suggestion,
         "metadata": metadata or {},
+        "created_at": _now_stamp(),
     }
-    res = client.table("pipelines").insert(payload).execute()
-    data_rows = getattr(res, "data", None) or []
-    return data_rows[0]["id"] if data_rows else None
+    
+    current_pipelines.append(new_pipeline)
+    
+    client.table("projects").update({
+        "pipelines": current_pipelines,
+        # "current_pipeline_id": new_pipeline_id # We can store this in metadata or implicit last
+    }).eq("id", project_id).execute()
+    
+    return new_pipeline_id
 
 
 def update_project_current_pipeline(client: Client, project_id: str, pipeline_id: str) -> None:
-    if not project_id or not pipeline_id:
-        return
-    client.table("projects").update({"current_pipeline_id": pipeline_id}).eq("id", project_id).execute()
+    pass # No-op, pipeline ID is returned by insert_pipeline and stored in module2_data if needed
 
 
 def insert_video(
@@ -381,12 +457,27 @@ def insert_video(
     file_id: Optional[str],
     data: Dict[str, Any],
 ) -> None:
+    if not project_id:
+        return
+        
+    res = client.table("projects").select("completed_modules, module3_data").eq("id", project_id).single().execute()
+    current_data = res.data or {}
+    
+    completed = current_data.get("completed_modules") or []
+    if "module3" not in completed:
+        completed.append("module3")
+        
     payload = {
-        "project_id": project_id,
-        "file_id": file_id,
-        "data": data,
+        "module3_data": {
+            **(current_data.get("module3_data") or {}),
+            **data,
+            "file_id": file_id,
+        },
+        "completed_modules": completed,
+        "current_module": "module3",
+        "updated_at": _now_stamp(),
     }
-    client.table("videos").insert(payload).execute()
+    client.table("projects").update(payload).eq("id", project_id).execute()
 
 
 def delete_project_files(client: Client, project_id: str, bucket: str = SUPABASE_BUCKET_FILES) -> Tuple[int, Optional[str]]:

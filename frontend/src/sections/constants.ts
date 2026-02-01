@@ -17,7 +17,7 @@ export const fontStyle = `
 // 1. CONFIGURATION
 // ==========================================
 
-export const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+export const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
 export const MODULES = [
     { id: 1, title: "Analyse Specs", icon: FileText, file: "Specs_V1.pdf", type: "specs", statusText: "Extraction des données..." },
@@ -32,78 +32,82 @@ export const MODULES = [
     { id: 10, title: "Digital Twin", icon: BrainCircuit, file: "Digital_Twin_Live.json", type: "twin", statusText: "Initialisation du Jumeau Numérique..." }
 ];
 
-export const MODULE_LOADING_META: Record<string, { kicker: string; description: string; bullets: string[]; accent: string; glow: string }> = {
-    specs: {
-        kicker: "Lecture du cahier des charges",
-        description: "Extraction intelligente des contraintes techniques, matières premières et volumes cibles.",
-        bullets: ["OCR & segmentation", "Normalisation des unités", "Structuration des specs"],
-        accent: "from-indigo-600 via-violet-600 to-fuchsia-600",
-        glow: "bg-fuchsia-500",
-    },
-    layout2d: {
-        kicker: "Plan 2D",
-        description: "Conception des plans DWG et organisation des zones industrielles.",
-        bullets: ["Zonage intelligent", "Flux & sécurité", "Implantation machines"],
-        accent: "from-emerald-600 via-teal-600 to-cyan-600",
-        glow: "bg-cyan-500",
-    },
-    model3d: {
-        kicker: "Modèle 3D",
-        description: "Génération IFC 3D avec volumes, contraintes et enveloppes.",
-        bullets: ["BIM industriel", "Volumes & gabarits", "Export IFC"],
-        accent: "from-slate-700 via-slate-800 to-indigo-800",
-        glow: "bg-indigo-400",
-    },
-    video: {
-        kicker: "Rendu immersif",
-        description: "Création d'une visite virtuelle réaliste avec scènes 3D et animations.",
-        bullets: ["Scènes 3D", "Caméras & parcours", "Export vidéo"],
-        accent: "from-amber-500 via-orange-500 to-rose-500",
-        glow: "bg-rose-500",
-    },
-    email: {
-        kicker: "Négociation email",
-        description: "Brouillons IA, contre-offres et suivi des conditions fournisseurs.",
-        bullets: ["Brouillons IA", "Incoterms", "Résumé d'accord"],
-        accent: "from-sky-600 via-blue-600 to-indigo-600",
-        glow: "bg-blue-500",
-    },
-    sourcing: {
-        kicker: "Sourcing mondial",
-        description: "Identification des fournisseurs et scoring multi-critères.",
-        bullets: ["Recherche globale", "Matching besoins", "Classement qualité"],
-        accent: "from-sky-600 via-blue-600 to-indigo-600",
-        glow: "bg-blue-500",
-    },
-    tco: {
-        kicker: "Analyse des coûts",
-        description: "Calcul du TCO, amortissements et projections multi-années.",
-        bullets: ["Coûts CAPEX", "OPEX & maintenance", "Projection 5 ans"],
-        accent: "from-slate-700 via-slate-800 to-indigo-800",
-        glow: "bg-indigo-400",
-    },
-    businessplan: {
-        kicker: "Plan d'affaires",
-        description: "Construction du modèle économique et des indicateurs financiers.",
-        bullets: ["BMC & ROI", "Pricing", "Synthèse investisseurs"],
-        accent: "from-emerald-600 via-green-600 to-lime-600",
-        glow: "bg-lime-400",
-    },
-    catalogue: {
-        kicker: "Catalogue technique",
-        description: "Compilation des fiches produits et mise en page PDF premium.",
-        bullets: ["Fiches produits", "Mise en page", "Export PDF"],
-        accent: "from-indigo-700 via-blue-700 to-slate-900",
-        glow: "bg-indigo-300",
-    },
-    twin: {
-        kicker: "Simulation & Monitoring",
-        description: "Jumeau numérique dynamique avec simulation de télémétrie et IA prédictive.",
-        bullets: ["Telemetry Simulation", "Predictive Analytics", "Real-time Charts"],
-        accent: "from-indigo-600 via-violet-600 to-fuchsia-600",
-        glow: "bg-fuchsia-500",
-    },
+export const MODULE_LOADING_META: Record<
+  string,
+  { kicker: string; description: string; bullets: string[]; accent: string; glow: string }
+> = {
+  specs: {
+    kicker: "Lecture du cahier des charges",
+    description: "Extraction des infos clés : contraintes, matières, capacités, exigences.",
+    bullets: ["Lecture & synthèse", "Extraction champs clés", "Structuration JSON"],
+    accent: "from-indigo-600 via-violet-600 to-fuchsia-600",
+    glow: "bg-fuchsia-500",
+  },
+  layout2d: {
+    kicker: "Plan 2D",
+    description: "Génération d’un plan 2D simplifié basé sur les zones et l’implantation.",
+    bullets: ["Définition des zones", "Placement de base", "Export 2D"],
+    accent: "from-emerald-600 via-teal-600 to-cyan-600",
+    glow: "bg-cyan-500",
+  },
+  model3d: {
+    kicker: "Modèle 3D",
+    description: "Construction d’un volume 3D indicatif pour visualisation.",
+    bullets: ["Volume indicatif", "Assemblage simple", "Export 3D"],
+    accent: "from-slate-700 via-slate-800 to-indigo-800",
+    glow: "bg-indigo-400",
+  },
+  video: {
+    kicker: "Rendu immersif",
+    description: "Rendu de visualisation basique à partir de la scène 3D.",
+    bullets: ["Rendu simple", "Quelques vues", "Export vidéo"],
+    accent: "from-amber-500 via-orange-500 to-rose-500",
+    glow: "bg-rose-500",
+  },
+  email: {
+    kicker: "Négociation email",
+    description: "Génération d’emails de contact et suivi des réponses.",
+    bullets: ["Brouillon d’email", "Suivi & relance", "Résumé des échanges"],
+    accent: "from-sky-600 via-blue-600 to-indigo-600",
+    glow: "bg-blue-500",
+  },
+  sourcing: {
+    kicker: "Sourcing",
+    description: "Recherche de fournisseurs + shortlist simple alignée aux besoins.",
+    bullets: ["Recherche fournisseurs", "Shortlist", "Liens & contacts"],
+    accent: "from-sky-600 via-blue-600 to-indigo-600",
+    glow: "bg-blue-500",
+  },
+  tco: {
+    kicker: "Analyse des coûts",
+    description: "Estimation des coûts principaux et synthèse par poste.",
+    bullets: ["CAPEX estimatif", "OPEX estimatif", "Tableau récapitulatif"],
+    accent: "from-slate-700 via-slate-800 to-indigo-800",
+    glow: "bg-indigo-400",
+  },
+  businessplan: {
+    kicker: "Plan d'affaires",
+    description: "Structuration d’un business plan court avec chiffres clés.",
+    bullets: ["Résumé & pitch", "Hypothèses clés", "Chiffres principaux"],
+    accent: "from-emerald-600 via-green-600 to-lime-600",
+    glow: "bg-lime-400",
+  },
+  catalogue: {
+    kicker: "Catalogue technique",
+    description: "Compilation des éléments techniques dans un PDF propre.",
+    bullets: ["Compilation contenu", "Mise en page simple", "Export PDF"],
+    accent: "from-indigo-700 via-blue-700 to-slate-900",
+    glow: "bg-indigo-300",
+  },
+  twin: {
+    kicker: "Simulation & Monitoring",
+    description: "Tableau de bord simple avec indicateurs et courbes basiques.",
+    bullets: ["KPIs basiques", "Graphiques simples", "Données simulées"],
+    accent: "from-indigo-600 via-violet-600 to-fuchsia-600",
+    glow: "bg-fuchsia-500",
+  },
 };
+
 
 export const MOCK_TCO_DATA = {
     "company_name": "SARL ALLO MAISON",

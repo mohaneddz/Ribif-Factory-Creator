@@ -5,7 +5,7 @@ import { useEffect, useState, Suspense, useRef } from "react";
 import { Phone, PhoneOff, Loader2, CheckCircle2, XCircle, Volume2 } from "lucide-react";
 import Vapi from "@vapi-ai/web";
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 const VAPI_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || "";
 
 // =============================================================================

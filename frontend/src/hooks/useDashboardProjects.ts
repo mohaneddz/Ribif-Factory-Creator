@@ -101,7 +101,7 @@ export function useDashboardProjects() {
 
   const handleDeleteProject = async (projectId: string): Promise<boolean> => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
       const response = await fetch(`${backendUrl}/api/projects/${projectId}`, {
         method: "DELETE",
         headers: {
