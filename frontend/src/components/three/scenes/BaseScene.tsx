@@ -15,7 +15,8 @@ const Canvas = dynamic(
 
 import CaptureCamera from "../cameras/CaptureCamera"
 import CameraStatusHUD from "../helpers/CameraStatusHUD"
-import { useSceneSettings, useSceneThreeLogic, BaseLogic, SceneLogicParams } from "@/hooks/useSceneLogic"
+import { useSceneSettings, BaseLogic, SceneLogicParams } from "@/hooks/useSceneLogic"
+import { useSceneThreeLogic } from "@/hooks/useSceneThreeLogic"
 
 interface BaseSceneProps extends SceneLogicParams {
     children: (logic: BaseLogic) => ReactNode

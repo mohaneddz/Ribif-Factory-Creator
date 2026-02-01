@@ -13,6 +13,7 @@
     "@react-three/drei": "^9.117.3",
     "@react-three/fiber": "^8.17.14",
     "@supabase/supabase-js": "^2.93.2",
+    "@vapi-ai/web": "^2.5.2",
     "clsx": "^2.1.1",
     "dxf-parser": "^1.1.2",
     "framer-motion": "^11.3.8",

@@ -18,7 +18,6 @@ import clsx from "clsx";
 
 import { BusinessPlanView } from "@/sections/BusinessPlanView";
 import { CatalogueTechniqueView } from "@/sections/CatalogueTechniqueView";
-import { CallsNegotiationView } from "@/sections/CallsNegotiationView";
 import { EmailNegotiationView } from "@/sections/EmailNegotiationView";
 import { ModuleLoadingView } from "@/sections/ModuleLoadingView";
 import { Layout2DView, Model3DView } from "@/sections/PlansView";
@@ -809,7 +808,6 @@ export default function FactoryCopilot() {
                                                 {selectedModuleItem.type === 'video' && <VideoView progress={selectedProgress} videoUrl={videoUrl} />}
                                                 {selectedModuleItem.type === 'sourcing' && <SourcingView progress={selectedProgress} data={extractedData} module4Data={module4Data} loading={module4Loading} />}
                                                 {selectedModuleItem.type === 'email' && <EmailNegotiationView module4Data={module4Data} loading={module4Loading} />}
-                                                {selectedModuleItem.type === 'calls' && <CallsNegotiationView />}
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
                                                 {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.pdf_download_url} htmlUrl={catalogData?.html_download_url} />}

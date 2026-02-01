@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
-    Box, FileText, Layers, Mail, Phone, Video, Globe, Check,
+    Box, FileText, Layers, Mail, Video, Globe, Check,
     Upload, Loader2, Download, RefreshCw, Sparkles, Building2,
     Info, Play, FileSearch, Eye, BrainCircuit, Calculator,
     Briefcase, X, FileSpreadsheet, ChevronLeft, ChevronRight, BookOpen
@@ -11,7 +11,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import HTMLFlipBook from "react-pageflip";
-import { CallsNegotiationView } from "@/sections/CallsNegotiationView";
 import { EmailNegotiationView } from "@/sections/EmailNegotiationView";
 import { Layout2DView, Model3DView } from "@/sections/PlansView";
 
@@ -42,13 +41,12 @@ const MODULES = [
     { id: 1, title: "Analyse Specs", icon: FileText, file: "Specs_V1.pdf", type: "specs", statusText: "Extraction des données..." },
     { id: 2, title: "Sourcing Global", icon: Globe, file: "Liste_Sourcing.xlsx", type: "sourcing", statusText: "Recherche fournisseurs..." },
     { id: 3, title: "Email Center", icon: Mail, file: "Email_Negotiations.md", type: "email", statusText: "Préparation des emails..." },
-    { id: 4, title: "Phone Calls Negotiations", icon: Phone, file: "Call_Transcripts.wav", type: "calls", statusText: "Simulation d'appels..." },
-    { id: 5, title: "Analyse TCO", icon: Calculator, file: "Rapport_TCO.json", type: "tco", statusText: "Calcul des coûts..." },
-    { id: 6, title: "Business Plan", icon: Briefcase, file: "Business_Plan.pdf", type: "businessplan", statusText: "Génération du plan..." },
-    { id: 7, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." },
-    { id: 8, title: "2D Layout Design", icon: Layers, file: "layout_square.dxf", type: "layout2d", statusText: "Génération du layout 2D..." },
-    { id: 9, title: "3D Model Generation", icon: Box, file: "factory1.glb", type: "model3d", statusText: "Modélisation 3D..." },
-    { id: 10, title: "Video Model Presentation", icon: Video, file: "Presentation_HD.mp4", type: "video", statusText: "Rendu vidéo HD..." }
+    { id: 4, title: "Analyse TCO", icon: Calculator, file: "Rapport_TCO.json", type: "tco", statusText: "Calcul des coûts..." },
+    { id: 5, title: "Business Plan", icon: Briefcase, file: "Business_Plan.pdf", type: "businessplan", statusText: "Génération du plan..." },
+    { id: 6, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." },
+    { id: 7, title: "2D Layout Design", icon: Layers, file: "layout_square.dxf", type: "layout2d", statusText: "Génération du layout 2D..." },
+    { id: 8, title: "3D Model Generation", icon: Box, file: "factory1.glb", type: "model3d", statusText: "Modélisation 3D..." },
+    { id: 9, title: "Video Model Presentation", icon: Video, file: "Presentation_HD.mp4", type: "video", statusText: "Rendu vidéo HD..." }
 ];
 
 const MODULE_LOADING_META: Record<string, { kicker: string; description: string; bullets: string[]; accent: string; glow: string }> = {
@@ -2689,7 +2687,6 @@ export default function FactoryCopilot() {
                                                 {selectedModuleItem.type === 'video' && <VideoView progress={selectedProgress} videoUrl={videoUrl} />}
                                                 {selectedModuleItem.type === 'sourcing' && <SourcingView progress={selectedProgress} data={extractedData} module4Data={module4Data} loading={module4Loading} />}
                                                 {selectedModuleItem.type === 'email' && <EmailNegotiationView module4Data={module4Data} loading={module4Loading} />}
-                                                {selectedModuleItem.type === 'calls' && <CallsNegotiationView />}
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
                                                 {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url} loading={catalogLoading} />}
