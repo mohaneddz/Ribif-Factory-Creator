@@ -130,6 +130,16 @@ def process_module_1():
                 meta = payload.get("ribif_metadata")
                 if isinstance(meta, dict):
                     meta["project_id"] = meta.get("project_id") or project_id
+            
+            # Strip base64 image data from skipped response too
+            def strip_base64(obj):
+                if isinstance(obj, dict):
+                    return {k: (None if k == "image_url" and isinstance(v, str) and v.startswith("data:") else strip_base64(v)) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [strip_base64(item) for item in obj]
+                return obj
+            
+            payload = strip_base64(payload)
             response_payload = {"message": "Success", "data": payload, "status": "skipped"}
             return jsonify(response_payload)
 
@@ -526,7 +536,32 @@ def process_module_1():
         final_result.setdefault("ribif_metadata", {})
         final_result["ribif_metadata"]["module1_id"] = module1_id
 
-        return jsonify(sanitize_for_json({"message": "Success", "data": final_result}))
+        # === OPTIMIZE RESPONSE SIZE FOR SERVERLESS PLATFORMS ===
+        # Create a lightweight response that excludes large base64 data
+        # The full data is available via module1_output_file_url
+        response_data = sanitize_for_json({"message": "Success", "data": final_result})
+        
+        # Strip base64 image data from response to reduce payload size
+        # Images are still available via image_download_url
+        def strip_base64_from_response(obj):
+            """Recursively strip base64 data URIs from response to reduce size."""
+            if isinstance(obj, dict):
+                result = {}
+                for k, v in obj.items():
+                    if k == "image_url" and isinstance(v, str) and v.startswith("data:"):
+                        # Replace base64 data URI with null, client should use image_download_url
+                        result[k] = None
+                    else:
+                        result[k] = strip_base64_from_response(v)
+                return result
+            elif isinstance(obj, list):
+                return [strip_base64_from_response(item) for item in obj]
+            else:
+                return obj
+        
+        response_data = strip_base64_from_response(response_data)
+        
+        return jsonify(response_data)
     except Exception as e:
         module1_logger.error(f"Critical module1 failure: {e}", exc_info=True)
         # Ensure we always return a valid response even on catastrophic failure
