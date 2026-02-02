@@ -32,6 +32,8 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 # Increase timeouts for long-running enrichment operations
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max upload
+app.config['JSON_AS_ASCII'] = False  # Allow non-ASCII characters in JSON
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False  # Faster JSON responses
 
 app.register_blueprint(bp_common)
 app.register_blueprint(bp_module1)
@@ -45,6 +47,29 @@ app.register_blueprint(bp_module9)
 app.register_blueprint(bp_email_service)
 app.register_blueprint(bp_validation)
 app.register_blueprint(health_bp)
+
+
+# Global error handlers for better debugging
+@app.errorhandler(400)
+def bad_request_error(error):
+    from flask import jsonify, request
+    return jsonify({
+        "error": "Bad Request",
+        "message": str(error.description) if hasattr(error, 'description') else str(error),
+        "path": request.path,
+        "method": request.method,
+        "hint": "Check Content-Type header and request body format"
+    }), 400
+
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    from flask import jsonify
+    return jsonify({
+        "error": "Request too large",
+        "message": "The request body exceeds the maximum allowed size (100MB)"
+    }), 413
+
 
 if __name__ == "__main__":
     app.run(

@@ -156,7 +156,15 @@ class RibifEnrichmentAgent:
             except:
                 pass
             
-            machine["quantite_necessaire"] = qty_data.get("quantity", machine.get("quantite_necessaire") or 1)
+            # Safely extract quantity - handle cases where LLM returns nested objects
+            raw_qty = qty_data.get("quantity", machine.get("quantite_necessaire") or 1)
+            if isinstance(raw_qty, dict):
+                # Handle nested structures like {"value": 1, "unit": "pieces"}
+                raw_qty = raw_qty.get("value", raw_qty.get("quantity", 1))
+            try:
+                machine["quantite_necessaire"] = int(raw_qty) if raw_qty else 1
+            except (TypeError, ValueError):
+                machine["quantite_necessaire"] = 1
             machine["rationale_quantite"] = qty_data.get("rationale", "Estimated based on project scale")
             
             # 2. Specs Enrichment (Agentic Search)

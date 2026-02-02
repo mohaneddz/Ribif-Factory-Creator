@@ -103,43 +103,167 @@ def parse_parameter_value(raw_value: Any) -> Tuple[Optional[float], Optional[str
     return None, None, "unknown", "low"
 
 
-def normalize_parametres_process(raw_params: Dict[str, Any]) -> Dict[str, Any]:
+# Default process parameters based on operation/machine type
+DEFAULT_PROCESS_PARAMS = {
+    # High temperature processes
+    "injection": {"temperature": 220, "pressure": 120, "cycle": 45},
+    "moulage": {"temperature": 200, "pressure": 100, "cycle": 60},
+    "molding": {"temperature": 200, "pressure": 100, "cycle": 60},
+    "extrusion": {"temperature": 180, "pressure": 80, "cycle": 30},
+    "thermoformage": {"temperature": 160, "pressure": 5, "cycle": 40},
+    "thermoforming": {"temperature": 160, "pressure": 5, "cycle": 40},
+    "soudure": {"temperature": 1800, "pressure": 1, "cycle": 20},
+    "welding": {"temperature": 1800, "pressure": 1, "cycle": 20},
+    "heat treatment": {"temperature": 450, "pressure": 1, "cycle": 3600},
+    "traitement thermique": {"temperature": 450, "pressure": 1, "cycle": 3600},
+    "cuisson": {"temperature": 180, "pressure": 1, "cycle": 1800},
+    "baking": {"temperature": 180, "pressure": 1, "cycle": 1800},
+    # Machining processes
+    "usinage": {"temperature": 25, "pressure": 1, "cycle": 120},
+    "machining": {"temperature": 25, "pressure": 1, "cycle": 120},
+    "cnc": {"temperature": 25, "pressure": 1, "cycle": 180},
+    "fraisage": {"temperature": 25, "pressure": 1, "cycle": 150},
+    "milling": {"temperature": 25, "pressure": 1, "cycle": 150},
+    "tournage": {"temperature": 25, "pressure": 1, "cycle": 90},
+    "turning": {"temperature": 25, "pressure": 1, "cycle": 90},
+    "découpe": {"temperature": 25, "pressure": 8, "cycle": 30},
+    "cutting": {"temperature": 25, "pressure": 8, "cycle": 30},
+    "perçage": {"temperature": 25, "pressure": 1, "cycle": 45},
+    "drilling": {"temperature": 25, "pressure": 1, "cycle": 45},
+    "laser": {"temperature": 25, "pressure": 1, "cycle": 60},
+    # Pressing/forming
+    "presse": {"temperature": 25, "pressure": 200, "cycle": 30},
+    "press": {"temperature": 25, "pressure": 200, "cycle": 30},
+    "emboutissage": {"temperature": 25, "pressure": 300, "cycle": 15},
+    "stamping": {"temperature": 25, "pressure": 300, "cycle": 15},
+    "pliage": {"temperature": 25, "pressure": 150, "cycle": 20},
+    "bending": {"temperature": 25, "pressure": 150, "cycle": 20},
+    # Assembly/handling
+    "assemblage": {"temperature": 25, "pressure": 1, "cycle": 60},
+    "assembly": {"temperature": 25, "pressure": 1, "cycle": 60},
+    "montage": {"temperature": 25, "pressure": 1, "cycle": 90},
+    "packaging": {"temperature": 25, "pressure": 1, "cycle": 30},
+    "emballage": {"temperature": 25, "pressure": 1, "cycle": 30},
+    "palettisation": {"temperature": 25, "pressure": 1, "cycle": 45},
+    "palletizing": {"temperature": 25, "pressure": 1, "cycle": 45},
+    "manutention": {"temperature": 25, "pressure": 1, "cycle": 20},
+    "handling": {"temperature": 25, "pressure": 1, "cycle": 20},
+    # Quality/inspection
+    "contrôle": {"temperature": 25, "pressure": 1, "cycle": 60},
+    "control": {"temperature": 25, "pressure": 1, "cycle": 60},
+    "inspection": {"temperature": 25, "pressure": 1, "cycle": 45},
+    "test": {"temperature": 25, "pressure": 1, "cycle": 120},
+    "qc": {"temperature": 25, "pressure": 1, "cycle": 60},
+    "quality": {"temperature": 25, "pressure": 1, "cycle": 60},
+    # Surface treatment
+    "peinture": {"temperature": 60, "pressure": 4, "cycle": 300},
+    "painting": {"temperature": 60, "pressure": 4, "cycle": 300},
+    "coating": {"temperature": 80, "pressure": 1, "cycle": 180},
+    "revêtement": {"temperature": 80, "pressure": 1, "cycle": 180},
+    "polissage": {"temperature": 25, "pressure": 1, "cycle": 120},
+    "polishing": {"temperature": 25, "pressure": 1, "cycle": 120},
+    "nettoyage": {"temperature": 40, "pressure": 3, "cycle": 60},
+    "cleaning": {"temperature": 40, "pressure": 3, "cycle": 60},
+    # Default fallback
+    "default": {"temperature": 25, "pressure": 1, "cycle": 60},
+}
+
+
+def estimate_default_params(step_name: str, machine_name: str = None) -> Dict[str, Any]:
+    """
+    Estimate default process parameters based on step name and machine name.
+    
+    Args:
+        step_name: Name of the production step
+        machine_name: Name of the machine (optional)
+    
+    Returns:
+        Dict with estimated temperature, pressure, cycle values
+    """
+    search_text = f"{step_name or ''} {machine_name or ''}".lower()
+    
+    # Find best matching process type
+    for process_key, params in DEFAULT_PROCESS_PARAMS.items():
+        if process_key in search_text:
+            return params.copy()
+    
+    # Return default values
+    return DEFAULT_PROCESS_PARAMS["default"].copy()
+
+
+def normalize_parametres_process(raw_params: Dict[str, Any], step_name: str = None, machine_name: str = None) -> Dict[str, Any]:
     """
     Normalize parametres_process from various formats into structured schema.
+    If values are missing or N/A, estimates sensible defaults based on operation type.
     
     Args:
         raw_params: Raw parameters dict with keys like temperature, pression, temps_cycle, vitesse
+        step_name: Name of the step (for estimating defaults)
+        machine_name: Name of the machine (for estimating defaults)
     
     Returns:
         Normalized dict with structured temperature, pressure, cycle_time, speed objects
     """
     normalized = {}
     
+    # Get default estimates based on step/machine type
+    defaults = estimate_default_params(step_name, machine_name)
+    
     # Temperature
     temp_raw = raw_params.get("temperature") or raw_params.get("temp")
     if temp_raw:
         value, unit, source, confidence = parse_parameter_value(temp_raw)
-        normalized["temperature"] = {
-            "value": value,
-            "unit": unit or "°C",
-            "source": source,
-            "confidence": confidence
-        }
+        if value is not None:
+            normalized["temperature"] = {
+                "value": value,
+                "unit": unit or "°C",
+                "source": source,
+                "confidence": confidence
+            }
+        else:
+            # Use estimated default
+            normalized["temperature"] = {
+                "value": defaults["temperature"],
+                "unit": "°C",
+                "source": "estimated",
+                "confidence": "medium"
+            }
     else:
-        normalized["temperature"] = {"value": None, "unit": None, "source": "unknown", "confidence": "unknown"}
+        # Use estimated default
+        normalized["temperature"] = {
+            "value": defaults["temperature"],
+            "unit": "°C",
+            "source": "estimated",
+            "confidence": "medium"
+        }
     
     # Pressure
     pressure_raw = raw_params.get("pression") or raw_params.get("pressure")
     if pressure_raw:
         value, unit, source, confidence = parse_parameter_value(pressure_raw)
-        normalized["pressure"] = {
-            "value": value,
-            "unit": unit or "bar",
-            "source": source,
-            "confidence": confidence
-        }
+        if value is not None:
+            normalized["pressure"] = {
+                "value": value,
+                "unit": unit or "bar",
+                "source": source,
+                "confidence": confidence
+            }
+        else:
+            # Use estimated default
+            normalized["pressure"] = {
+                "value": defaults["pressure"],
+                "unit": "bar",
+                "source": "estimated",
+                "confidence": "medium"
+            }
     else:
-        normalized["pressure"] = {"value": None, "unit": None, "source": "unknown", "confidence": "unknown"}
+        # Use estimated default
+        normalized["pressure"] = {
+            "value": defaults["pressure"],
+            "unit": "bar",
+            "source": "estimated",
+            "confidence": "medium"
+        }
     
     # Cycle time
     cycle_raw = raw_params.get("temps_cycle") or raw_params.get("cycle_time") or raw_params.get("cycle")
@@ -158,16 +282,31 @@ def normalize_parametres_process(raw_params: Dict[str, Any]) -> Dict[str, Any]:
         elif "batch" in cycle_str or "lot" in cycle_str:
             cycle_mode = "batch"
         
-        normalized["cycle_time"] = {
-            "value": value,
-            "unit": unit,
-            "source": source,
-            "confidence": confidence
-        }
+        if value is not None:
+            normalized["cycle_time"] = {
+                "value": value,
+                "unit": unit or "s",
+                "source": source,
+                "confidence": confidence
+            }
+        else:
+            # Use estimated default
+            normalized["cycle_time"] = {
+                "value": defaults["cycle"],
+                "unit": "s",
+                "source": "estimated",
+                "confidence": "medium"
+            }
         if cycle_mode:
             normalized["cycle_mode"] = cycle_mode
     else:
-        normalized["cycle_time"] = {"value": None, "unit": None, "source": "unknown", "confidence": "unknown"}
+        # Use estimated default
+        normalized["cycle_time"] = {
+            "value": defaults["cycle"],
+            "unit": "s",
+            "source": "estimated",
+            "confidence": "medium"
+        }
     
     # Speed (optional)
     speed_raw = raw_params.get("vitesse") or raw_params.get("speed")
@@ -327,17 +466,21 @@ def create_hierarchical_stage5_structure(raw_processes: List[Dict[str, Any]]) ->
             # Normalize each step
             normalized_steps = []
             for local_idx, step in enumerate(deduped_steps):
-                # Normalize parameters
+                # Extract step and machine names for default estimation
+                step_name = step.get("name") or step.get("nom_etape") or f"Step {local_idx + 1}"
+                machine_name = step.get("machine") or step.get("machine_name")
+                
+                # Normalize parameters with step context for better defaults
                 raw_params = step.get("parametres_process", {})
-                normalized_params = normalize_parametres_process(raw_params)
+                normalized_params = normalize_parametres_process(raw_params, step_name, machine_name)
                 
                 # Create normalized step
                 normalized_step = {
-                    "nom_etape": step.get("name") or step.get("nom_etape") or f"Step {local_idx + 1}",
+                    "nom_etape": step_name,
                     "numero_etape": step.get("step") or step.get("numero_etape") or (local_idx + 1),
                     "type_operation": step.get("type_operation"),
                     "description": step.get("description"),
-                    "machine": step.get("machine") or step.get("machine_name"),
+                    "machine": machine_name,
                     "machines_utilisees": step.get("machines_utilisees"),
                     "inputs": step.get("inputs"),
                     "outputs": step.get("outputs"),
@@ -384,17 +527,21 @@ def create_hierarchical_stage5_structure(raw_processes: List[Dict[str, Any]]) ->
         # Normalize each step
         normalized_steps = []
         for local_idx, step in enumerate(deduped_steps):
-            # Normalize parameters
+            # Extract step and machine names for default estimation
+            step_name = step.get("nom_etape") or step.get("name") or f"Step {local_idx + 1}"
+            machine_name = step.get("machine") or step.get("machine_name")
+            
+            # Normalize parameters with step context for better defaults
             raw_params = step.get("parametres_process", {})
-            normalized_params = normalize_parametres_process(raw_params)
+            normalized_params = normalize_parametres_process(raw_params, step_name, machine_name)
             
             # Create normalized step
             normalized_step = {
-                "nom_etape": step.get("nom_etape") or step.get("name") or f"Step {local_idx + 1}",
+                "nom_etape": step_name,
                 "numero_etape": step.get("numero_etape") or step.get("step") or (local_idx + 1),
                 "type_operation": step.get("type_operation"),
                 "description": step.get("description"),
-                "machine": step.get("machine"),
+                "machine": machine_name,
                 "machines_utilisees": step.get("machines_utilisees"),
                 "inputs": step.get("inputs"),
                 "outputs": step.get("outputs"),

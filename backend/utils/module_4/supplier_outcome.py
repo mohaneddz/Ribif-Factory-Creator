@@ -29,7 +29,7 @@ class SupplierOutcomeStatus(Enum):
     SKIPPED_GENERIC = "skipped_generic"  # Generic/standard machine, no OEM needed
     SKIPPED_BASIC = "skipped_basic"  # Simple/basic machine, local suppliers sufficient
     SKIPPED_TIMEOUT = "skipped_timeout"  # Machine processing timed out before search
-    BUDGET_LIMITED = "budget_limited"  # Phase C stopped early due to global budget
+    SKIPPED_BUDGET_LIMITED = "skipped_budget_limited"  # Phase C stopped early due to global budget allocation
     
     # Failure states (search was attempted but failed)
     SEARCH_FAILED_API_ERROR = "search_failed_api_error"  # API/network error

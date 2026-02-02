@@ -67,15 +67,20 @@ logger = get_logger(__name__)
 # CONFIGURATION & CONSTANTS
 # =========================================================
 
-# Global budget - REDUCED to prevent overshoot (was 15, now 9 for 135 total with 15 machines)
-GLOBAL_WEB_CALL_MULTIPLIER = 9  # Conservative: ~9 calls/machine for 15 machines = 135 total
+# FAST MODE: Skip web searches completely and use cached/fallback data only
+# Controlled via FAST_MODE_MODULE4 env var (default: DISABLED for better results)
+FAST_MODE_MODULE4 = os.getenv("FAST_MODE_MODULE4", "0").lower() in ("1", "true", "yes")
 
-# Per-machine budgets (Phase C only) - ADJUSTED for hard budget enforcement
-MAX_SEARCH_QUERIES_PER_MACHINE = 5  # Can be reduced dynamically if budget tight
-MAX_RESULTS_PER_QUERY = 15  # More results per query for better coverage
-MAX_FETCH_PAGES_TOTAL = 25  # Can be reduced dynamically if budget tight
-MAX_LLM_CALLS_PER_MACHINE = 4  # 3-4 LLM steps: synthesis + validation + scoring + fallback
-MAX_RUNTIME_PER_MACHINE_S = 180  # 2-3 minutes per machine for comprehensive search
+# Global budget - INCREASED for better supplier discovery
+# Each machine gets ~15 calls for thorough search (queries + pages)
+GLOBAL_WEB_CALL_MULTIPLIER = 2 if FAST_MODE_MODULE4 else 15  # 15 calls per machine in normal mode
+
+# Per-machine budgets (Phase C only) - Balanced for quality
+MAX_SEARCH_QUERIES_PER_MACHINE = 1 if FAST_MODE_MODULE4 else 5  # 5 queries per machine
+MAX_RESULTS_PER_QUERY = 5 if FAST_MODE_MODULE4 else 15  # 15 results per query
+MAX_FETCH_PAGES_TOTAL = 3 if FAST_MODE_MODULE4 else 10  # 10 page fetches per machine
+MAX_LLM_CALLS_PER_MACHINE = 1 if FAST_MODE_MODULE4 else 2  # 2 LLM calls per machine
+MAX_RUNTIME_PER_MACHINE_S = 15 if FAST_MODE_MODULE4 else 120  # 2 min timeout in normal mode
 
 # Cache TTL
 CACHE_TTL_DAYS = 7
@@ -568,17 +573,24 @@ def plan_phase_c_budget(
         # Allocate queries and pages based on share
         # Assume: 1 query = 1 call, 1 page = 1 call
         # Target: queries + pages ≈ share
+        # IMPROVED: Lower thresholds to ensure machines get allocated budget
         if share >= 30:  # Plenty of budget
             queries = MAX_SEARCH_QUERIES_PER_MACHINE  # 5
-            pages = min(MAX_FETCH_PAGES_TOTAL, int(share - queries))  # Up to 25
-        elif share >= 15:  # Medium budget
-            queries = 3
+            pages = min(MAX_FETCH_PAGES_TOTAL, int(share - queries))  # Up to 10
+        elif share >= 15:  # Good budget
+            queries = 4
             pages = min(10, int(share - queries))
-        elif share >= 5:  # Tight budget
+        elif share >= 8:  # Medium budget
+            queries = 3
+            pages = min(5, int(share - queries))
+        elif share >= 4:  # Tight budget - still do some searching
+            queries = 2
+            pages = min(2, int(share - queries))
+        elif share >= 2:  # Minimal budget - do at least 1 query
             queries = 1
-            pages = min(3, int(share - queries))
-        else:  # Insufficient
-            queries = 0
+            pages = max(1, int(share - queries))
+        else:  # Very low budget - still try 1 query
+            queries = 1 if share >= 1 else 0
             pages = 0
         
         allocation[name] = {
@@ -637,13 +649,45 @@ def web_validate_minimal(
     INVARIANT: Always record explicit outcome (found/skipped/failed) and never returns empty due to system issues
     NEW INVARIANT: NEVER exceeds allocated budget - all web calls reserved BEFORE execution
     """
+    # FAST MODE: Skip web entirely, use fallback + AI suppliers
+    if FAST_MODE_MODULE4:
+        logger.info(f"Phase C: FAST MODE - Skipping web search for {canonical_name}")
+        
+        # Get fallback suppliers for this machine type
+        fallback = get_fallback_suppliers(canonical_name)
+        
+        # Generate AI fallback to supplement
+        from utils.module_4.ai_fallback import generate_ai_fallback_suppliers
+        typical_mfrs = INDUSTRY_KNOWLEDGE.get(canonical_name, {}).get('typical_manufacturers', [])
+        ai_suppliers = generate_ai_fallback_suppliers(canonical_name, typical_mfrs, max_suppliers=3)
+        
+        for s in ai_suppliers:
+            s['is_ai_fallback'] = True
+            s['ai_tag'] = '★'
+        
+        all_suppliers = fallback + ai_suppliers
+        
+        outcome_registry.record_skip(
+            original_name,
+            SupplierOutcomeStatus.SKIPPED_GENERIC,
+            f"Fast mode: Using {len(fallback)} fallback + {len(ai_suppliers)} AI suppliers"
+        )
+        
+        return {
+            "validated_suppliers": all_suppliers[:10],
+            "web_source": "fast_mode_fallback",
+            "queries_used": 0,
+            "pages_fetched": 0,
+            "candidates_evaluated": 0,
+            "candidates_filtered": 0
+        }
     # Check if budget limited (from planning pass)
     if allocated_budget and allocated_budget.get('skip'):
-        logger.warning(f"Phase C: Skipping {original_name} - budget allocation insufficient")
+        logger.warning(f"Phase C: Skipping {original_name} - budget allocation insufficient (SKIP_REASON=budget_limited)")
         fallback = get_fallback_suppliers(canonical_name)
         outcome_registry.record_skip(
             original_name,
-            SupplierOutcomeStatus.BUDGET_LIMITED,
+            SupplierOutcomeStatus.SKIPPED_BUDGET_LIMITED,
             f"Phase C stopped early due to global budget - using {len(fallback)} fallback suppliers"
         )
         return {"validated_suppliers": fallback, "web_source": "fallback_budget_limited"}
@@ -1359,6 +1403,8 @@ def enrich_machine_bounded(
     
     # Phase C: Minimal Web Validation (OPTIONAL, bounded)
     phase_c = {"validated_suppliers": []}
+    machine_budget = None  # Initialize to None to track if web validation was executed
+    web_validation_executed = False
     
     if should_validate_with_web(machine_class, confidence):
         # Check if we have budget allocation (from planning pass)
@@ -1384,13 +1430,25 @@ def enrich_machine_bounded(
                 global_budget_controller or GlobalBudgetController(max_budget=1000),  # Fallback
                 budget_allocation
             )
+            web_validation_executed = True
         elif budget_allocation and budget_allocation.get('skip'):
-            # Budget allocation says to skip
-            logger.info(f"Phase C: Skipping {nom_machine} per budget allocation")
+            # Budget allocation says to skip - use AI fallback instead of empty suppliers
+            logger.info(f"Phase C: Skipping {nom_machine} per budget allocation (SKIP_REASON=budget_limited) - generating AI fallback")
+            
+            # Generate AI fallback suppliers since we can't do web search
+            from utils.module_4.ai_fallback import generate_ai_fallback_suppliers
+            typical_mfrs = INDUSTRY_KNOWLEDGE.get(canonical_name, {}).get('typical_manufacturers', [])
+            ai_suppliers = generate_ai_fallback_suppliers(canonical_name, typical_mfrs, max_suppliers=5)
+            for s in ai_suppliers:
+                s['is_ai_fallback'] = True
+                s['ai_tag'] = '★'
+            
+            phase_c = {"validated_suppliers": ai_suppliers, "web_source": "ai_fallback_budget_limited"}
+            
             outcome_registry.record_skip(
                 nom_machine,
-                SupplierOutcomeStatus.BUDGET_LIMITED,
-                "Insufficient global budget for Phase C validation"
+                SupplierOutcomeStatus.SKIPPED_BUDGET_LIMITED,
+                f"Insufficient global budget for Phase C validation - using {len(ai_suppliers)} AI fallback suppliers"
             )
         elif global_budget.can_allocate_machine():
             # Legacy path (no planning pass) - use default limits
@@ -1411,24 +1469,37 @@ def enrich_machine_bounded(
                 global_budget_controller or GlobalBudgetController(max_budget=1000),  # Fallback
                 None  # No allocation
             )
+            web_validation_executed = True
         else:
-            # No budget available
+            # No budget available - use AI fallback
+            logger.info(f"Phase C: Global budget exhausted for {nom_machine} - generating AI fallback")
+            from utils.module_4.ai_fallback import generate_ai_fallback_suppliers
+            typical_mfrs = INDUSTRY_KNOWLEDGE.get(canonical_name, {}).get('typical_manufacturers', [])
+            ai_suppliers = generate_ai_fallback_suppliers(canonical_name, typical_mfrs, max_suppliers=5)
+            for s in ai_suppliers:
+                s['is_ai_fallback'] = True
+                s['ai_tag'] = '★'
+            
+            phase_c = {"validated_suppliers": ai_suppliers, "web_source": "ai_fallback_budget_exhausted"}
+            
             outcome_registry.record_skip(
                 nom_machine,
                 SupplierOutcomeStatus.SKIPPED_NO_BUDGET,
-                "Global budget exhausted before Phase C"
+                f"Global budget exhausted before Phase C - using {len(ai_suppliers)} AI fallback suppliers"
             )
         
-        # ASSERT: Budgets enforced
-        assert machine_budget.queries_used <= MAX_SEARCH_QUERIES_PER_MACHINE, "Query budget exceeded"
-        assert machine_budget.pages_fetched <= MAX_FETCH_PAGES_TOTAL, "Page fetch budget exceeded"
-        
-        # ASSERT: Excluded classes never trigger web
-        assert machine_class != CLASS_SUBSYSTEM, "Subsystem triggered web validation"
-        assert machine_class != CLASS_OPTIONAL or confidence == CONF_LOW, "Optional triggered web without low confidence"
-        
-        # Finalize machine budget (updates global counters)
-        global_budget.finalize_machine(nom_machine)
+        # Only check budgets if web validation was actually executed
+        if web_validation_executed and machine_budget is not None:
+            # ASSERT: Budgets enforced
+            assert machine_budget.queries_used <= MAX_SEARCH_QUERIES_PER_MACHINE, "Query budget exceeded"
+            assert machine_budget.pages_fetched <= MAX_FETCH_PAGES_TOTAL, "Page fetch budget exceeded"
+            
+            # ASSERT: Excluded classes never trigger web
+            assert machine_class != CLASS_SUBSYSTEM, "Subsystem triggered web validation"
+            assert machine_class != CLASS_OPTIONAL or confidence == CONF_LOW, "Optional triggered web without low confidence"
+            
+            # Finalize machine budget (updates global counters)
+            global_budget.finalize_machine(nom_machine)
         
         logger.info(
             f"Phase C: {canonical_name} - "
@@ -1437,33 +1508,63 @@ def enrich_machine_bounded(
             f"{phase_c.get('pages_fetched', 0)} pages"
         )
     else:
-        # Skip - record in outcome registry
+        # Skip web validation but still provide suppliers via AI fallback or industry knowledge
+        # This ensures EVERY machine gets suppliers, not just the ones that do web search
+        
         if machine_class == CLASS_SUBSYSTEM:
+            # Subsystems don't need suppliers
             outcome_registry.record_skip(
                 nom_machine,
                 SupplierOutcomeStatus.SKIPPED_GENERIC,
                 "Subsystem - no OEM supplier needed"
             )
         elif machine_class == CLASS_OPTIONAL:
+            # Optional systems get AI fallback suppliers
+            from utils.module_4.ai_fallback import generate_ai_fallback_suppliers
+            typical_mfrs = INDUSTRY_KNOWLEDGE.get(canonical_name, {}).get('typical_manufacturers', [])
+            ai_suppliers = generate_ai_fallback_suppliers(canonical_name, typical_mfrs, max_suppliers=4)
+            for s in ai_suppliers:
+                s['is_ai_fallback'] = True
+                s['ai_tag'] = '★'
+            phase_c = {"validated_suppliers": ai_suppliers, "web_source": "ai_fallback_optional"}
+            
             outcome_registry.record_skip(
                 nom_machine,
                 SupplierOutcomeStatus.SKIPPED_GENERIC,
-                "Optional system - not priority for sourcing"
+                f"Optional system - using {len(ai_suppliers)} AI fallback suppliers"
             )
         elif not global_budget.can_allocate_machine():
+            # Budget exhausted - still provide AI fallback
+            from utils.module_4.ai_fallback import generate_ai_fallback_suppliers
+            typical_mfrs = INDUSTRY_KNOWLEDGE.get(canonical_name, {}).get('typical_manufacturers', [])
+            ai_suppliers = generate_ai_fallback_suppliers(canonical_name, typical_mfrs, max_suppliers=4)
+            for s in ai_suppliers:
+                s['is_ai_fallback'] = True
+                s['ai_tag'] = '★'
+            phase_c = {"validated_suppliers": ai_suppliers, "web_source": "ai_fallback_budget_exhausted"}
+            
             outcome_registry.record_skip(
                 nom_machine,
                 SupplierOutcomeStatus.SKIPPED_NO_BUDGET,
-                "Global budget exhausted"
+                f"Global budget exhausted - using {len(ai_suppliers)} AI fallback suppliers"
             )
         else:
+            # Core stable machine with good confidence - provide suppliers from industry knowledge + AI
+            from utils.module_4.ai_fallback import generate_ai_fallback_suppliers
+            typical_mfrs = INDUSTRY_KNOWLEDGE.get(canonical_name, {}).get('typical_manufacturers', [])
+            ai_suppliers = generate_ai_fallback_suppliers(canonical_name, typical_mfrs, max_suppliers=5)
+            for s in ai_suppliers:
+                s['is_ai_fallback'] = True
+                s['ai_tag'] = '★'
+            phase_c = {"validated_suppliers": ai_suppliers, "web_source": "ai_fallback_core_stable"}
+            
             outcome_registry.record_skip(
                 nom_machine,
                 SupplierOutcomeStatus.SKIPPED_GENERIC,
-                f"Core stable machine with {confidence} confidence - internal knowledge sufficient"
+                f"Core stable machine with {confidence} confidence - using {len(ai_suppliers)} AI fallback suppliers"
             )
         
-        logger.info(f"Phase C: Skipped for {canonical_name} (not needed or budget exhausted)")
+        logger.info(f"Phase C: Skipped web for {canonical_name}, using {len(phase_c.get('validated_suppliers', []))} fallback suppliers")
         global_budget.skip_machine(nom_machine, "No web validation needed")
     
     # Phase D: Single Synthesis (ONE LLM CALL MAX)

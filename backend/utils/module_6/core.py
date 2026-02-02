@@ -37,9 +37,10 @@ Component Breakdown:
 import os
 import json
 import re
+import hashlib
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-from datetime import date
+from typing import Dict, List, Any, Optional, Tuple
+from datetime import date, datetime
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from google import genai
@@ -48,6 +49,206 @@ from google.genai import types
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+# ============================================
+# MODULE VERSION FOR IDEMPOTENCY
+# ============================================
+MODULE6_VERSION = "v1"
+
+# ============================================
+# HEURISTIC FALLBACK TABLE (by machine category)
+# ============================================
+MACHINE_HEURISTICS = {
+    "injection": {"base_price": 12_000_000, "impl_pct": 0.10, "ops_pct": 0.05, "maint_pct": 0.04},
+    "extrusion": {"base_price": 15_000_000, "impl_pct": 0.12, "ops_pct": 0.06, "maint_pct": 0.05},
+    "thermoform": {"base_price": 10_000_000, "impl_pct": 0.10, "ops_pct": 0.05, "maint_pct": 0.04},
+    "cnc": {"base_price": 18_000_000, "impl_pct": 0.08, "ops_pct": 0.04, "maint_pct": 0.03},
+    "robot": {"base_price": 20_000_000, "impl_pct": 0.15, "ops_pct": 0.06, "maint_pct": 0.05},
+    "conveyor": {"base_price": 4_000_000, "impl_pct": 0.08, "ops_pct": 0.03, "maint_pct": 0.02},
+    "compressor": {"base_price": 3_500_000, "impl_pct": 0.06, "ops_pct": 0.04, "maint_pct": 0.03},
+    "mixer": {"base_price": 5_000_000, "impl_pct": 0.08, "ops_pct": 0.04, "maint_pct": 0.03},
+    "packaging": {"base_price": 8_000_000, "impl_pct": 0.10, "ops_pct": 0.05, "maint_pct": 0.04},
+    "assembly": {"base_price": 7_000_000, "impl_pct": 0.10, "ops_pct": 0.05, "maint_pct": 0.04},
+    "lamination": {"base_price": 12_000_000, "impl_pct": 0.10, "ops_pct": 0.05, "maint_pct": 0.04},
+    "glass": {"base_price": 25_000_000, "impl_pct": 0.12, "ops_pct": 0.06, "maint_pct": 0.05},
+    "recycling": {"base_price": 15_000_000, "impl_pct": 0.12, "ops_pct": 0.06, "maint_pct": 0.05},
+    "storage": {"base_price": 8_000_000, "impl_pct": 0.08, "ops_pct": 0.03, "maint_pct": 0.02},
+    "agv": {"base_price": 15_000_000, "impl_pct": 0.10, "ops_pct": 0.04, "maint_pct": 0.03},
+    "default": {"base_price": 10_000_000, "impl_pct": 0.10, "ops_pct": 0.05, "maint_pct": 0.04},
+}
+
+MATERIAL_HEURISTICS = {
+    "polymer": {"unit_price": 220_000, "transport_pct": 0.12, "storage_pct": 0.03, "wastage_pct": 0.02},
+    "resin": {"unit_price": 300_000, "transport_pct": 0.12, "storage_pct": 0.03, "wastage_pct": 0.02},
+    "plastic": {"unit_price": 200_000, "transport_pct": 0.12, "storage_pct": 0.03, "wastage_pct": 0.02},
+    "glass": {"unit_price": 350_000, "transport_pct": 0.15, "storage_pct": 0.04, "wastage_pct": 0.03},
+    "metal": {"unit_price": 280_000, "transport_pct": 0.15, "storage_pct": 0.03, "wastage_pct": 0.02},
+    "additive": {"unit_price": 500_000, "transport_pct": 0.10, "storage_pct": 0.02, "wastage_pct": 0.01},
+    "colorant": {"unit_price": 600_000, "transport_pct": 0.10, "storage_pct": 0.02, "wastage_pct": 0.01},
+    "default": {"unit_price": 250_000, "transport_pct": 0.12, "storage_pct": 0.03, "wastage_pct": 0.02},
+}
+
+
+# ============================================
+# HELPER FUNCTIONS
+# ============================================
+
+def canonicalize_name(name: str) -> str:
+    """
+    Normalize a material/machine name for matching:
+    - lowercase
+    - remove parentheses content
+    - remove quantities, units, descriptors after dash
+    - strip extra whitespace
+    """
+    if not name:
+        return ""
+    result = name.lower().strip()
+    # Remove parentheses and their content
+    result = re.sub(r'\s*\([^)]*\)', '', result)
+    # Remove content after dash (often quantities/descriptors)
+    result = re.sub(r'\s*-\s*.*$', '', result)
+    # Remove quantities/numbers with units
+    result = re.sub(r'\b\d+\s*(kg|g|t|tonnes?|litres?|l|m|cm|mm)\b', '', result, flags=re.IGNORECASE)
+    # Normalize whitespace
+    result = re.sub(r'\s+', ' ', result).strip()
+    return result
+
+
+def compute_input_fingerprint(data: Dict[str, Any]) -> str:
+    """
+    Compute SHA256 fingerprint of canonical Module 6 input.
+    Used for idempotency checking.
+    """
+    # Extract only the fields that affect computation
+    canonical = {
+        "machines": [],
+        "materials": [],
+        "products": [],
+    }
+    
+    # Machines from enriched data
+    for m in data.get("machines_enriched", []):
+        machine_input = m.get("machine_input", {})
+        canonical["machines"].append({
+            "name": canonicalize_name(machine_input.get("nom_machine", "")),
+            "type": machine_input.get("type", ""),
+        })
+    
+    # Materials from stage 2
+    stage_2 = data.get("stage_2_matieres_premieres", {})
+    matieres = stage_2.get("matieres_premieres", [])
+    if isinstance(matieres, dict):
+        matieres = matieres.get("matieres_premieres", [])
+    for mat in matieres:
+        canonical["materials"].append(canonicalize_name(mat.get("nom_materiau", "")))
+    
+    # Products from stage 3
+    stage_3 = data.get("stage_3_produits_fabriques", {})
+    products = stage_3.get("produits_fabriques", [])
+    if isinstance(products, dict):
+        products = products.get("produits_fabriques", [])
+    for p in products:
+        canonical["products"].append(canonicalize_name(p.get("nom_produit", "")))
+    
+    # Sort for determinism
+    canonical["machines"].sort(key=lambda x: x.get("name", ""))
+    canonical["materials"].sort()
+    canonical["products"].sort()
+    
+    canonical_json = json.dumps(canonical, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(canonical_json.encode()).hexdigest()[:16]
+
+
+def get_machine_category_key(machine_name: str, machine_type: str = "") -> str:
+    """Determine heuristic category from machine name/type."""
+    text = f"{machine_name} {machine_type}".lower()
+    if "injection" in text:
+        return "injection"
+    if "extru" in text:
+        return "extrusion"
+    if "thermo" in text:
+        return "thermoform"
+    if "cnc" in text or "usinage" in text:
+        return "cnc"
+    if "robot" in text:
+        return "robot"
+    if "convoy" in text or "conveyor" in text or "transport" in text:
+        return "conveyor"
+    if "compress" in text:
+        return "compressor"
+    if "mix" in text or "mélang" in text:
+        return "mixer"
+    if "emball" in text or "packag" in text:
+        return "packaging"
+    if "assembl" in text:
+        return "assembly"
+    if "lamin" in text:
+        return "lamination"
+    if "verre" in text or "glass" in text:
+        return "glass"
+    if "recycl" in text or "granul" in text:
+        return "recycling"
+    if "stock" in text or "silo" in text or "asrs" in text:
+        return "storage"
+    if "agv" in text or "guidage" in text:
+        return "agv"
+    return "default"
+
+
+def get_material_category_key(material_name: str) -> str:
+    """Determine heuristic category from material name."""
+    text = material_name.lower()
+    if any(k in text for k in ["polyur", "polyprop", "polyéth", "polyeth", "pvc", "abs", "pe", "pp", "polymer"]):
+        return "polymer"
+    if "resin" in text or "résine" in text or "époxy" in text or "epoxy" in text:
+        return "resin"
+    if "plast" in text:
+        return "plastic"
+    if "verre" in text or "glass" in text:
+        return "glass"
+    if any(k in text for k in ["métal", "metal", "acier", "steel", "alumin", "fer", "iron"]):
+        return "metal"
+    if "additif" in text or "additive" in text:
+        return "additive"
+    if "color" in text or "pigment" in text or "teint" in text:
+        return "colorant"
+    return "default"
+
+
+def get_heuristic_machine_estimate(machine_name: str, machine_type: str = "") -> Dict[str, Any]:
+    """Generate heuristic-based machine estimate when LLM fails."""
+    category = get_machine_category_key(machine_name, machine_type)
+    h = MACHINE_HEURISTICS.get(category, MACHINE_HEURISTICS["default"])
+    base = h["base_price"]
+    return {
+        "estimated_purchase_price": base,
+        "implementation_cost": int(base * h["impl_pct"]),
+        "annual_operations_cost": int(base * h["ops_pct"]),
+        "annual_maintenance_cost": int(base * h["maint_pct"]),
+        "annual_downtime_cost": int(base * 0.02),
+        "resale_value": int(base * 0.35),
+        "disposal_cost": int(base * 0.02),
+        "lifetime_years": 10,
+        "confidence": "low",
+        "source": "heuristic",
+        "notes": f"Heuristic estimate based on category '{category}' - LLM estimation failed",
+    }
+
+
+def get_heuristic_material_estimate(material_name: str) -> Dict[str, Any]:
+    """Generate heuristic-based material estimate when LLM fails."""
+    category = get_material_category_key(material_name)
+    h = MATERIAL_HEURISTICS.get(category, MATERIAL_HEURISTICS["default"])
+    return {
+        "unit_price": h["unit_price"],
+        "transport_pct": h["transport_pct"],
+        "storage_pct": h["storage_pct"],
+        "wastage_pct": h["wastage_pct"],
+        "confidence": "low",
+        "source": "heuristic",
+        "notes": f"Heuristic estimate based on category '{category}' - LLM estimation failed",
+    }
 
 # ============================================
 # PYDANTIC MODELS
@@ -124,6 +325,7 @@ class MachineTCO(BaseModel):
     cost_breakdown: CostBreakdown
     estimated_purchase_price: float
     estimation_confidence: str
+    estimation_source: str = "llm"
     estimation_notes: str = Field(default="", exclude=True)
 
 
@@ -152,6 +354,7 @@ class RawMaterialTCO(BaseModel):
     wastage_cost: float
     total_tco: float
     estimation_confidence: str
+    estimation_source: str = "llm"
     estimation_notes: str = Field(default="", exclude=True)
 
 
@@ -336,11 +539,16 @@ Respond ONLY with valid JSON containing estimates in DZD (Algerian Dinar)."""
         self._detected_language = "en"
         return "en"
 
-    def call_gemini(self, prompt: str) -> Dict:
+    def call_gemini(self, prompt: str, retry_strict: bool = False) -> Tuple[Dict, bool, str]:
         """
         Call Gemini API and extract JSON from response.
+        Returns (result_dict, json_ok, raw_response) tuple.
         """
+        raw_response = ""
         try:
+            if retry_strict:
+                prompt = prompt + "\n\nCRITICAL: RETURN VALID JSON ONLY. All numeric fields must have numeric values (not null, not strings)."
+            
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=prompt,
@@ -353,6 +561,7 @@ Respond ONLY with valid JSON containing estimates in DZD (Algerian Dinar)."""
             )
             if hasattr(response, "text") and response.text:
                 content = response.text.strip()
+                raw_response = content
                 
                 # Strip markdown code fences if present
                 if content.startswith("```"):
@@ -364,68 +573,75 @@ Respond ONLY with valid JSON containing estimates in DZD (Algerian Dinar)."""
                 if "```" in content:
                     content = content.split("```")[0].strip()
                 
-                # Debug: Print content after cleanup
-                logger.info("Content after cleanup (first 150 chars): %s", content[:150])
-                
                 # Extract JSON from response
                 json_start = content.find('{')
                 json_end = content.rfind('}') + 1
                 if json_start != -1 and json_end > json_start:
                     try:
-                        return json.loads(content[json_start:json_end])
+                        parsed = json.loads(content[json_start:json_end])
+                        return parsed, True, raw_response
                     except json.JSONDecodeError as je:
                         logger.error("JSON parse error: %s", je)
-                        logger.error("Raw content: %s", content[:300])
+                        return {}, False, raw_response
                 else:
                     logger.error("No JSON braces found. json_start=%s, json_end=%s", json_start, json_end)
-                    logger.error("Content: %s", content[:200])
+                    return {}, False, raw_response
             else:
                 if hasattr(response, 'prompt_feedback'):
                     logger.error("Response blocked: %s", response.prompt_feedback)
                 else:
                     logger.error("Empty response from Gemini")
-            return {}
+                return {}, False, raw_response
         except Exception as e:
             logger.error("Gemini API Error: %s", e)
-            return {}
+            return {}, False, raw_response
 
-    def _validate_machine_estimate(self, result: Dict, machine: Dict) -> Dict:
-        """Validate required values in the estimate and fail if missing."""
-        required_keys = [
+    def _validate_machine_estimate(self, result: Dict, machine: Dict) -> Tuple[Dict, bool]:
+        """
+        Validate required values in the estimate.
+        Returns (validated_dict, schema_ok) tuple.
+        """
+        required_numeric = [
             "estimated_purchase_price",
             "implementation_cost",
             "annual_operations_cost",
             "annual_maintenance_cost",
-            "annual_downtime_cost",
-            "resale_value",
-            "disposal_cost",
-            "lifetime_years",
-            "confidence",
-            "notes",
         ]
-        missing = [k for k in required_keys if k not in result or result.get(k) is None]
-        if missing:
-            raise ValueError(
-                f"Missing required machine estimate fields {missing} for {machine.get('name', 'Unknown')}"
-            )
-
-        numeric_keys = [
-            "estimated_purchase_price",
-            "implementation_cost",
-            "annual_operations_cost",
-            "annual_maintenance_cost",
+        optional_numeric = [
             "annual_downtime_cost",
             "resale_value",
             "disposal_cost",
             "lifetime_years",
         ]
-        for key in numeric_keys:
+        
+        # Check required numeric fields
+        for key in required_numeric:
+            val = result.get(key)
+            if val is None or val == "":
+                return result, False
             try:
-                float(result.get(key))
+                float(val)
             except (TypeError, ValueError):
-                raise ValueError(
-                    f"Invalid numeric value for {key} in machine estimate for {machine.get('name', 'Unknown')}: {result.get(key)}"
-                )
+                return result, False
+        
+        # Check optional numeric fields - set defaults if missing
+        for key in optional_numeric:
+            val = result.get(key)
+            if val is None or val == "":
+                # Set reasonable defaults
+                if key == "annual_downtime_cost":
+                    result[key] = float(result["estimated_purchase_price"]) * 0.02
+                elif key == "resale_value":
+                    result[key] = float(result["estimated_purchase_price"]) * 0.35
+                elif key == "disposal_cost":
+                    result[key] = float(result["estimated_purchase_price"]) * 0.02
+                elif key == "lifetime_years":
+                    result[key] = 10
+            else:
+                try:
+                    float(val)
+                except (TypeError, ValueError):
+                    return result, False
 
         return {
             "estimated_purchase_price": result.get("estimated_purchase_price"),
@@ -436,9 +652,10 @@ Respond ONLY with valid JSON containing estimates in DZD (Algerian Dinar)."""
             "resale_value": result.get("resale_value"),
             "disposal_cost": result.get("disposal_cost"),
             "lifetime_years": result.get("lifetime_years"),
-            "confidence": result.get("confidence"),
-            "notes": result.get("notes"),
-        }
+            "confidence": result.get("confidence", "medium"),
+            "source": result.get("source", "llm"),
+            "notes": result.get("notes", ""),
+        }, True
 
     def _get_note(self, note_type: str) -> str:
         """Get note text in the appropriate language."""
@@ -571,25 +788,56 @@ Respond in JSON:
     "notes": "<justification>"
 }}"""
 
-        retry_prompt = base_prompt + "\nIMPORTANT: Do not return null for any numeric fields. All numeric fields must be valid numbers."
-
-        try:
-            result = self.call_gemini(base_prompt)
-            if result:
-                validated = self._validate_machine_estimate(result, machine)
-                logger.info("LLM estimation SUCCESS for machine: %s", machine.get("name", "Unknown"))
+        machine_type = machine.get('category', '')
+        
+        # First attempt
+        result, json_ok, raw_response = self.call_gemini(base_prompt, retry_strict=False)
+        
+        if json_ok and result:
+            validated, schema_ok = self._validate_machine_estimate(result, machine)
+            if schema_ok:
+                logger.info("LLM estimation SUCCESS for machine: %s (json_ok=True, schema_ok=True, retry_count=0)", machine_name)
                 return validated
-            raise ValueError(f"Empty LLM response for machine: {machine.get('name', 'Unknown')}")
-        except Exception as first_error:
-            try:
-                result = self.call_gemini(retry_prompt)
-                if result:
-                    validated = self._validate_machine_estimate(result, machine)
-                    logger.info("LLM estimation SUCCESS for machine: %s", machine.get("name", "Unknown"))
-                    return validated
-                raise ValueError(f"Empty LLM response for machine: {machine.get('name', 'Unknown')}")
-            except Exception as e:
-                raise ValueError(f"LLM estimation failed for machine {machine.get('name', 'Unknown')}: {e}") from first_error
+            else:
+                logger.warning("LLM parse failed for machine %s: schema validation failed, retrying", machine_name)
+        else:
+            logger.warning("LLM parse failed for machine %s: json_ok=%s, retrying", machine_name, json_ok)
+            # Save raw response for debugging
+            if raw_response:
+                self._save_failed_response(machine_name, raw_response, "machine_attempt_1")
+        
+        # Retry once with strict prompt
+        result, json_ok, raw_response = self.call_gemini(base_prompt, retry_strict=True)
+        
+        if json_ok and result:
+            validated, schema_ok = self._validate_machine_estimate(result, machine)
+            if schema_ok:
+                logger.info("LLM estimation SUCCESS for machine: %s (json_ok=True, schema_ok=True, retry_count=1)", machine_name)
+                return validated
+            else:
+                logger.warning("LLM retry failed for machine %s: schema validation failed after retry", machine_name)
+        else:
+            logger.warning("LLM retry failed for machine %s: json_ok=%s after retry", machine_name, json_ok)
+            if raw_response:
+                self._save_failed_response(machine_name, raw_response, "machine_attempt_2")
+        
+        # Fallback to heuristics
+        logger.warning("Using heuristic fallback for machine: %s (confidence=low, source=heuristic)", machine_name)
+        return get_heuristic_machine_estimate(machine_name, machine_type)
+    
+    def _save_failed_response(self, entity_name: str, raw_response: str, tag: str) -> None:
+        """Save failed LLM response for debugging/replay."""
+        try:
+            debug_dir = Path("data/module_6/debug")
+            debug_dir.mkdir(parents=True, exist_ok=True)
+            safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', entity_name)[:50]
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filepath = debug_dir / f"{tag}_{safe_name}_{timestamp}.txt"
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(raw_response)
+            logger.debug("Saved failed LLM response to %s", filepath)
+        except Exception as e:
+            logger.debug("Could not save failed response: %s", e)
 
     def estimate_product_costs(
         self, 
@@ -657,9 +905,9 @@ Return ONLY a JSON object mapping product names to cost estimates:
 }}
 """
         
-        result = self.call_gemini(prompt)
+        result, json_ok, _ = self.call_gemini(prompt)
         
-        if not result:
+        if not json_ok or not result:
             logger.warning("LLM did not return product cost estimates, using conservative defaults")
             # Return conservative defaults based on avg_machine_annual
             return {
@@ -682,9 +930,17 @@ Return ONLY a JSON object mapping product names to cost estimates:
         """
         Estimate costs for raw materials from RIBIF stage 2.
         Uses BATCH LLM call for all materials at once for better performance.
+        Uses name normalization to match input ↔ output materials.
         """
         if not materials:
             return []
+        
+        # Build canonical name mapping
+        canonical_to_original = {}
+        for m in materials:
+            nom = m.get("nom_materiau", "Unknown")
+            canonical = canonicalize_name(nom)
+            canonical_to_original[canonical] = nom
         
         # Get estimates - batch LLM or fallback for all at once
         if use_llm:
@@ -692,20 +948,34 @@ Return ONLY a JSON object mapping product names to cost estimates:
         else:
             raise ValueError("LLM estimation disabled; cannot estimate raw materials without explicit inputs.")
         
+        # Normalize returned estimate keys
+        normalized_estimates = {}
+        for key, val in estimates.items():
+            canonical_key = canonicalize_name(key)
+            normalized_estimates[canonical_key] = val
+        
         results = []
         for material in materials:
             nom = material.get("nom_materiau", "Unknown")
+            canonical_nom = canonicalize_name(nom)
             type_mat = material.get("type", "")
             quantite_info = material.get("quantite_estimee", {})
             quantite = float(quantite_info.get("valeur", 0) or 0)
             unite = quantite_info.get("unite", "tonnes")
             
-            # Get estimate for this material (fallback if not in batch result)
-            if nom not in estimates:
-                raise ValueError(f"Missing LLM estimate for material: {nom}")
-            estimate = estimates.get(nom)
+            # Look up estimate using canonical name
+            estimate = normalized_estimates.get(canonical_nom)
             
-            estimate = self._validate_material_estimate(estimate, material)
+            if not estimate:
+                # Fallback to heuristics if not found
+                logger.warning("No LLM estimate for material '%s' (canonical: '%s'), using heuristic", nom, canonical_nom)
+                estimate = get_heuristic_material_estimate(nom)
+            else:
+                estimate, is_valid = self._validate_material_estimate(estimate, material)
+                if not is_valid:
+                    logger.warning("Invalid LLM estimate for material '%s', using heuristic", nom)
+                    estimate = get_heuristic_material_estimate(nom)
+            
             unit_price = float(estimate.get("unit_price"))
             annual_cost = quantite * unit_price
             transport_pct = float(estimate.get("transport_pct"))
@@ -730,23 +1000,30 @@ Return ONLY a JSON object mapping product names to cost estimates:
                 "storage_cost": round(storage_cost, 2),
                 "wastage_cost": round(wastage_cost, 2),
                 "total_tco": round(total_tco, 2),
-                "estimation_confidence": estimate.get("confidence"),
+                "estimation_confidence": estimate.get("confidence", "medium"),
+                "estimation_source": estimate.get("source", "llm"),
                 "estimation_notes": estimate.get("notes", "")
             })
         
         return results
 
     def _estimate_materials_batch(self, materials: List[Dict]) -> Dict[str, Dict]:
-        """Estimate all raw material prices in a single LLM call for performance"""
+        """
+        Estimate all raw material prices in a single LLM call for performance.
+        Uses name normalization for matching.
+        """
         if not materials:
             return {}
         
         # Build materials list for prompt
         materials_text = ""
         material_names = []
+        canonical_to_original = {}
         for i, m in enumerate(materials, 1):
             nom = m.get("nom_materiau", "Unknown")
+            canonical = canonicalize_name(nom)
             material_names.append(nom)
+            canonical_to_original[canonical] = nom
             type_mat = m.get("type", "")
             quantite_info = m.get("quantite_estimee", {})
             quantite = quantite_info.get("valeur", 0)
@@ -754,7 +1031,7 @@ Return ONLY a JSON object mapping product names to cost estimates:
             specs = m.get("specifications", "")
             materials_text += f"{i}. {nom} ({type_mat}) - {quantite} {unite}/year - {specs}\n"
         
-        logger.info(f"Requesting LLM estimates for {len(material_names)} materials: {material_names}")
+        logger.info("Requesting LLM estimates for %d materials", len(material_names))
         
         prompt = f"""Estimate purchase prices for ALL these raw materials for industry in Algeria:
 
@@ -783,55 +1060,84 @@ Example format:
     ...
 }}"""
 
-        try:
-            result = self.call_gemini(prompt)
-            if result and isinstance(result, dict):
-                returned_materials = list(result.keys())
-                logger.info(f"LLM returned estimates for {len(returned_materials)} materials: {returned_materials}")
-                
-                # Check for missing materials - raise error if any missing
-                missing_materials = set(material_names) - set(returned_materials)
-                if missing_materials:
-                    logger.warning(f"LLM did not return estimates for {len(missing_materials)} materials: {list(missing_materials)}")
-                    # Retry with just the missing materials
-                    retry_materials = [m for m in materials if m.get("nom_materiau", "Unknown") in missing_materials]
-                    if retry_materials:
-                        logger.info(f"Retrying LLM estimation for {len(retry_materials)} missing materials")
-                        retry_result = self._estimate_materials_batch_single(retry_materials)
-                        if retry_result:
-                            result.update(retry_result)
-                
-                return result
+        # First attempt
+        result, json_ok, raw_response = self.call_gemini(prompt)
+        
+        if json_ok and result and isinstance(result, dict):
+            # Normalize returned keys for matching
+            normalized_result = {}
+            for key, val in result.items():
+                normalized_result[canonicalize_name(key)] = val
+                # Also keep original key
+                normalized_result[key] = val
             
-            # If LLM returns empty, raise error
-            raise ValueError("LLM returned empty response for material estimation. Please provide more context or retry.")
+            # Check for missing materials using normalized names
+            returned_canonical = set(canonicalize_name(k) for k in result.keys())
+            requested_canonical = set(canonicalize_name(n) for n in material_names)
+            missing_canonical = requested_canonical - returned_canonical
             
-        except ValueError:
-            raise
-        except Exception as e:
-            logger.error(f"Batch material estimation failed: {e}")
-            raise ValueError(f"Material cost estimation failed: {e}. Please retry or provide manual estimates.")
+            if missing_canonical:
+                # Map back to original names
+                missing_original = [canonical_to_original.get(c, c) for c in missing_canonical]
+                logger.warning("LLM did not return estimates for %d materials (after normalization): %s", 
+                              len(missing_original), missing_original)
+                
+                # Retry with just the missing materials (max 1 retry)
+                retry_materials = [m for m in materials 
+                                  if canonicalize_name(m.get("nom_materiau", "")) in missing_canonical]
+                if retry_materials:
+                    logger.info("Retrying LLM estimation for %d missing materials (reason: missing_materials_after_norm)", 
+                               len(retry_materials))
+                    retry_result = self._estimate_materials_retry(retry_materials)
+                    if retry_result:
+                        for key, val in retry_result.items():
+                            normalized_result[canonicalize_name(key)] = val
+                            normalized_result[key] = val
+            
+            logger.info("BATCH LLM material estimation SUCCESS (json_ok=True, materials_returned=%d)", len(result))
+            return normalized_result
+        
+        # If first attempt failed, retry once
+        if raw_response:
+            self._save_failed_response("materials_batch", raw_response, "materials_batch_attempt_1")
+        
+        logger.warning("Batch material estimation failed (json_ok=%s), retrying with strict prompt", json_ok)
+        result, json_ok, raw_response = self.call_gemini(prompt, retry_strict=True)
+        
+        if json_ok and result and isinstance(result, dict):
+            logger.info("BATCH LLM material estimation SUCCESS on retry (json_ok=True, materials_returned=%d)", len(result))
+            # Normalize keys
+            normalized_result = {}
+            for key, val in result.items():
+                normalized_result[canonicalize_name(key)] = val
+                normalized_result[key] = val
+            return normalized_result
+        
+        if raw_response:
+            self._save_failed_response("materials_batch", raw_response, "materials_batch_attempt_2")
+        
+        # All attempts failed - return empty, let caller use heuristics
+        logger.error("Batch material estimation failed after retry, will use heuristics")
+        return {}
 
-    def _estimate_materials_batch_single(self, materials: List[Dict]) -> Dict[str, Dict]:
-        """Retry estimation for individual materials that failed in batch."""
+    def _estimate_materials_retry(self, materials: List[Dict]) -> Dict[str, Dict]:
+        """Retry estimation for individual materials that failed in batch (max 1 retry)."""
         if not materials:
             return {}
         
-        result = {}
-        for m in materials:
+        # Build a simpler batch prompt for missing materials
+        materials_text = ""
+        for i, m in enumerate(materials, 1):
             nom = m.get("nom_materiau", "Unknown")
             type_mat = m.get("type", "")
             quantite_info = m.get("quantite_estimee", {})
             quantite = quantite_info.get("valeur", 0)
             unite = quantite_info.get("unite", "tonnes")
-            
-            prompt = f"""Estimate the purchase price for this raw material for industry in Algeria:
+            materials_text += f"{i}. {nom} ({type_mat}) - {quantite} {unite}/year\n"
+        
+        prompt = f"""Estimate purchase prices for these raw materials for industry in Algeria:
 
-Material: {nom}
-Type: {type_mat}
-Annual quantity needed: {quantite} {unite}
-
-Provide realistic prices for SMALL TO MID-SIZE Algerian companies in DZD (Algerian Dinar).
+{materials_text}
 
 RAW MATERIAL PRICE GUIDELINES (DZD per tonne, CIF Algeria):
 - Standard polymers (PP, PE, PVC): 180,000 - 280,000 DZD/tonne
@@ -841,41 +1147,49 @@ RAW MATERIAL PRICE GUIDELINES (DZD per tonne, CIF Algeria):
 - Industrial solvents: 150,000 - 300,000 DZD/tonne
 - Glass materials: 200,000 - 500,000 DZD/tonne
 
-Return ONLY a JSON object:
+Return ONLY a JSON object with material names as keys:
 {{
-    "unit_price": <number - price per tonne in DZD>,
-    "transport_pct": <number - transport cost as decimal, e.g. 0.12 for 12%>,
-    "storage_pct": <number - storage cost as decimal>,
-    "wastage_pct": <number - material loss as decimal>,
-    "confidence": "<high/medium/low>",
-    "notes": "<brief note about the estimate>"
+    "Material Name": {{"unit_price": <number>, "transport_pct": <0-1>, "storage_pct": <0-1>, "wastage_pct": <0-1>, "confidence": "<high/medium/low>"}},
+    ...
 }}"""
-            
-            try:
-                estimate = self.call_gemini(prompt)
-                if estimate and isinstance(estimate, dict):
-                    result[nom] = estimate
-                    logger.info(f"Got single estimate for: {nom}")
-            except Exception as e:
-                logger.warning(f"Failed to get estimate for {nom}: {e}")
         
-        return result
+        result, json_ok, raw_response = self.call_gemini(prompt, retry_strict=True)
+        
+        if json_ok and result and isinstance(result, dict):
+            logger.info("Retry estimation SUCCESS for %d missing materials", len(result))
+            return result
+        
+        if raw_response:
+            self._save_failed_response("materials_retry", raw_response, "materials_retry")
+        
+        logger.warning("Retry estimation failed for missing materials")
+        return {}
 
-    def _validate_material_estimate(self, result: Dict, material: Dict) -> Dict:
-        """Validate material estimate and fail if missing."""
+    def _validate_material_estimate(self, result: Dict, material: Dict) -> Tuple[Dict, bool]:
+        """
+        Validate material estimate.
+        Returns (validated_dict, is_valid) tuple.
+        """
         required_keys = ["unit_price", "transport_pct", "storage_pct", "wastage_pct"]
-        missing = [k for k in required_keys if k not in result or result.get(k) is None]
-        if missing:
-            raise ValueError(f"Missing material estimate fields {missing} for {material.get('nom_materiau', 'Unknown')}")
+        
+        for key in required_keys:
+            val = result.get(key)
+            if val is None or val == "":
+                return result, False
+            try:
+                float(val)
+            except (TypeError, ValueError):
+                return result, False
 
         return {
             "unit_price": result.get("unit_price"),
             "transport_pct": result.get("transport_pct"),
             "storage_pct": result.get("storage_pct"),
             "wastage_pct": result.get("wastage_pct"),
-            "confidence": result.get("confidence"),
+            "confidence": result.get("confidence", "medium"),
+            "source": result.get("source", "llm"),
             "notes": result.get("notes", self._get_note("validated_material"))
-        }
+        }, True
 
     def calculate_machine_tco(
         self,
@@ -932,7 +1246,8 @@ Return ONLY a JSON object:
             lifetime_years=lifetime_years,
             cost_breakdown=cost_breakdown,
             estimated_purchase_price=round(purchase_price, 2),
-            estimation_confidence=estimates.get("confidence"),
+            estimation_confidence=estimates.get("confidence", "medium"),
+            estimation_source=estimates.get("source", "llm"),
             estimation_notes=estimates.get("notes", "")
         )
 

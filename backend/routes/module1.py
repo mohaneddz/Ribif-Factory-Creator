@@ -11,7 +11,6 @@ from supabase_utils import get_supabase, insert_module1_extraction
 from utils.module_1.core import RIBIFExtractor
 from utils.module_1.enricher import enricher
 from utils.logger import log_skip, get_logger
-from utils.request_lock import require_project_lock
 from utils.app_helpers import (
     get_pipeline_settings,
     get_request_project_id,
@@ -69,7 +68,6 @@ The image should be:
 
 
 @bp_module1.route("/api/module1/process", methods=["POST"])
-@require_project_lock(timeout=1.0)
 def process_module_1():
     module1_logger = get_logger("module1")
     try:
@@ -201,7 +199,7 @@ def process_module_1():
             # Only set signal alarm on Unix systems
             if hasattr(signal, 'SIGALRM'):
                 signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(300)  # 5 minute timeout for entire enrichment
+                signal.alarm(120)  # 2 minute timeout for entire enrichment (reduced from 5 min)
             
             try:
                 enriched_result = enricher.process(extraction_result)
@@ -258,7 +256,14 @@ def process_module_1():
         mandatory_machines = []
         excluded_count = 0
         for machine in all_machines:
-            quantite = machine.get("quantite_necessaire", 0)
+            raw_quantite = machine.get("quantite_necessaire", 0)
+            # Safely extract integer from quantite - handle cases where it might be a dict
+            if isinstance(raw_quantite, dict):
+                raw_quantite = raw_quantite.get("value", raw_quantite.get("quantity", 0))
+            try:
+                quantite = int(raw_quantite) if raw_quantite else 0
+            except (TypeError, ValueError):
+                quantite = 0
             nom = machine.get("nom_machine", "")
             
             # Keep machines that have a specified quantity OR are explicitly marked as core production equipment

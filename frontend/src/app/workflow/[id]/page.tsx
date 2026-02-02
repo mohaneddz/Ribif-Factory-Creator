@@ -37,6 +37,68 @@ import {
     ProjectRecord,
 } from "@/lib/projectService";
 
+/**
+ * Strip heavy image data from module1 payload before sending to module4.
+ * This reduces payload from ~13MB to ~50KB by removing base64 images.
+ */
+function stripImagesForModule4(data: any): any {
+    if (!data) return data;
+    
+    const stripped = JSON.parse(JSON.stringify(data)); // Deep clone
+    
+    // Strip from machines_production
+    const machines = stripped?.stage_4_machines_equipements?.machines_production;
+    if (Array.isArray(machines)) {
+        stripped.stage_4_machines_equipements.machines_production = machines.map((m: any) => {
+            if (!m || typeof m !== 'object') return m;
+            const clean: any = {};
+            for (const [key, value] of Object.entries(m)) {
+                // Skip image fields with base64 data
+                if (['image', 'image_url', 'image_data', 'image_base64', 'best_image_url', 'image_local_path'].includes(key)) {
+                    if (typeof value === 'string' && (value.startsWith('data:image') || value.length > 10000)) {
+                        continue;
+                    }
+                }
+                // Clean assets.image_urls
+                if (key === 'assets' && value && typeof value === 'object') {
+                    const cleanAssets: any = {};
+                    for (const [ak, av] of Object.entries(value as Record<string, unknown>)) {
+                        if (ak === 'image_urls' && Array.isArray(av)) {
+                            const cleanUrls = av.filter((u: any) => typeof u === 'string' && !u.startsWith('data:image') && u.length < 1000);
+                            if (cleanUrls.length > 0) cleanAssets[ak] = cleanUrls;
+                        } else {
+                            cleanAssets[ak] = av;
+                        }
+                    }
+                    clean[key] = cleanAssets;
+                    continue;
+                }
+                clean[key] = value;
+            }
+            return clean;
+        });
+    }
+    
+    // Also strip from enriched_machines if present
+    if (Array.isArray(stripped?.enriched_machines)) {
+        stripped.enriched_machines = stripped.enriched_machines.map((m: any) => {
+            if (!m || typeof m !== 'object') return m;
+            const clean: any = {};
+            for (const [key, value] of Object.entries(m)) {
+                if (['image', 'image_url', 'image_data', 'image_base64', 'best_image_url', 'image_local_path'].includes(key)) {
+                    if (typeof value === 'string' && (value.startsWith('data:image') || value.length > 10000)) {
+                        continue;
+                    }
+                }
+                clean[key] = value;
+            }
+            return clean;
+        });
+    }
+    
+    return stripped;
+}
+
 export default function FactoryCopilot() {
     const router = useRouter();
     const params = useParams();
@@ -390,9 +452,13 @@ export default function FactoryCopilot() {
 
                     let res;
                     try {
+                        // Strip heavy image data before sending (reduces ~13MB to ~50KB)
+                        const lightPayload = stripImagesForModule4(m1Data);
+                        console.log("📦 Module 4 payload size:", JSON.stringify(lightPayload).length / 1024, "KB");
+                        
                         res = await fetch(`${API_BASE}/api/module4/enrich`, {
                             method: 'POST', headers: jsonHeaders,
-                            body: JSON.stringify({ ...m1Data, project_id: currentProjectId, pipeline_settings: activeSettings })
+                            body: JSON.stringify({ ...lightPayload, project_id: currentProjectId, pipeline_settings: activeSettings })
                         });
                     } catch (fetchError: any) {
                         setModule4Loading(false);
@@ -447,9 +513,13 @@ export default function FactoryCopilot() {
                     
                     let res;
                     try {
+                        // Strip images from m1Data before sending (reduces payload significantly)
+                        const lightM1Data = stripImagesForModule4(m1Data);
+                        console.log("📦 Module 6 payload size:", JSON.stringify({ ...lightM1Data, ...m4Data }).length / 1024, "KB");
+                        
                         res = await fetch(`${API_BASE}/api/module6/tco-from-sourcing`, {
                             method: 'POST', headers: jsonHeaders,
-                            body: JSON.stringify({ ...m1Data, ...m4Data, project_id: currentProjectId })
+                            body: JSON.stringify({ ...lightM1Data, ...m4Data, project_id: currentProjectId })
                         });
                     } catch (fetchError: any) {
                         setTcoLoading(false);

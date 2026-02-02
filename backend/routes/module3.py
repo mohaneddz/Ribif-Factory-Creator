@@ -16,7 +16,6 @@ from utils.app_helpers import (
     upload_with_name_timestamp,
 )
 from utils.logger import log_skip, get_logger
-from utils.request_lock import require_project_lock
 
 try:
     from vertex_utils import generate_video
@@ -109,7 +108,6 @@ def _ensure_three(images: List[bytes]) -> List[bytes]:
 
 
 @bp_module3.route("/api/module3/video", methods=["POST"])
-@require_project_lock(timeout=1.0)
 def generate_video_from_images():
     import time
 
