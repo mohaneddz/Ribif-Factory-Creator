@@ -92,9 +92,9 @@ class SourcingConfig:
         "Libya", "Egypt", "Middle East", "MENA"
     ])
     
-    # Caching
-    enable_cache: bool = True
-    cache_ttl_days: int = 7
+    # Caching (disabled - always perform fresh searches)
+    enable_cache: bool = False
+    cache_ttl_days: int = 0
 
 
 DEFAULT_CONFIG = SourcingConfig()

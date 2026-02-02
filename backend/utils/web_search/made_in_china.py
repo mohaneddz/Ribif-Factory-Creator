@@ -16,7 +16,6 @@ from .base import (
     SupplierResult,
     SearchError,
     safe_request,
-    get_cache,
     rate_limit,
 )
 
@@ -26,16 +25,10 @@ MADE_IN_CHINA_SEARCH_URL = "https://www.made-in-china.com/multi-search"
 @rate_limit(min_gap_s=3.0)
 def search_machines(query: str, max_results: int = 10) -> List[ProductResult]:
     """Search Made-in-China for industrial machines."""
-    cache = get_cache()
-    cached = cache.get(query, "mic_products")
-    if cached:
-        return [ProductResult(**r) if isinstance(r, dict) else r for r in cached]
-    
     try:
         search_url = f"{MADE_IN_CHINA_SEARCH_URL}/{quote_plus(query)}/p1.html"
         response = safe_request(url=search_url, timeout=20)
         results = _parse_search_results(response.text, max_results)
-        cache.set(query, "mic_products", [r.to_dict() for r in results])
         return results
     except Exception as e:
         raise SearchError(f"Made-in-China search failed: {e}")
@@ -129,16 +122,9 @@ def _parse_price(price_text: str) -> tuple[float, float]:
 @rate_limit(min_gap_s=3.0)
 def get_manufacturer_info(url: str) -> Optional[SupplierResult]:
     """Get manufacturer information from product/supplier page."""
-    cache = get_cache()
-    cached = cache.get(url, "mic_manufacturer")
-    if cached:
-        return SupplierResult(**cached) if isinstance(cached, dict) else cached
-    
     try:
         response = safe_request(url=url, timeout=20)
         result = _parse_manufacturer_page(response.text, url)
-        if result:
-            cache.set(url, "mic_manufacturer", result.to_dict())
         return result
     except Exception:
         return None

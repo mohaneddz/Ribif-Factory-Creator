@@ -18,7 +18,7 @@ import clsx from "clsx";
 
 import { BusinessPlanView } from "@/sections/BusinessPlanView";
 import { CatalogueTechniqueView } from "@/sections/CatalogueTechniqueView";
-import { EmailNegotiationView } from "@/sections/EmailNegotiationView";
+import { VoiceNegotiationView } from "@/sections/VoiceNegotiationView";
 import { ModuleLoadingView } from "@/sections/ModuleLoadingView";
 import { Layout2DView, Model3DView } from "@/sections/PlansView";
 import { SpecsView } from "@/sections/SpecsView";
@@ -128,6 +128,7 @@ export default function FactoryCopilot() {
         }
         if (data.module7_pitch) {
             setPitchDeckData(data.module7_pitch);
+            completedArtifacts.push(getModuleIndex("pitchdeck"));
             if (!completedArtifacts.includes(getModuleIndex("businessplan"))) {
                 completedArtifacts.push(getModuleIndex("businessplan"));
             }
@@ -227,10 +228,11 @@ export default function FactoryCopilot() {
         specs: "/deliverables/Specs_V1.pdf",
         sourcing: "/deliverables/Liste_Sourcing.xlsx",
         tco: "/deliverables/Rapport_TCO.json",
-        businessplan: "/deliverables/Business_Plan.pdf",
+        businessplan: "/deliverables/Business_Plan.xlsx",
+        pitchdeck: "/deliverables/Pitch_Deck.pdf",
         catalogue: "/deliverables/Catalogue_Produits.pdf",
-        layout2d: "/deliverables/layout_square.png",
-        model3d: "/models/factory1.glb",
+        layout2d: "/deliverables/layout_square.dxf",
+        model3d: "/deliverables/factory_model.glb",
         video: "/deliverables/Presentation_HD.mp4",
     };
 
@@ -239,15 +241,24 @@ export default function FactoryCopilot() {
         if (moduleType === "businessplan") {
             return resolveDownloadUrl(businessPlanData?.download_url) || deliverableFallbacks.businessplan;
         }
+        if (moduleType === "pitchdeck") {
+            return resolveDownloadUrl(pitchDeckData?.pdf_download_url) || deliverableFallbacks.pitchdeck;
+        }
         if (moduleType === "catalogue") {
             return resolveDownloadUrl(catalogData?.data?.pdf_download_url || catalogData?.data?.html_download_url || catalogData?.pdf_download_url || catalogData?.html_download_url) || deliverableFallbacks.catalogue;
         }
         if (moduleType === "layout2d") {
+            // Return DXF file for 2D layout, not PNG
             return resolveDownloadUrl(
-                layoutData?.layout_realistic_clean_url ||
-                layoutData?.layout_realistic_url ||
-                layoutData?.layout_2d_url
+                layoutData?.layout_dxf_supabase_url ||
+                layoutData?.layout_dxf_url
             ) || deliverableFallbacks.layout2d;
+        }
+        if (moduleType === "model3d") {
+            return resolveDownloadUrl(
+                layoutData?.layout_3d_supabase_url ||
+                layoutData?.layout_3d_url
+            ) || deliverableFallbacks.model3d;
         }
         if (moduleType === "video") {
             return resolveDownloadUrl(videoData?.video_url) || deliverableFallbacks.video;
@@ -477,6 +488,7 @@ export default function FactoryCopilot() {
             let bpJson = currentData?.module7_business;
             let pitchJson = currentData?.module7_pitch;
             const idxBusinessPlan = getModuleIndex("businessplan");
+            const idxPitchDeck = getModuleIndex("pitchdeck");
 
             if (tcoJson && (activeSettings.enableBusinessPlan || activeSettings.enablePitchDeck) && idxBusinessPlan >= 0) {
                 if ((!bpJson && activeSettings.enableBusinessPlan) || (!pitchJson && activeSettings.enablePitchDeck)) {
@@ -504,6 +516,9 @@ export default function FactoryCopilot() {
                 setBusinessPlanData(bpJson);
                 setPitchDeckData(pitchJson);
                 markArtifact(idxBusinessPlan);
+                if (pitchJson && idxPitchDeck >= 0) {
+                    markArtifact(idxPitchDeck);
+                }
             }
 
             // =====================================================
@@ -704,6 +719,7 @@ export default function FactoryCopilot() {
         if (moduleType === 'sourcing') { setModule4Data(null); updates.module4_data = null; }
         if (moduleType === 'tco') { setTcoData(null); updates.module6_data = null; }
         if (moduleType === 'businessplan') { setBusinessPlanData(null); setPitchDeckData(null); updates.module7_business = null; updates.module7_pitch = null; }
+        if (moduleType === 'pitchdeck') { setPitchDeckData(null); updates.module7_pitch = null; }
         if (moduleType === 'catalogue') { setCatalogData(null); updates.module9_data = null; }
         if (moduleType === 'layout2d') { setLayoutData(null); updates.module2_data = null; }
         if (moduleType === 'video') { setVideoData(null); updates.module3_data = null; }
@@ -830,7 +846,7 @@ export default function FactoryCopilot() {
     const isSelectedDone = artifacts.includes(selectedModule) || status === 'finished' || selectedModule < currentModule;
     const selectedProgress = isSelectedProcessing ? subStep : isSelectedDone ? 100 : 0;
     const displayArtifacts = status === 'finished' ? MODULES.map((_, idx) => idx) : artifacts;
-    const deliverableTypes = new Set(["specs", "sourcing", "tco", "businessplan", "catalogue", "layout2d", "model3d", "video", "twin"]);
+    const deliverableTypes = new Set(["specs", "sourcing", "tco", "businessplan", "pitchdeck", "catalogue", "layout2d", "model3d", "video", "twin"]);
     const downloadableArtifacts = displayArtifacts.filter(idx => deliverableTypes.has(MODULES[idx]?.type));
 
     return (
@@ -957,12 +973,12 @@ export default function FactoryCopilot() {
                                                 {selectedModuleItem.type === 'model3d' && <Model3DView pipelineModelUrl={pipelineModelUrl} />}
                                                 {selectedModuleItem.type === 'video' && <VideoView progress={selectedProgress} videoUrl={videoUrl} />}
                                                 {selectedModuleItem.type === 'sourcing' && <SourcingView progress={selectedProgress} data={extractedData} module4Data={module4Data} loading={module4Loading} />}
-                                                {selectedModuleItem.type === 'email' && <EmailNegotiationView module4Data={module4Data} loading={module4Loading} />}
+                                                {selectedModuleItem.type === 'email' && <VoiceNegotiationView projectId={routeProjectId || ""} module4Data={module4Data} loading={module4Loading} />}
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
-                                                {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.pdf_download_url} htmlUrl={catalogData?.html_download_url} />}
-                                                {selectedModuleItem.type === 'twin' && <DigitalTwinView pipelineModelUrl={pipelineModelUrl} />}
+                                                {selectedModuleItem.type === 'pitchdeck' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
                                                 {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url || catalogData?.pdf_download_url} htmlUrl={catalogData?.data?.html_download_url || catalogData?.html_download_url} />}
+                                                {selectedModuleItem.type === 'twin' && <DigitalTwinView pipelineModelUrl={pipelineModelUrl} />}
                                             </>
                                         )}
                                     </motion.div>

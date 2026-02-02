@@ -19,7 +19,6 @@ from .base import (
     ProductResult,
     MachineSpecsResult,
     SearchError,
-    get_cache,
 )
 
 # Import all providers
@@ -66,12 +65,6 @@ def search_machine_suppliers(
     Returns:
         List of SupplierResult from real web sources
     """
-    cache = get_cache()
-    cache_key = f"suppliers:{machine_name}:{machine_type}:{region}"
-    cached = cache.get(cache_key, "aggregator")
-    if cached:
-        return [SupplierResult(**r) if isinstance(r, dict) else r for r in cached]
-    
     all_suppliers: List[SupplierResult] = []
     query = f"{machine_name} {machine_type}".strip()
     
@@ -231,9 +224,6 @@ def search_machine_suppliers(
     unique_suppliers.sort(key=lambda x: x.relevance_score, reverse=True)
     final_results = unique_suppliers[:max_total_results]
     
-    # Cache results
-    cache.set(cache_key, "aggregator", [r.to_dict() for r in final_results])
-    
     return final_results
 
 
@@ -253,12 +243,6 @@ def search_machine_specs(
     Returns:
         MachineSpecsResult with specifications, datasheets, images
     """
-    cache = get_cache()
-    cache_key = f"specs:{machine_name}:{manufacturer}"
-    cached = cache.get(cache_key, "aggregator_specs")
-    if cached:
-        return MachineSpecsResult(**cached) if isinstance(cached, dict) else cached
-    
     result = MachineSpecsResult(
         manufacturer=manufacturer,
         model=machine_name,
@@ -303,9 +287,6 @@ def search_machine_specs(
     result.datasheet_urls = result.datasheet_urls[:5]
     result.sources = result.sources[:10]
     
-    # Cache result
-    cache.set(cache_key, "aggregator_specs", result.to_dict())
-    
     return result
 
 
@@ -325,12 +306,6 @@ def search_machine_images(
     Returns:
         List of ImageResult with real machine photos
     """
-    cache = get_cache()
-    cache_key = f"images:{machine_name}:{manufacturer}"
-    cached = cache.get(cache_key, "aggregator_images")
-    if cached:
-        return [ImageResult(**r) if isinstance(r, dict) else r for r in cached]
-    
     query = f"{manufacturer} {machine_name} industrial machine".strip()
     images: List[ImageResult] = []
     
@@ -363,9 +338,6 @@ def search_machine_images(
         except Exception:
             pass
     
-    # Cache results
-    cache.set(cache_key, "aggregator_images", [r.to_dict() for r in images[:max_results]])
-    
     return images[:max_results]
 
 
@@ -379,12 +351,6 @@ def search_pricing_info(
     
     Returns aggregated pricing data with ranges and sources.
     """
-    cache = get_cache()
-    cache_key = f"pricing:{machine_name}:{machine_type}:{region}"
-    cached = cache.get(cache_key, "aggregator_pricing")
-    if cached:
-        return cached
-    
     query = f"{machine_name} {machine_type}".strip()
     prices: List[Dict[str, Any]] = []
     
@@ -462,7 +428,6 @@ def search_pricing_info(
         "total_listings": len(prices),
     }
     
-    cache.set(cache_key, "aggregator_pricing", result)
     return result
 
 
@@ -472,11 +437,6 @@ def find_manufacturer_website(manufacturer_name: str) -> Optional[str]:
     """
     if not manufacturer_name:
         return None
-    
-    cache = get_cache()
-    cached = cache.get(manufacturer_name, "manufacturer_website")
-    if cached:
-        return cached
     
     query = f"{manufacturer_name} official website"
     
@@ -502,12 +462,10 @@ def find_manufacturer_website(manufacturer_name: str) -> Optional[str]:
         domain = sr.url.lower()
         # Check if domain contains manufacturer name
         if manufacturer_clean in domain.replace(".", "").replace("-", ""):
-            cache.set(manufacturer_name, "manufacturer_website", sr.url)
             return sr.url
     
     # Return first result as fallback
     if results:
-        cache.set(manufacturer_name, "manufacturer_website", results[0].url)
         return results[0].url
     
     return None
@@ -517,12 +475,6 @@ def search_company_contacts(company_name: str, region: str = "") -> Dict[str, st
     """
     Search for contact information (email, phone) for a company.
     """
-    cache = get_cache()
-    cache_key = f"contacts:{company_name}:{region}"
-    cached = cache.get(cache_key, "aggregator_contacts")
-    if cached:
-        return cached
-
     query = f"{company_name} official website contact email phone {region}".strip()
     
     # Try web search
@@ -569,7 +521,6 @@ def search_company_contacts(company_name: str, region: str = "") -> Dict[str, st
     if found_emails:
         contact_info["email"] = found_emails[0] # Most relevant usually first
         
-    cache.set(cache_key, "aggregator_contacts", contact_info)
     return contact_info
 
 
@@ -587,12 +538,6 @@ def search_general(
     Returns:
         List of SearchResult from web sources
     """
-    cache = get_cache()
-    cache_key = f"general:{query}"
-    cached = cache.get(cache_key, "aggregator")
-    if cached:
-        return [SearchResult(**r) if isinstance(r, dict) else r for r in cached]
-    
     all_results: List[SearchResult] = []
     
     # Use DuckDuckGo as primary source (no API key needed)
@@ -622,8 +567,5 @@ def search_general(
     
     # Limit results
     all_results = all_results[:max_results]
-    
-    # Cache results
-    cache.set(cache_key, "aggregator", [r.__dict__ if hasattr(r, '__dict__') else r for r in all_results])
     
     return all_results

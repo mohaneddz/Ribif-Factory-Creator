@@ -18,7 +18,6 @@ from .base import (
     ImageResult,
     SearchError,
     safe_request,
-    get_cache,
     rate_limit,
 )
 
@@ -134,24 +133,9 @@ def _get_ddg() -> DuckDuckGoSearch:
 
 def instant_answer(query: str) -> Optional[Dict[str, Any]]:
     """Get DuckDuckGo instant answer."""
-    cache = get_cache()
-    cached = cache.get(query, "ddg_instant")
-    if cached:
-        return cached
-    
-    result = _get_ddg().instant_answer(query)
-    if result:
-        cache.set(query, "ddg_instant", result)
-    return result
+    return _get_ddg().instant_answer(query)
 
 
 def web_search(query: str, max_results: int = 10) -> List[SearchResult]:
     """Search DuckDuckGo web."""
-    cache = get_cache()
-    cached = cache.get(query, "ddg_web")
-    if cached:
-        return [SearchResult(**r) if isinstance(r, dict) else r for r in cached]
-    
-    results = _get_ddg().search(query, max_results)
-    cache.set(query, "ddg_web", [r.to_dict() for r in results])
-    return results
+    return _get_ddg().search(query, max_results)

@@ -19,7 +19,6 @@ from .base import (
     SearchError,
     APIKeyError,
     safe_request,
-    get_cache,
 )
 
 SERPER_API_URL = "https://google.serper.dev"
@@ -134,35 +133,14 @@ def _get_serper() -> SerperSearch:
 
 def search_google(query: str, num_results: int = 10) -> List[SearchResult]:
     """Search Google using Serper API."""
-    cache = get_cache()
-    cached = cache.get(query, "serper_web")
-    if cached:
-        return [SearchResult(**r) if isinstance(r, dict) else r for r in cached]
-    
-    results = _get_serper().search(query, num_results)
-    cache.set(query, "serper_web", [r.to_dict() for r in results])
-    return results
+    return _get_serper().search(query, num_results)
 
 
 def search_images(query: str, num_results: int = 10) -> List[ImageResult]:
     """Search Google Images using Serper API."""
-    cache = get_cache()
-    cached = cache.get(query, "serper_images")
-    if cached:
-        return [ImageResult(**r) if isinstance(r, dict) else r for r in cached]
-    
-    results = _get_serper().search_images(query, num_results)
-    cache.set(query, "serper_images", [r.to_dict() for r in results])
-    return results
+    return _get_serper().search_images(query, num_results)
 
 
 def search_news(query: str, num_results: int = 10) -> List[SearchResult]:
     """Search Google News using Serper API."""
-    cache = get_cache()
-    cached = cache.get(query, "serper_news")
-    if cached:
-        return [SearchResult(**r) if isinstance(r, dict) else r for r in cached]
-    
-    results = _get_serper().search_news(query, num_results)
-    cache.set(query, "serper_news", [r.to_dict() for r in results])
-    return results
+    return _get_serper().search_news(query, num_results)

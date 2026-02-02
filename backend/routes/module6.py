@@ -119,14 +119,24 @@ def calculate_tco_from_sourcing():
             if all_machine_tcos:
                 avg_machine_annual = sum(m.annual_tco for m in all_machine_tcos) / max(len(all_machine_tcos), 1)
 
+            # Use LLM to estimate product costs based on context
+            product_estimates = tco_calculator.estimate_product_costs(
+                products=products,
+                avg_machine_annual=avg_machine_annual,
+                stage_1=stage_1,
+                stage_3=stage_3,
+            )
+
             for product in products:
                 nom_produit = product.get("nom_produit", "Unknown")
                 categorie = product.get("categorie", "finished")
-
-                landing_cost = avg_machine_annual * 0.05
-                holding_cost = avg_machine_annual * 0.03
-                quality_cost = avg_machine_annual * 0.02
-                administrative_cost = avg_machine_annual * 0.01
+                
+                # Get LLM estimates for this product
+                estimate = product_estimates.get(nom_produit, {})
+                landing_cost = float(estimate.get("landing_cost", avg_machine_annual * 0.03))
+                holding_cost = float(estimate.get("holding_cost", avg_machine_annual * 0.02))
+                quality_cost = float(estimate.get("quality_cost", avg_machine_annual * 0.015))
+                administrative_cost = float(estimate.get("administrative_cost", avg_machine_annual * 0.01))
 
                 all_product_tcos.append(ProductTCO(
                     nom_produit=nom_produit,
