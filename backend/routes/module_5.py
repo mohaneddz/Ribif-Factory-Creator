@@ -65,6 +65,9 @@ NEGOTIATION_IMAP_PORT = int(os.getenv("NEGOTIATION_IMAP_PORT", os.getenv("IMAP_P
 # Leave empty to use the original supplier emails from JSON
 TEST_RECIPIENT_EMAIL = os.getenv("TEST_RECIPIENT_EMAIL", "").strip()
 
+# Log email config at startup for debugging
+logger.info(f"Email config loaded: SMTP_HOST={NEGOTIATION_SMTP_HOST}, SMTP_USERNAME={NEGOTIATION_SMTP_USERNAME}, TEST_RECIPIENT={TEST_RECIPIENT_EMAIL}")
+
 
 def _get_email_config(payload: dict = None) -> dict:
     """Get email configuration from payload or env"""
@@ -1154,7 +1157,13 @@ def send_negotiation_link(negotiation_id: str):
     }
     """
     try:
-        payload = request.get_json() or {} if request.is_json else {}
+        # Fix operator precedence and handle empty body gracefully
+        payload = {}
+        if request.is_json:
+            try:
+                payload = request.get_json(silent=True) or {}
+            except Exception:
+                payload = {}
         
         client = supabase_utils.get_supabase()
         if not client:
@@ -1366,10 +1375,10 @@ def save_negotiation_result_v2(negotiation_id: str):
                 "last_updated": datetime.now(timezone.utc).isoformat(),
             })
         
-        # Send confirmation email if accepted
+        # Send confirmation email if accepted or completed (always send after voice call)
         email_result = None
         send_confirmation = payload.get("send_confirmation_email", True)
-        if send_confirmation and final_status == "accepted":
+        if send_confirmation and final_status in ("accepted", "completed"):
             try:
                 supplier_email = negotiation.get("supplier_email")
                 if supplier_email:
@@ -1537,7 +1546,17 @@ def bulk_create_negotiations():
         
         machine_name = payload.get("machine_name", payload.get("machine", {}).get("name", "Equipment"))
         machine_type = payload.get("machine_type", payload.get("machine", {}).get("type"))
-        quantity = payload.get("quantity", payload.get("machine", {}).get("quantity", 1))
+        raw_quantity = payload.get("quantity", payload.get("machine", {}).get("quantity", 1))
+        # Handle quantity that may be an object like {"source":"user_input","value":1} or just an int
+        if isinstance(raw_quantity, dict):
+            quantity = raw_quantity.get("value", 1)
+        else:
+            quantity = raw_quantity
+        # Ensure it's an integer
+        try:
+            quantity = int(quantity) if quantity else 1
+        except (ValueError, TypeError):
+            quantity = 1
         buyer_email = payload.get("buyer_email")
         buyer_company = payload.get("buyer_company", "RIBIF Algeria")
         buyer_contact_name = payload.get("buyer_contact_name", "")
@@ -1554,13 +1573,25 @@ def bulk_create_negotiations():
                     match = re.search(r'[\d,]+(?:\.\d+)?', price_estimate.replace(",", ""))
                     price_estimate = float(match.group()) if match else None
                 
+                # Extract supplier email - try multiple field names
+                supplier_email = supplier.get("email_address") or supplier.get("email") or supplier.get("contact_email")
+                supplier_name = supplier.get("supplier_name") or supplier.get("name") or "Unknown"
+                
+                # If no supplier email and TEST_RECIPIENT_EMAIL is configured, use it as placeholder
+                # This allows the negotiation flow to proceed in test/demo mode
+                if not supplier_email and TEST_RECIPIENT_EMAIL:
+                    supplier_email = TEST_RECIPIENT_EMAIL
+                    logger.info(f"Using TEST_RECIPIENT_EMAIL for supplier: {supplier_name}")
+                
+                logger.info(f"Creating negotiation for supplier: {supplier_name}, email: {supplier_email}")
+                
                 negotiation = supabase_utils.create_negotiation(
                     client=client,
                     project_id=project_id,
-                    supplier_name=supplier.get("supplier_name", supplier.get("name", "Unknown")),
+                    supplier_name=supplier_name,
                     machine_name=machine_name,
                     quantity=quantity,
-                    supplier_email=supplier.get("email_address", supplier.get("email")),
+                    supplier_email=supplier_email,
                     supplier_phone=supplier.get("phone_number", supplier.get("phone")),
                     supplier_website=supplier.get("website"),
                     supplier_region=supplier.get("region"),
@@ -1596,4 +1627,142 @@ def bulk_create_negotiations():
         
     except Exception as e:
         logger.exception("Error bulk creating negotiations")
+        return jsonify({"error": str(e), "status": "error"}), 500
+
+
+@bp_module5.route("/api/module5/v2/negotiations/project/<project_id>/send-all-links", methods=["POST"])
+def send_all_negotiation_links(project_id: str):
+    """
+    Send negotiation link emails to all pending suppliers for a project.
+    Only sends to negotiations with status 'pending' and valid supplier email.
+    """
+    try:
+        logger.info(f"send_all_negotiation_links called for project {project_id}")
+        # Fix operator precedence and handle empty body gracefully
+        payload = {}
+        if request.is_json:
+            try:
+                payload = request.get_json(silent=True) or {}
+            except Exception:
+                payload = {}
+        
+        client = supabase_utils.get_supabase()
+        if not client:
+            logger.error("Supabase not configured")
+            return jsonify({"error": "Supabase not configured"}), 500
+        
+        # Get all negotiations for project
+        negotiations = supabase_utils.get_negotiations_by_project(client, project_id)
+        logger.info(f"Found {len(negotiations)} total negotiations for project")
+        
+        # Filter to only pending ones
+        # If TEST_RECIPIENT_EMAIL is set, include negotiations without emails (test mode)
+        # Otherwise, only include negotiations with supplier emails
+        if TEST_RECIPIENT_EMAIL:
+            pending = [n for n in negotiations if n.get("status") == "pending"]
+            logger.info(f"TEST MODE: Found {len(pending)} pending negotiations (will use test email)")
+        else:
+            pending = [n for n in negotiations if n.get("status") == "pending" and n.get("supplier_email")]
+            logger.info(f"Found {len(pending)} pending negotiations with supplier emails")
+        
+        if not pending:
+            return jsonify({
+                "status": "success",
+                "message": "No pending negotiations with supplier emails found",
+                "sent_count": 0,
+                "failed_count": 0,
+            })
+        
+        sent = []
+        failed = []
+        
+        for negotiation in pending:
+            try:
+                supplier_email = negotiation.get("supplier_email")
+                # Use TEST_RECIPIENT_EMAIL if configured (test mode), otherwise use supplier email
+                recipient_email = TEST_RECIPIENT_EMAIL if TEST_RECIPIENT_EMAIL else supplier_email
+                
+                # Skip if no recipient email available
+                if not recipient_email:
+                    logger.warning(f"Skipping negotiation {negotiation.get('id')} - no recipient email")
+                    failed.append({
+                        "negotiation_id": negotiation.get("id"),
+                        "supplier_name": negotiation.get("supplier_name"),
+                        "error": "No recipient email available",
+                    })
+                    continue
+                
+                # Build negotiation link
+                link_token = negotiation.get("link_token")
+                negotiation_link = f"{FRONTEND_BASE_URL}/voice-call?token={link_token}"
+                
+                # Generate email
+                subject = generate_negotiation_link_subject(negotiation.get("machine_name"))
+                body = generate_negotiation_link_email(
+                    supplier_name=negotiation.get("supplier_name"),
+                    machine_name=negotiation.get("machine_name"),
+                    quantity=negotiation.get("quantity", 1),
+                    negotiation_link=negotiation_link,
+                    buyer_company=negotiation.get("buyer_company", "RIBIF Algeria"),
+                    buyer_contact_name=negotiation.get("buyer_contact_name", ""),
+                    initial_price_estimate=negotiation.get("initial_price_estimate"),
+                )
+                
+                # Send email
+                email_config = _get_email_config(payload)
+                buyer_email = payload.get("buyer_email") or negotiation.get("buyer_email") or NEGOTIATION_SMTP_USERNAME
+                
+                logger.info(f"Sending email: from={buyer_email}, to={recipient_email}, subject={subject}")
+                
+                send_payload = {
+                    **email_config,
+                    "to": [recipient_email],
+                    "subject": subject,
+                    "text": body,
+                    "from_address": buyer_email,
+                    "reply_to": buyer_email,
+                }
+                
+                result = send_email(send_payload)
+                logger.info(f"Email sent result: {result}")
+                
+                # Update negotiation status
+                supabase_utils.mark_negotiation_link_sent(client, negotiation.get("id"))
+                
+                # Record email
+                email_record = {
+                    "type": "negotiation_link",
+                    "message_id": result.get("message_id"),
+                    "recipient": recipient_email,
+                    "subject": subject,
+                    "sent_at": datetime.now(timezone.utc).isoformat(),
+                }
+                supabase_utils.add_email_to_negotiation(client, negotiation.get("id"), email_record)
+                
+                sent.append({
+                    "negotiation_id": negotiation.get("id"),
+                    "supplier_name": negotiation.get("supplier_name"),
+                    "recipient": recipient_email,
+                })
+                
+                logger.info(f"Sent negotiation link to {recipient_email} for supplier {negotiation.get('supplier_name')}")
+                
+            except Exception as e:
+                failed.append({
+                    "negotiation_id": negotiation.get("id"),
+                    "supplier_name": negotiation.get("supplier_name"),
+                    "error": str(e),
+                })
+                logger.error(f"Failed to send link to {negotiation.get('supplier_name')}: {e}")
+        
+        return jsonify({
+            "status": "success",
+            "sent_count": len(sent),
+            "failed_count": len(failed),
+            "sent": sent,
+            "failed": failed,
+        })
+        
+    except Exception as e:
+        logger.exception("Error sending all negotiation links")
         return jsonify({"error": str(e), "status": "error"}), 500

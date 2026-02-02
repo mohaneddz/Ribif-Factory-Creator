@@ -180,6 +180,7 @@ You must estimate realistic acquisition, operating, maintenance, and disposal co
 
 CRITICAL: These are SMALL TO MID-SIZE Algerian companies with annual revenue of 50M-500M DZD.
 All prices must be realistic for this market segment - NOT prices for large multinationals.
+ASSUME USED OR ENTRY-LEVEL EQUIPMENT unless explicitly specified as "new" or "premium".
 
 ALL VALUES MUST BE IN ALGERIAN DINAR (DZD).
 
@@ -193,15 +194,18 @@ IMPORTANT ALGERIAN MARKET CONTEXT:
 - Used equipment: 40-60% of new price
 
 REALISTIC PRICE RANGES FOR SMALL/MID-SIZE COMPANIES (DZD):
-- Small injection molding machine (up to 200 tons): 8,000,000 - 25,000,000 DZD
-- Medium injection molding machine (200-500 tons): 25,000,000 - 60,000,000 DZD
-- Large injection molding machine (500-1000 tons): 60,000,000 - 150,000,000 DZD
-- CNC machine (basic to mid-range): 15,000,000 - 50,000,000 DZD
-- Industrial mixer/blender: 3,000,000 - 15,000,000 DZD
-- Packaging machine: 5,000,000 - 30,000,000 DZD
-- Conveyor system: 2,000,000 - 10,000,000 DZD
-- Compressor (industrial): 2,000,000 - 8,000,000 DZD
-- Chiller unit: 3,000,000 - 12,000,000 DZD
+For INDIVIDUAL MACHINES (not production lines):
+- Small injection molding machine (up to 200 tons): 5,000,000 - 15,000,000 DZD
+- Medium injection molding machine (200-500 tons): 15,000,000 - 35,000,000 DZD
+- Extrusion machine (single unit): 8,000,000 - 25,000,000 DZD
+- CNC machine (basic to mid-range): 8,000,000 - 30,000,000 DZD
+- Industrial mixer/blender: 2,000,000 - 10,000,000 DZD
+- Packaging machine: 3,000,000 - 15,000,000 DZD
+- Conveyor system: 1,500,000 - 8,000,000 DZD
+- Compressor (industrial): 1,500,000 - 6,000,000 DZD
+- Chiller unit: 2,000,000 - 8,000,000 DZD
+- Lamination machine (single unit): 5,000,000 - 20,000,000 DZD
+- Assembly equipment: 3,000,000 - 12,000,000 DZD
 
 RAW MATERIAL PRICES (DZD per tonne, CIF Algeria):
 - Standard polymers (PP, PE, PVC): 180,000 - 280,000 DZD/tonne
@@ -412,8 +416,30 @@ Respond ONLY with valid JSON containing estimates in DZD (Algerian Dinar)."""
 - Power supply: {specs.get('alimentation', 'N/A')}
 """
         
+        # Detect if this is a production line vs single machine
+        machine_name = machine.get('name', 'Unknown')
+        is_production_line = any(kw in machine_name.lower() for kw in ['ligne de', 'ligne d\'', 'production line', 'ligne', 'système'])
+        
+        line_guidance = ""
+        if is_production_line:
+            line_guidance = """
+IMPORTANT: This appears to be a PRODUCTION LINE, not a single machine.
+For a SMALL Algerian company, estimate the MINIMUM viable configuration:
+- estimated_purchase_price should be 15,000,000 - 60,000,000 DZD for most lines
+- Only exceed 60,000,000 DZD if the line is highly complex or automated
+- Assume USED or REFURBISHED equipment is acceptable
+"""
+        else:
+            line_guidance = """
+IMPORTANT: This is a SINGLE MACHINE (not a production line).
+For a SMALL Algerian company:
+- estimated_purchase_price should typically be 5,000,000 - 30,000,000 DZD
+- Only exceed 30,000,000 DZD for very large/specialized equipment
+- Assume USED or ENTRY-LEVEL equipment is acceptable
+"""
+        
         base_prompt = f"""Estimate the complete TCO for this industrial machine in Algeria with realistic, defensible numbers.
-
+{line_guidance}
     Rules:
     - All amounts must be numeric (no strings) and in DZD.
     - Use realistic bounds and ratios:
@@ -428,7 +454,7 @@ Respond ONLY with valid JSON containing estimates in DZD (Algerian Dinar)."""
     - If specs are missing, infer a conservative mid‑range price for the category.
     - Round amounts to the nearest 1,000 DZD.
 
-MACHINE: {machine.get('name', 'Unknown')}
+MACHINE: {machine_name}
 ID: {machine.get('id', 'N/A')}
 CATEGORY: {machine.get('category', 'N/A')}
 MANUFACTURER: {machine.get('manufacturer', 'N/A')}

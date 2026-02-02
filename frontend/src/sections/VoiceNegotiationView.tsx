@@ -502,22 +502,33 @@ const SummaryStats = ({ summary }: { summary: NegotiationsSummary | null }) => {
 // Main component
 export const VoiceNegotiationView = ({
     projectId,
-    module4Data,
+    module4Data: rawModule4Data,
     loading: externalLoading
 }: {
     projectId: string;
-    module4Data?: MachineEnriched[] | null;
+    module4Data?: { machines_enriched?: MachineEnriched[] } | MachineEnriched[] | null;
     loading?: boolean;
 }) => {
+    // Normalize module4Data - handle both raw array and { machines_enriched: [] } format
+    const module4Data: MachineEnriched[] | null = Array.isArray(rawModule4Data)
+        ? rawModule4Data
+        : rawModule4Data?.machines_enriched || null;
     const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
     const [summary, setSummary] = useState<NegotiationsSummary | null>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [linkSending, setLinkSending] = useState(false);
+    const [sendingAllLinks, setSendingAllLinks] = useState(false);
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     const selectedNegotiation = negotiations.find(n => n.id === selectedId);
+    const pendingCount = negotiations.filter(n => n.status === "pending" && n.supplier_email).length;
+    
+    // Track if we've already auto-initiated the process
+    const [autoInitiated, setAutoInitiated] = useState(false);
+    const [autoCreationStatus, setAutoCreationStatus] = useState<string | null>(null);
 
     // Fetch negotiations
     const fetchNegotiations = useCallback(async () => {
@@ -547,6 +558,111 @@ export const VoiceNegotiationView = ({
         const interval = setInterval(fetchNegotiations, 30000);
         return () => clearInterval(interval);
     }, [fetchNegotiations]);
+
+    // Auto-dismiss success message after 5 seconds
+    useEffect(() => {
+        if (successMessage) {
+            const timer = setTimeout(() => setSuccessMessage(null), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [successMessage]);
+
+    // AUTO-INITIATION: Create negotiations and send emails automatically when module4 data is available
+    useEffect(() => {
+        const autoInitiateNegotiations = async () => {
+            // Only run once and when we have module4 data, projectId, and no existing negotiations
+            if (autoInitiated || !module4Data || !projectId || module4Data.length === 0) return;
+            if (externalLoading || loading) return;
+            if (negotiations.length > 0) return; // Already have negotiations
+            
+            setAutoInitiated(true);
+            setAutoCreationStatus("Creating negotiations...");
+            setCreating(true);
+            
+            try {
+                // Step 1: Create negotiations from module 4 data
+                let createdCount = 0;
+                for (const machine of module4Data) {
+                    const suppliers = machine.suppliers || [];
+                    if (suppliers.length === 0) continue;
+
+                    const payload = {
+                        project_id: projectId,
+                        machine_name: machine.machine_input?.nom_machine || "Equipment",
+                        machine_type: machine.machine_input?.type,
+                        quantity: machine.machine_input?.quantite_necessaire || 1,
+                        suppliers: suppliers,
+                        buyer_company: "RIBIF Algeria",
+                    };
+
+                    console.log("[Module5] Creating negotiations with payload:", payload);
+
+                    const res = await fetch(`${API_BASE}/api/module5/v2/negotiations/bulk-create`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload),
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        createdCount += data.created_count || 0;
+                        console.log("[Module5] Created negotiations:", data);
+                    } else {
+                        const errData = await res.json();
+                        console.error("[Module5] Failed to create negotiations:", errData);
+                    }
+                }
+                
+                console.log("[Module5] Total created:", createdCount);
+                
+                if (createdCount > 0) {
+                    // Step 2: Auto-send all negotiation links immediately
+                    setAutoCreationStatus(`Sending emails to ${createdCount} suppliers...`);
+                    
+                    console.log("[Module5] Sending negotiation links for project:", projectId);
+                    
+                    const sendRes = await fetch(`${API_BASE}/api/module5/v2/negotiations/project/${projectId}/send-all-links`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({}),
+                    });
+                    
+                    const sendData = await sendRes.json();
+                    console.log("[Module5] Send links response:", sendData);
+                    
+                    if (sendRes.ok && sendData.sent_count > 0) {
+                        setSuccessMessage(`✅ Auto-sent ${sendData.sent_count} negotiation link${sendData.sent_count > 1 ? 's' : ''} to suppliers!`);
+                    } else if (sendData.failed_count > 0) {
+                        setError(`Some emails failed to send (${sendData.failed_count}): ${JSON.stringify(sendData.failed)}`);
+                    } else if (sendData.sent_count === 0) {
+                        setError(`No emails sent: ${sendData.message || 'Unknown reason'}`);
+                    }
+                }
+                
+                // Refresh to show updated statuses
+                const refreshRes = await fetch(`${API_BASE}/api/module5/v2/negotiations/project/${projectId}`);
+                if (refreshRes.ok) {
+                    const refreshData = await refreshRes.json();
+                    setNegotiations(refreshData.negotiations || []);
+                    setSummary(refreshData.summary || null);
+                    if (refreshData.negotiations?.length > 0) {
+                        setSelectedId(refreshData.negotiations[0].id);
+                    }
+                }
+                
+            } catch (err: any) {
+                console.error("[Module5] Auto-initiation failed:", err);
+                setError(err.message || "Failed to auto-initiate negotiations");
+            } finally {
+                setCreating(false);
+                setAutoCreationStatus(null);
+                setLoading(false);
+            }
+        };
+        
+        autoInitiateNegotiations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [module4Data, projectId, autoInitiated, negotiations.length, externalLoading, loading]);
 
     // Create negotiations from module 4 data
     const createFromModule4 = async () => {
@@ -594,11 +710,13 @@ export const VoiceNegotiationView = ({
     const sendNegotiationLink = async (negotiationId: string) => {
         setLinkSending(true);
         setError(null);
+        setSuccessMessage(null);
 
         try {
             const res = await fetch(`${API_BASE}/api/module5/v2/negotiations/${negotiationId}/send-link`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({}),
             });
 
             if (!res.ok) {
@@ -606,6 +724,7 @@ export const VoiceNegotiationView = ({
                 throw new Error(errData.error || "Failed to send link");
             }
 
+            setSuccessMessage("Negotiation link sent successfully!");
             await fetchNegotiations();
         } catch (err: any) {
             setError(err.message || "Failed to send negotiation link");
@@ -614,17 +733,60 @@ export const VoiceNegotiationView = ({
         }
     };
 
+    // Send all negotiation links
+    const sendAllNegotiationLinks = async () => {
+        if (!projectId || pendingCount === 0) return;
+        
+        setSendingAllLinks(true);
+        setError(null);
+        setSuccessMessage(null);
+
+        try {
+            const res = await fetch(`${API_BASE}/api/module5/v2/negotiations/project/${projectId}/send-all-links`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({}),
+            });
+
+            const data = await res.json();
+            
+            if (!res.ok) {
+                throw new Error(data.error || "Failed to send links");
+            }
+
+            if (data.sent_count > 0) {
+                setSuccessMessage(`Successfully sent ${data.sent_count} negotiation link${data.sent_count > 1 ? 's' : ''}!`);
+            }
+            if (data.failed_count > 0) {
+                setError(`Failed to send ${data.failed_count} link${data.failed_count > 1 ? 's' : ''}`);
+            }
+            
+            await fetchNegotiations();
+        } catch (err: any) {
+            setError(err.message || "Failed to send negotiation links");
+        } finally {
+            setSendingAllLinks(false);
+        }
+    };
+
     // Open call preview
     const openCallPreview = (token: string) => {
         window.open(`/voice-call?token=${token}`, "_blank");
     };
 
-    if (externalLoading || loading) {
+    if (externalLoading || loading || autoCreationStatus) {
         return (
             <div className="h-full flex items-center justify-center bg-white dark:bg-[#13141c]">
                 <div className="text-center">
                     <Loader2 size={32} className="mx-auto text-indigo-500 animate-spin mb-3" />
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Loading negotiations...</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {autoCreationStatus || "Loading negotiations..."}
+                    </p>
+                    {autoCreationStatus && (
+                        <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-2">
+                            Automatically setting up supplier negotiations...
+                        </p>
+                    )}
                 </div>
             </div>
         );
@@ -685,19 +847,45 @@ export const VoiceNegotiationView = ({
                 {/* Summary */}
                 <SummaryStats summary={summary} />
 
-                {/* Header */}
-                <div className="p-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
-                    <h3 className="font-bold text-slate-800 dark:text-white">Negotiations</h3>
-                    {module4Data && module4Data.length > 0 && (
+                {/* Header with Send All button */}
+                <div className="p-4 border-b border-slate-100 dark:border-white/10">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-bold text-slate-800 dark:text-white">Negotiations</h3>
+                        {module4Data && module4Data.length > 0 && (
+                            <button
+                                onClick={createFromModule4}
+                                disabled={creating}
+                                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                            >
+                                {creating ? <Loader2 size={12} className="animate-spin" /> : "+"} Add More
+                            </button>
+                        )}
+                    </div>
+                    
+                    {/* Send All Links Button */}
+                    {pendingCount > 0 && (
                         <button
-                            onClick={createFromModule4}
-                            disabled={creating}
-                            className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                            onClick={sendAllNegotiationLinks}
+                            disabled={sendingAllLinks || linkSending}
+                            className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-sm rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
                         >
-                            {creating ? <Loader2 size={12} className="animate-spin" /> : "+"} Add More
+                            {sendingAllLinks ? (
+                                <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                                <Send size={14} />
+                            )}
+                            Send Links to All ({pendingCount} pending)
                         </button>
                     )}
                 </div>
+
+                {/* Success banner */}
+                {successMessage && (
+                    <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 border-b border-emerald-200 dark:border-emerald-500/20 flex items-center gap-2">
+                        <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400">{successMessage}</p>
+                    </div>
+                )}
 
                 {/* Error banner */}
                 {error && (
