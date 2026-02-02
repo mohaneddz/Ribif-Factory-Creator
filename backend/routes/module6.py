@@ -121,23 +121,17 @@ def calculate_tco_from_sourcing():
                 return jsonify({"error": "No enriched machines found in input"}), 400
 
             tco_calculator = RIBIFModule6TCO()
-            all_machine_tcos = []
-            all_product_tcos = []
-
+            
+            # Prepare all machines for BATCH estimation (single LLM call)
+            machine_inputs = []
+            suppliers_map = {}
+            
             for idx, machine_item in enumerate(machines_enriched, 1):
                 machine_input_raw = machine_item.get("machine_input", {})
                 suppliers_raw = machine_item.get("suppliers", [])
-
-                top_supplier = None
-                if suppliers_raw:
-                    sorted_suppliers = sorted(
-                        suppliers_raw,
-                        key=lambda x: x.get("relevance_score", 0),
-                        reverse=True,
-                    )
-                    top_supplier = sorted_suppliers[0] if sorted_suppliers else None
-
+                
                 machine_name = machine_input_raw.get("nom_machine", f"Machine_{idx}")
+                
                 tco_machine_input = {
                     "id": f"machine_{idx}",
                     "name": machine_name,
@@ -152,24 +146,48 @@ def calculate_tco_from_sourcing():
                         "alimentation": machine_input_raw.get("specifications", {}).get("alimentation", ""),
                     },
                 }
-
-                tco_suppliers = []
-                if top_supplier:
-                    tco_suppliers.append({
-                        "supplier_name": top_supplier.get("supplier_name", "Unknown"),
-                        "website": top_supplier.get("website", ""),
-                        "region": top_supplier.get("region", "Global"),
-                        "price_estimate": top_supplier.get("price_estimate"),
-                        "lead_time_days": None,
-                        "source": top_supplier.get("source", "Module 4 Enrichment"),
-                        "notes": top_supplier.get("notes", ""),
-                        "relevance_score": top_supplier.get("relevance_score", 0),
-                    })
-
+                machine_inputs.append(tco_machine_input)
+                
+                # Build suppliers map for batch estimation
+                if suppliers_raw:
+                    sorted_suppliers = sorted(
+                        suppliers_raw,
+                        key=lambda x: x.get("relevance_score", 0),
+                        reverse=True,
+                    )
+                    suppliers_map[machine_name] = [{
+                        "supplier_name": s.get("supplier_name", "Unknown"),
+                        "website": s.get("website", ""),
+                        "region": s.get("region", "Global"),
+                        "price_estimate": s.get("price_estimate"),
+                        "source": s.get("source", "Module 4 Enrichment"),
+                        "notes": s.get("notes", ""),
+                        "relevance_score": s.get("relevance_score", 0),
+                    } for s in sorted_suppliers[:3]]
+            
+            # BATCH estimate all machines in ONE LLM call
+            logger.info("Starting BATCH TCO estimation for %d machines", len(machine_inputs))
+            batch_estimates = tco_calculator.estimate_machines_batch(machine_inputs, suppliers_map)
+            
+            all_machine_tcos = []
+            all_product_tcos = []
+            
+            for machine_input in machine_inputs:
+                machine_name = machine_input["name"]
+                
+                # Get batch estimate or fall back to heuristic
+                estimate = batch_estimates.get(machine_name)
+                if not estimate:
+                    logger.warning("No batch estimate for '%s', using heuristic", machine_name)
+                    from utils.module_6.core import get_heuristic_machine_estimate
+                    estimate = get_heuristic_machine_estimate(machine_name, machine_input.get("category", ""))
+                
+                # Calculate TCO from estimate
                 machine_tco = tco_calculator.calculate_machine_tco(
-                    machine_input=tco_machine_input,
-                    suppliers=tco_suppliers,
-                    use_llm=True,
+                    machine_input=machine_input,
+                    suppliers=suppliers_map.get(machine_name, []),
+                    use_llm=False,  # Don't call LLM again - use pre-computed estimate
+                    precomputed_estimate=estimate,
                 )
                 all_machine_tcos.append(machine_tco)
 

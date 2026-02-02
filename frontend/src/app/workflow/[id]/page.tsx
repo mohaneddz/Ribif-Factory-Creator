@@ -804,7 +804,17 @@ export default function FactoryCopilot() {
         setSelectedModule(idx);
         setSubStep(0);
         setStatus('processing');
-        runHasData.current = true; // Trigger the processing loop again
+        runHasData.current = true;
+
+        // Build cleaned project data and trigger workflow
+        const cleanedData = {
+            ...projectData,
+            ...updates,
+        } as ProjectRecord;
+
+        // Trigger workflow with cleaned data
+        setPendingResumeData(cleanedData);
+        setShouldAutoResume(true);
     };
 
     const regenerateAll = async () => {

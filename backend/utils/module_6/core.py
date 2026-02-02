@@ -78,14 +78,14 @@ MACHINE_HEURISTICS = {
 }
 
 MATERIAL_HEURISTICS = {
-    "polymer": {"unit_price": 220_000, "transport_pct": 0.12, "storage_pct": 0.03, "wastage_pct": 0.02},
-    "resin": {"unit_price": 300_000, "transport_pct": 0.12, "storage_pct": 0.03, "wastage_pct": 0.02},
-    "plastic": {"unit_price": 200_000, "transport_pct": 0.12, "storage_pct": 0.03, "wastage_pct": 0.02},
-    "glass": {"unit_price": 350_000, "transport_pct": 0.15, "storage_pct": 0.04, "wastage_pct": 0.03},
-    "metal": {"unit_price": 280_000, "transport_pct": 0.15, "storage_pct": 0.03, "wastage_pct": 0.02},
-    "additive": {"unit_price": 500_000, "transport_pct": 0.10, "storage_pct": 0.02, "wastage_pct": 0.01},
-    "colorant": {"unit_price": 600_000, "transport_pct": 0.10, "storage_pct": 0.02, "wastage_pct": 0.01},
-    "default": {"unit_price": 250_000, "transport_pct": 0.12, "storage_pct": 0.03, "wastage_pct": 0.02},
+    "polymer": {"unit_price": 180_000, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
+    "resin": {"unit_price": 250_000, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
+    "plastic": {"unit_price": 160_000, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
+    "glass": {"unit_price": 280_000, "transport_pct": 0.10, "storage_pct": 0.03, "wastage_pct": 0.02},
+    "metal": {"unit_price": 220_000, "transport_pct": 0.10, "storage_pct": 0.02, "wastage_pct": 0.015},
+    "additive": {"unit_price": 400_000, "transport_pct": 0.06, "storage_pct": 0.015, "wastage_pct": 0.01},
+    "colorant": {"unit_price": 450_000, "transport_pct": 0.06, "storage_pct": 0.015, "wastage_pct": 0.01},
+    "default": {"unit_price": 200_000, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
 }
 
 
@@ -404,101 +404,49 @@ class RIBIFModule6TCO:
     SYSTEM_PROMPT = """You are an expert in financial analysis and industrial cost estimation for SMALL TO MID-SIZE companies in Algeria.
 You must estimate realistic acquisition, operating, maintenance, and disposal costs of industrial equipment.
 
-CRITICAL: These are SMALL TO MID-SIZE Algerian companies with annual revenue of 50M-500M DZD.
-All prices must be realistic for this market segment - NOT prices for large multinationals.
-ASSUME USED OR ENTRY-LEVEL EQUIPMENT unless explicitly specified as "new" or "premium".
+CRITICAL RULES:
+1. These are SMALL TO MID-SIZE Algerian companies with annual revenue of 50M-500M DZD.
+2. All prices must be realistic for this market segment - NOT prices for large multinationals.
+3. ASSUME USED OR ENTRY-LEVEL EQUIPMENT unless explicitly specified as "new" or "premium".
+4. ALL VALUES MUST BE IN ALGERIAN DINAR (DZD).
+5. BE CONSERVATIVE - when in doubt, estimate LOWER not higher.
 
-ALL VALUES MUST BE IN ALGERIAN DINAR (DZD).
+=== REALISTIC PRICE RANGES (DZD) - THESE ARE YOUR HARD LIMITS ===
 
-=== TCO CALCULATION METHODOLOGY ===
-TCO Formula: TCO = Ci + Co + Cm + Cd - Rv
+INDIVIDUAL MACHINES (single units, not production lines):
+- Small injection molding (≤200t): 4,000,000 - 12,000,000 DZD
+- Medium injection molding (200-500t): 12,000,000 - 25,000,000 DZD
+- Extrusion machine (single): 6,000,000 - 18,000,000 DZD
+- CNC machine (basic-mid): 6,000,000 - 20,000,000 DZD
+- Industrial mixer/blender: 1,500,000 - 8,000,000 DZD
+- Packaging machine: 2,000,000 - 10,000,000 DZD
+- Conveyor system: 1,000,000 - 5,000,000 DZD
+- Compressor (industrial): 1,000,000 - 4,000,000 DZD
+- Chiller unit: 1,500,000 - 6,000,000 DZD
+- Lamination machine: 4,000,000 - 15,000,000 DZD
+- Assembly equipment: 2,000,000 - 8,000,000 DZD
+- AGV/automated transport: 8,000,000 - 20,000,000 DZD
 
-Where the components are calculated as follows:
+PRODUCTION LINES (multiple integrated machines):
+- Small production line: 15,000,000 - 40,000,000 DZD
+- Medium production line: 40,000,000 - 80,000,000 DZD
 
-1. INITIAL/ACQUISITION COSTS (Ci):
-   Ci = Cp + Cins + Ctr + Cinf + Ci_training
-   - Cp (Purchase Price): Base equipment cost, including import duties and taxes
-   - Cins (Installation): Site preparation, electrical/plumbing connections, commissioning
-   - Ctr (Transportation): Shipping, freight, handling, insurance during transit
-   - Cinf (Infrastructure): Building modifications, utilities upgrade, foundations
-   - Ci_training (Training): Operator training, technical documentation, certification
+RAW MATERIALS (DZD per tonne, CIF Algeria):
+- Standard polymers (PP, PE, PVC): 150,000 - 220,000 DZD/tonne
+- Engineering plastics (ABS, PC): 220,000 - 320,000 DZD/tonne
+- Specialty resins (epoxy, PU): 280,000 - 450,000 DZD/tonne
+- Additives/colorants: 350,000 - 600,000 DZD/tonne
+- Glass materials: 180,000 - 350,000 DZD/tonne
+- Metal materials: 180,000 - 300,000 DZD/tonne
 
-2. OPERATING COSTS (Co) - Annual:
-   Co = Ce + Clab + Ccons + Cutil
-   - Ce (Energy): Electricity, gas, fuel consumption based on machine power rating
-   - Clab (Labor): Operator wages, supervision, benefits (direct labor allocation)
-   - Ccons (Consumables): Lubricants, filters, tooling, safety equipment
-   - Cutil (Utilities): Water, compressed air, cooling, waste disposal
+ANNUAL COST RATIOS (as % of purchase price):
+- Implementation/installation: 5-12%
+- Annual operations (energy, labor): 4-10%
+- Annual maintenance: 3-6%
+- Annual downtime: 1-3%
+- Resale value at end of life: 25-40%
 
-3. MAINTENANCE COSTS (Cm) - Annual:
-   Cm = Cpm + Ccm + Csp
-   - Cpm (Preventive Maintenance): Scheduled inspections, cleaning, calibration
-   - Ccm (Corrective Maintenance): Unplanned repairs, emergency interventions
-   - Csp (Spare Parts): Replacement components, wear parts inventory
-
-4. DOWNTIME/HIDDEN COSTS (Cd) - Annual:
-   Cd = Cprod_loss + Cqual + Cenv + Ccompliance
-   - Cprod_loss (Production Loss): Lost output during breakdowns × margin per unit
-   - Cqual (Quality Costs): Scrap, rework, customer returns, warranty claims
-   - Cenv (Environmental): Waste treatment, emissions control, compliance monitoring
-   - Ccompliance (Regulatory): Permits, inspections, certifications, safety audits
-
-5. RESIDUAL VALUE (Rv):
-   Rv = (Cp × depreciation_factor) - Cdisposal
-   - Depreciation factor: Typically 10-30% of original value after 10-15 years
-   - Cdisposal: Decommissioning, removal, environmental remediation if negative value
-
-=== COST ESTIMATION GUIDELINES ===
-As percentage of Purchase Price (Cp):
-- Installation (Cins): 5-15% of Cp
-- Transportation (Ctr): 3-10% of Cp (higher for overseas imports)
-- Infrastructure (Cinf): 2-10% of Cp (depends on facility readiness)
-- Training (Ci_training): 1-3% of Cp
-- Annual Energy (Ce): 2-8% of Cp (depends on utilization and power rating)
-- Annual Labor (Clab): 3-10% of Cp (depends on automation level)
-- Annual Consumables (Ccons): 1-3% of Cp
-- Annual Utilities (Cutil): 0.5-2% of Cp
-- Annual Preventive Maintenance (Cpm): 2-4% of Cp
-- Annual Corrective Maintenance (Ccm): 1-3% of Cp
-- Annual Spare Parts (Csp): 1-3% of Cp
-- Annual Production Loss (Cprod_loss): 0.5-2% of annual production value
-- Annual Quality Costs (Cqual): 0.5-2% of production value
-- Residual Value (Rv): 10-30% of Cp at end of life
-
-=== IMPORTANT ALGERIAN MARKET CONTEXT ===
-- Labor costs: Technician salary 50,000-80,000 DZD/month, Engineer 100,000-150,000 DZD/month
-- Energy costs: Industrial electricity ~5-8 DZD/kWh
-- Spare parts: Often imported, add 30-50% markup on international prices
-- Equipment import: Customs duties 15-30%, freight adds 10-20%
-- Inflation: ~7-9% annually
-- Equipment lifespan: 8-15 years for industrial machines
-- Used equipment: 40-60% of new price
-
-REALISTIC PRICE RANGES FOR SMALL/MID-SIZE COMPANIES (DZD):
-For INDIVIDUAL MACHINES (not production lines):
-- Small injection molding machine (up to 200 tons): 5,000,000 - 15,000,000 DZD
-- Medium injection molding machine (200-500 tons): 15,000,000 - 35,000,000 DZD
-- Extrusion machine (single unit): 8,000,000 - 25,000,000 DZD
-- CNC machine (basic to mid-range): 8,000,000 - 30,000,000 DZD
-- Industrial mixer/blender: 2,000,000 - 10,000,000 DZD
-- Packaging machine: 3,000,000 - 15,000,000 DZD
-- Conveyor system: 1,500,000 - 8,000,000 DZD
-- Compressor (industrial): 1,500,000 - 6,000,000 DZD
-- Chiller unit: 2,000,000 - 8,000,000 DZD
-- Lamination machine (single unit): 5,000,000 - 20,000,000 DZD
-- Assembly equipment: 3,000,000 - 12,000,000 DZD
-
-RAW MATERIAL PRICES (DZD per tonne, CIF Algeria):
-- Standard polymers (PP, PE, PVC): 180,000 - 280,000 DZD/tonne
-- Engineering plastics (ABS, PC): 280,000 - 400,000 DZD/tonne
-- Specialty resins (epoxy, PU): 350,000 - 550,000 DZD/tonne
-- Additives/colorants: 400,000 - 800,000 DZD/tonne
-
-ANNUAL COST GUIDELINES:
-- Maintenance: 3-8% of purchase price annually
-- Operations (energy, labor): 10-20% of purchase price annually
-- Downtime losses: 1-3% of annual production value
-
+IMPORTANT: If you're unsure, use the MIDDLE of the range, not the maximum.
 Respond ONLY with valid JSON containing estimates in DZD (Algerian Dinar)."""
 
     # French keywords for language detection
@@ -839,6 +787,123 @@ Respond in JSON:
         except Exception as e:
             logger.debug("Could not save failed response: %s", e)
 
+    def estimate_machines_batch(
+        self,
+        machines: List[Dict[str, Any]],
+        suppliers_map: Dict[str, List[Dict[str, Any]]] = None
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Estimate TCO for ALL machines in a single LLM call for better performance.
+        Returns a dict mapping machine name/id to cost estimates.
+        """
+        if not machines:
+            return {}
+        
+        suppliers_map = suppliers_map or {}
+        
+        # Build machines list for prompt
+        machines_text = ""
+        machine_keys = []
+        for i, m in enumerate(machines, 1):
+            name = m.get('name', f'Machine_{i}')
+            machine_keys.append(name)
+            category = m.get('category', 'Industrial Equipment')
+            manufacturer = m.get('manufacturer', 'Unknown')
+            specs = m.get('original_specs', {})
+            if hasattr(specs, 'model_dump'):
+                specs = specs.model_dump()
+            
+            # Get supplier info if available
+            supplier_info = ""
+            machine_suppliers = suppliers_map.get(name, [])
+            if machine_suppliers:
+                top = machine_suppliers[0]
+                supplier_info = f"Supplier: {top.get('supplier_name', 'N/A')} ({top.get('region', 'N/A')})"
+            
+            specs_str = f"Capacity: {specs.get('capacite', 'N/A')}, Power: {specs.get('puissance', 'N/A')}"
+            machines_text += f"{i}. {name}\n   Category: {category}, Manufacturer: {manufacturer}\n   Specs: {specs_str}\n   {supplier_info}\n\n"
+        
+        logger.info("Requesting BATCH LLM estimates for %d machines", len(machines))
+        
+        prompt = f"""Estimate TCO costs for ALL these industrial machines for a SMALL/MID-SIZE Algerian company.
+
+MACHINES LIST:
+{machines_text}
+
+CRITICAL PRICE GUIDELINES (DZD) - USE THESE RANGES:
+- Small/medium machines: 3,000,000 - 15,000,000 DZD
+- Large/specialized machines: 15,000,000 - 35,000,000 DZD
+- Production lines (multiple integrated): 25,000,000 - 60,000,000 DZD
+
+COST RATIOS (as % of purchase price):
+- implementation_cost: 6-10%
+- annual_operations_cost: 5-8%
+- annual_maintenance_cost: 3-5%
+- annual_downtime_cost: 1-2%
+- resale_value: 30-40% at end of life
+- disposal_cost: 1-2%
+- lifetime_years: 10-12
+
+Return a JSON object with EXACT machine names as keys:
+{{
+    "Machine Name 1": {{
+        "estimated_purchase_price": <number>,
+        "implementation_cost": <number>,
+        "annual_operations_cost": <number>,
+        "annual_maintenance_cost": <number>,
+        "annual_downtime_cost": <number>,
+        "resale_value": <number>,
+        "disposal_cost": <number>,
+        "lifetime_years": <number>,
+        "confidence": "medium"
+    }},
+    "Machine Name 2": {{ ... }},
+    ...
+}}
+
+IMPORTANT: Include ALL {len(machines)} machines. Use EXACT names as keys. All values must be numbers in DZD."""
+
+        # First attempt
+        result, json_ok, raw_response = self.call_gemini(prompt)
+        
+        if json_ok and result and isinstance(result, dict):
+            # Validate and normalize
+            normalized = {}
+            for key, val in result.items():
+                validated, is_valid = self._validate_machine_estimate(val, {"name": key})
+                if is_valid:
+                    normalized[key] = validated
+                else:
+                    logger.warning("Invalid estimate for machine '%s' in batch, will use heuristic", key)
+            
+            if len(normalized) >= len(machines) * 0.7:  # At least 70% success
+                logger.info("BATCH machine estimation SUCCESS (returned=%d/%d)", len(normalized), len(machines))
+                return normalized
+        
+        if raw_response:
+            self._save_failed_response("machines_batch", raw_response, "machines_batch_attempt_1")
+        
+        # Retry with stricter prompt
+        logger.warning("Batch machine estimation incomplete, retrying with strict prompt")
+        result, json_ok, raw_response = self.call_gemini(prompt, retry_strict=True)
+        
+        if json_ok and result and isinstance(result, dict):
+            normalized = {}
+            for key, val in result.items():
+                validated, is_valid = self._validate_machine_estimate(val, {"name": key})
+                if is_valid:
+                    normalized[key] = validated
+            
+            if normalized:
+                logger.info("BATCH machine estimation SUCCESS on retry (returned=%d/%d)", len(normalized), len(machines))
+                return normalized
+        
+        if raw_response:
+            self._save_failed_response("machines_batch", raw_response, "machines_batch_attempt_2")
+        
+        logger.warning("Batch machine estimation failed, returning empty (will use heuristics)")
+        return {}
+
     def estimate_product_costs(
         self, 
         products: List[Dict[str, Any]], 
@@ -873,33 +938,28 @@ Company context:
 - Size: Small to mid-size Algerian company
 """
 
-        prompt = f"""Estimate product handling and logistics costs for these products for a small/mid-size Algerian manufacturer:
+        prompt = f"""Estimate product handling costs for a small/mid-size Algerian manufacturer:
 
 {products_text}
-
 {company_info}
 
 Reference: Average annual machine TCO is {avg_machine_annual:,.0f} DZD.
 
-For each product, estimate realistic costs in DZD for:
-1. landing_cost: Import duties, freight, customs clearance for raw materials/components
-2. holding_cost: Inventory storage, warehousing, insurance costs
-3. quality_cost: Quality control, testing, certification, defect handling
-4. administrative_cost: Documentation, customs paperwork, procurement overhead
+CONSERVATIVE COST GUIDELINES (as % of avg_machine_annual):
+- landing_cost: 1-3% (import duties, freight)
+- holding_cost: 1-2% (storage, warehousing)
+- quality_cost: 0.5-1.5% (testing, QC)
+- administrative_cost: 0.5-1% (paperwork)
 
-IMPORTANT: These should be REALISTIC costs for a SMALL/MID-SIZE company:
-- Landing cost: typically 1-4% of material costs
-- Holding cost: typically 1-3% of material costs  
-- Quality cost: typically 0.5-2% of production value
-- Administrative cost: typically 0.5-1.5% of procurement costs
+Use CONSERVATIVE estimates (lower end of ranges).
 
-Return ONLY a JSON object mapping product names to cost estimates:
+Return JSON with ALL products:
 {{
-    "Product Name 1": {{
-        "landing_cost": <number in DZD>,
-        "holding_cost": <number in DZD>,
-        "quality_cost": <number in DZD>,
-        "administrative_cost": <number in DZD>
+    "Product Name": {{
+        "landing_cost": <number>,
+        "holding_cost": <number>,
+        "quality_cost": <number>,
+        "administrative_cost": <number>
     }},
     ...
 }}
@@ -912,10 +972,10 @@ Return ONLY a JSON object mapping product names to cost estimates:
             # Return conservative defaults based on avg_machine_annual
             return {
                 name: {
-                    "landing_cost": avg_machine_annual * 0.03,
-                    "holding_cost": avg_machine_annual * 0.02,
-                    "quality_cost": avg_machine_annual * 0.015,
-                    "administrative_cost": avg_machine_annual * 0.01,
+                    "landing_cost": avg_machine_annual * 0.02,
+                    "holding_cost": avg_machine_annual * 0.015,
+                    "quality_cost": avg_machine_annual * 0.01,
+                    "administrative_cost": avg_machine_annual * 0.008,
                 }
                 for name in product_names
             }
@@ -1038,25 +1098,32 @@ Return ONLY a JSON object mapping product names to cost estimates:
 MATERIALS LIST:
 {materials_text}
 
-ALGERIAN CONTEXT:
-- Polymers and resins are generally imported (Europe, China, Middle East)
-- Exchange rate: ~135 DZD for 1 EUR
-- Import/customs fees: 15-30% depending on product
-- Maritime + land transport: varies by origin
+CONSERVATIVE PRICE GUIDELINES (DZD per tonne, CIF Algeria):
+- Standard polymers (PP, PE, PVC): 150,000 - 200,000 DZD/tonne
+- Engineering plastics (ABS, PC, Nylon): 200,000 - 300,000 DZD/tonne
+- Specialty resins (epoxy, PU): 250,000 - 400,000 DZD/tonne
+- Additives/colorants: 350,000 - 550,000 DZD/tonne
+- Glass materials: 150,000 - 300,000 DZD/tonne
+- Metal materials: 150,000 - 250,000 DZD/tonne
+- Industrial solvents/chemicals: 100,000 - 250,000 DZD/tonne
 
-For EACH material, estimate:
-- unit_price: DZD per tonne (CIF Algeria)
-- transport_pct: logistics fraction (0-1)
-- storage_pct: storage fraction (0-1)  
-- wastage_pct: loss fraction (0-1)
-- confidence: "high", "medium", or "low"
+OVERHEAD RATIOS (as fraction of material cost):
+- transport_pct: 0.05 - 0.10 (5-10%)
+- storage_pct: 0.01 - 0.03 (1-3%)
+- wastage_pct: 0.01 - 0.02 (1-2%)
 
-IMPORTANT: Respond with JSON containing ALL {len(materials)} materials. Use EXACT material names as keys.
+IMPORTANT: Use CONSERVATIVE estimates (middle-low of ranges). When uncertain, use LOWER values.
 
-Example format:
+For EACH material, provide:
+- unit_price: DZD per tonne (use middle of appropriate range)
+- transport_pct: fraction 0.05-0.10
+- storage_pct: fraction 0.01-0.03
+- wastage_pct: fraction 0.01-0.02
+- confidence: "medium"
+
+Return JSON with ALL {len(materials)} materials. Use EXACT material names as keys:
 {{
-    "Polyuréthane (PU)": {{"unit_price": 350000, "transport_pct": 0.15, "storage_pct": 0.03, "wastage_pct": 0.02, "confidence": "medium"}},
-    "Résines époxy": {{"unit_price": 280000, "transport_pct": 0.12, "storage_pct": 0.02, "wastage_pct": 0.02, "confidence": "medium"}},
+    "Material Name": {{"unit_price": <number>, "transport_pct": <0.05-0.10>, "storage_pct": <0.01-0.03>, "wastage_pct": <0.01-0.02>, "confidence": "medium"}},
     ...
 }}"""
 
@@ -1195,12 +1262,22 @@ Return ONLY a JSON object with material names as keys:
         self,
         machine_input: Dict[str, Any],
         suppliers: List[Dict[str, Any]],
-        use_llm: bool = True
+        use_llm: bool = True,
+        precomputed_estimate: Dict[str, Any] = None
     ) -> MachineTCO:
         """
         Calculate TCO for a single machine from RIBIF input.
+        
+        Args:
+            machine_input: Machine specification dict
+            suppliers: List of supplier info dicts
+            use_llm: Whether to call LLM for estimation (ignored if precomputed_estimate provided)
+            precomputed_estimate: Pre-computed estimate dict (from batch call)
         """
-        estimates = self.estimate_machine_tco(machine_input, suppliers, use_llm=use_llm)
+        if precomputed_estimate:
+            estimates = precomputed_estimate
+        else:
+            estimates = self.estimate_machine_tco(machine_input, suppliers, use_llm=use_llm)
         
         # Convert all values to float to handle LLM returning strings
         purchase_price = float(estimates["estimated_purchase_price"])
