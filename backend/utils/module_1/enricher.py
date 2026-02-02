@@ -155,7 +155,8 @@ class RIBIFEnricher:
 
     def _call_llm_json(self, prompt: str, tag: str) -> Dict[str, Any]:
         """
-        HARDENED: LLM call with quota checking, retry logic, and graceful error handling.
+        HARDENED: LLM call with quota checking, MAX 1 retry, and graceful error handling.
+        NO long backoff/sleep - fail fast and return minimal structure.
         """
         try:
             @with_quota_check("vertex_ai", max_calls=100)
@@ -173,20 +174,19 @@ class RIBIFEnricher:
             raw = _make_call()
             data = safe_json_loader(raw)
             
+            # NO long retry loops - if parsing failed, try ONE more time then give up
             if not data and tag == "normalization":
-                # Retry once for normalization if it failed
-                logger.warning(f"Normalization failed, retrying once...")
-                @with_retry(max_attempts=1, catch_quota_errors=True)
-                def _retry_call():
+                logger.warning(f"Normalization parse failed, single retry...")
+                try:
                     raw_retry = generate_message(
                         prompt="Your previous output was malformed. Return ONLY valid JSON.\n" + STRICT_JSON_HEADER + prompt,
                         system_instruction=SYSTEM_INSTRUCTION,
                         temperature=0.1
                     )
-                    return raw_retry
-                
-                raw_retry = _retry_call()
-                data = safe_json_loader(raw_retry)
+                    data = safe_json_loader(raw_retry)
+                except Exception as retry_err:
+                    logger.warning(f"Retry also failed: {retry_err}")
+                    data = {}
             
             return data if data else {}
             
@@ -197,13 +197,8 @@ class RIBIFEnricher:
             else:
                 logger.error(f"Task '{tag}' LLM call failed: {e}")
             
-            # Graceful degradation
+            # Graceful degradation - return empty, NO retry loops
             return {}
-            logger.error(f"Enricher LLM call '{tag}' failed, falling back to zero-shot or legacy method.")
-            if ENABLE_ZERO_SHOT:
-                return self.enrich_machine_zero_shot(machine)
-            else:
-                return self.enrich_one_machine_global(machine)
 
     def enrich_machine_zero_shot(self, machine: Dict[str, Any]) -> Dict[str, Any]:
         """
