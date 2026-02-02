@@ -10,6 +10,7 @@ from config import BASE_URL, OUTPUT_DIRS, UPLOAD_DIR, CREATE_MACHINE_IMAGES, SKI
 from supabase_utils import get_supabase, insert_module1_extraction
 from utils.module_1.core import RIBIFExtractor
 from utils.module_1.enricher import enricher
+from utils.module_1.no_nulls import fill_all_nulls, verify_no_nulls
 from utils.logger import log_skip, get_logger
 from utils.app_helpers import (
     get_pipeline_settings,
@@ -429,6 +430,18 @@ def process_module_1():
             "pipeline_settings": settings,
         })
         final_result["project_id"] = project_id
+
+        # === FINAL SAFETY NET: Fill ALL remaining nulls ===
+        module1_logger.info("Running final no-nulls safety pass...")
+        try:
+            final_result = fill_all_nulls(final_result, use_llm=False)
+            null_check = verify_no_nulls(final_result)
+            if null_check["has_nulls"]:
+                module1_logger.warning(f"Still have {null_check['null_count']} null values after final fill")
+            else:
+                module1_logger.info("✓ All fields populated - no nulls remaining")
+        except Exception as e:
+            module1_logger.warning(f"Final no-nulls pass failed: {e}")
 
         output_file = OUTPUT_DIRS["module1"] / f"{Path(filename).stem}_complete_pipeline.json"
         write_json(output_file, final_result)

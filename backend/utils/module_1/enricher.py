@@ -9,6 +9,7 @@ from utils.web_search.agentic import agentic_search
 from utils.web_search.sourcing_agent import sourcing_agent
 from utils.module_1.helpers import safe_json_loader, normalize_headers
 from utils.module_1.zero_shot_enricher import ZeroShotEnricher
+from utils.module_1.no_nulls import fill_all_nulls, verify_no_nulls, fill_machine_nulls, fill_step_nulls, get_process_params_for_machine
 from utils.normalization import normalize_numeric, canonicalize_key
 from utils.quota_manager import (
     with_quota_check, with_rate_limit, with_retry,
@@ -332,6 +333,9 @@ class RIBIFEnricher:
         machine["confidence"] = "medium"
         machine["rationale"] = f"Estimated using engineering heuristics for {name}."
         
+        # === FILL ALL MACHINE NULLS ===
+        machine = fill_machine_nulls(machine)
+        
         logger.info(f"Machine {name} fast-enriched in {round(time.time() - t_start, 2)}s")
         return machine
 
@@ -609,6 +613,22 @@ class RIBIFEnricher:
             "processing_time": processing_time,
             "metrics": metrics.to_dict()
         }
+
+        # === CRITICAL: FILL ALL NULLS - Ensure no empty fields anywhere ===
+        logger.info("Running final no-nulls pass to fill all remaining gaps...")
+        try:
+            final_json = fill_all_nulls(final_json, use_llm=False)
+            
+            # Verify no nulls remain
+            null_check = verify_no_nulls(final_json)
+            if null_check["has_nulls"]:
+                logger.warning(f"Still have {null_check['null_count']} null values after fill pass")
+            else:
+                logger.info("✓ All fields populated - no nulls remaining")
+                
+        except Exception as e:
+            logger.error(f"No-nulls fill pass failed: {e}", exc_info=True)
+            # Continue with what we have
 
         logger.info(f"Enrichment complete in {processing_time}s")
         return final_json
