@@ -35,7 +35,14 @@ export const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: {
         return url;
     };
     
-    const pitchDeckPdfUrl = resolvePdfUrl(pitchDeckData?.pdf_download_url);
+    // Add inline=true param for iframe display
+    const resolveInlinePdfUrl = (url: string | undefined): string => {
+        const resolved = resolvePdfUrl(url);
+        if (!resolved) return "";
+        return resolved.includes("?") ? `${resolved}&inline=true` : `${resolved}?inline=true`;
+    };
+    
+    const pitchDeckPdfUrl = resolveInlinePdfUrl(pitchDeckData?.pdf_download_url);
     const businessPlanDownloadUrl = resolvePdfUrl(businessPlanData?.download_url);
 
     // Fetch PDF as blob and create object URL for iframe display

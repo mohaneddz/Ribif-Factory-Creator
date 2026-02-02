@@ -24,12 +24,21 @@ DOWNLOAD_FOLDERS = [
 
 
 @bp_common.route("/download/<path:filename>", methods=["GET"])
+@cross_origin()
 def download_file(filename: str):
     safe_name = Path(filename).name
+    # Check if inline viewing is requested (for iframe PDF display)
+    inline = request.args.get("inline", "").lower() in ("1", "true", "yes")
     for folder in DOWNLOAD_FOLDERS:
         candidate = folder / safe_name
         if candidate.exists() and candidate.is_file():
-            return send_file(candidate, as_attachment=True)
+            # Determine mimetype for proper content-type header
+            mimetype = None
+            if safe_name.lower().endswith(".pdf"):
+                mimetype = "application/pdf"
+            elif safe_name.lower().endswith(".xlsx"):
+                mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            return send_file(candidate, as_attachment=not inline, mimetype=mimetype)
     return jsonify({"error": "File not found"}), 404
 
 
