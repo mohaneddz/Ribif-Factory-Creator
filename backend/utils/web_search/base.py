@@ -37,7 +37,7 @@ def _normalize_headers(headers: Dict[str, Any]) -> Dict[str, str]:
 # Default settings
 DEFAULT_TIMEOUT_S = 15
 DEFAULT_RATE_LIMIT_GAP_S = 1.0
-DEFAULT_CACHE_TTL_HOURS = 24
+DEFAULT_CACHE_TTL_HOURS = 0  # Disabled - always fetch fresh results
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",

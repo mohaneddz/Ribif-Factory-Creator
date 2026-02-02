@@ -1023,6 +1023,26 @@ Return JSON with ALL products:
             quantite = float(quantite_info.get("valeur", 0) or 0)
             unite = quantite_info.get("unite", "tonnes")
             
+            # Estimate quantity if missing or zero
+            quantity_estimated = False
+            if quantite <= 0:
+                # Estimate based on material type - conservative annual consumption
+                type_lower = (type_mat or nom).lower()
+                if any(kw in type_lower for kw in ["colorant", "additif", "additive", "pigment"]):
+                    quantite = 5  # Small quantity additives: 5 tonnes/year
+                elif any(kw in type_lower for kw in ["resin", "résine", "epoxy", "specialty"]):
+                    quantite = 20  # Specialty materials: 20 tonnes/year
+                elif any(kw in type_lower for kw in ["polymer", "plastique", "plastic", "pp", "pe", "pvc", "abs"]):
+                    quantite = 100  # Main polymers: 100 tonnes/year
+                elif any(kw in type_lower for kw in ["metal", "métal", "steel", "acier", "aluminum"]):
+                    quantite = 50  # Metals: 50 tonnes/year
+                elif any(kw in type_lower for kw in ["glass", "verre"]):
+                    quantite = 30  # Glass: 30 tonnes/year
+                else:
+                    quantite = 50  # Default: 50 tonnes/year
+                quantity_estimated = True
+                logger.info("Estimated quantity for material '%s': %.1f %s/year", nom, quantite, unite)
+            
             # Look up estimate using canonical name
             estimate = normalized_estimates.get(canonical_nom)
             
@@ -1053,6 +1073,7 @@ Return JSON with ALL products:
                 "type_materiau": type_mat,
                 "categorie": material.get("categorie", "Primaire"),
                 "quantite_annuelle": quantite,
+                "quantite_estimated": quantity_estimated,
                 "unite": unite,
                 "unit_price": round(unit_price, 2),
                 "annual_cost": round(annual_cost, 2),
@@ -1060,9 +1081,9 @@ Return JSON with ALL products:
                 "storage_cost": round(storage_cost, 2),
                 "wastage_cost": round(wastage_cost, 2),
                 "total_tco": round(total_tco, 2),
-                "estimation_confidence": estimate.get("confidence", "medium"),
+                "estimation_confidence": "low" if quantity_estimated else estimate.get("confidence", "medium"),
                 "estimation_source": estimate.get("source", "llm"),
-                "estimation_notes": estimate.get("notes", "")
+                "estimation_notes": ("Quantity estimated based on material type. " if quantity_estimated else "") + estimate.get("notes", "")
             })
         
         return results

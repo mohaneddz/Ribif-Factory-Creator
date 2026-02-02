@@ -60,7 +60,7 @@ def get_sourcing_config_from_env() -> SourcingConfig:
         target_suppliers_max=int(os.getenv("SOURCING_TARGET_MAX", DEFAULT_CONFIG.target_suppliers_max)),
         timeout_per_machine=float(os.getenv("SOURCING_TIMEOUT", DEFAULT_CONFIG.timeout_per_machine)),
         strictness_level=os.getenv("SOURCING_STRICTNESS", DEFAULT_CONFIG.strictness_level),
-        enable_cache=os.getenv("SOURCING_ENABLE_CACHE", "true").lower() == "true",
+        enable_cache=os.getenv("SOURCING_ENABLE_CACHE", "false").lower() == "true",
         domain_diversity_cap=int(os.getenv("SOURCING_DOMAIN_CAP", DEFAULT_CONFIG.domain_diversity_cap)),
         use_llm_ranking=os.getenv("SOURCING_USE_LLM_RANKING", "false").lower() == "true",
     )
