@@ -31,11 +31,18 @@ logger = get_logger(__name__)
 # Config
 # ================================
 
-NEGOTIATIONS_CACHE_DIR = Path(os.getenv(
-    "NEGOTIATIONS_CACHE_DIR",
-    os.path.join(os.path.dirname(__file__), "..", "..", "cache", "negotiations")
-))
-NEGOTIATIONS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+# Import CACHE_DIR from config (handles read-only filesystem fallback)
+try:
+    from config import CACHE_DIR as BASE_CACHE_DIR
+    _default_cache = str(BASE_CACHE_DIR / "negotiations")
+except ImportError:
+    _default_cache = os.path.join(os.path.dirname(__file__), "..", "..", "cache", "negotiations")
+
+NEGOTIATIONS_CACHE_DIR = Path(os.getenv("NEGOTIATIONS_CACHE_DIR", _default_cache))
+try:
+    NEGOTIATIONS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass  # Read-only filesystem, caching will be handled gracefully
 
 MAX_NEGOTIATION_ROUNDS = int(os.getenv("MAX_NEGOTIATION_ROUNDS", "5"))
 AUTO_ACCEPT_MARGIN = float(os.getenv("NEGOTIATION_AUTO_ACCEPT_MARGIN", "0.05"))  # Accept if within 5% of target

@@ -160,8 +160,17 @@ FALLBACK_SUPPLIERS = {
 # CACHING
 # =========================================================
 
-CACHE_DIR = Path("cache/module_4")
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
+# Import CACHE_DIR from config (handles read-only filesystem fallback)
+try:
+    from config import CACHE_DIR as BASE_CACHE_DIR
+    CACHE_DIR = BASE_CACHE_DIR / "module_4"
+except ImportError:
+    CACHE_DIR = Path("cache/module_4")
+
+try:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass  # Read-only filesystem, caching will be disabled
 
 def _cache_key(canonical_name: str, version: str) -> str:
     """Generate cache key."""

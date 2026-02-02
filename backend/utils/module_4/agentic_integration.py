@@ -349,8 +349,17 @@ def process_module4_agentic_sourcing(
 # CACHING INTEGRATION
 # =========================================================
 
-CACHE_DIR = Path("cache/module_4/agentic")
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
+# Import CACHE_DIR from config (handles read-only filesystem fallback)
+try:
+    from config import CACHE_DIR as BASE_CACHE_DIR
+    CACHE_DIR = BASE_CACHE_DIR / "module_4" / "agentic"
+except ImportError:
+    CACHE_DIR = Path("cache/module_4/agentic")
+
+try:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass  # Read-only filesystem, caching will be disabled
 
 
 def get_cached_result(machine_name: str, config: SourcingConfig) -> Optional[SourcingResult]:
