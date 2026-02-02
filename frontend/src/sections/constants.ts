@@ -25,12 +25,11 @@ export const MODULES = [
     { id: 3, title: "Email Center", icon: Mail, file: "Email_Negotiations.md", type: "email", statusText: "Préparation des emails..." },
     { id: 4, title: "Analyse TCO", icon: Calculator, file: "Rapport_TCO.json", type: "tco", statusText: "Calcul des coûts..." },
     { id: 5, title: "Business Plan", icon: Briefcase, file: "Business_Plan.xlsx", type: "businessplan", statusText: "Génération du plan..." },
-    { id: 6, title: "Pitch Deck", icon: Presentation, file: "Pitch_Deck.pdf", type: "pitchdeck", statusText: "Génération du pitch deck..." },
-    { id: 7, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." },
-    { id: 8, title: "2D Layout Design", icon: Layers, file: "layout_square.dxf", type: "layout2d", statusText: "Génération du layout 2D..." },
-    { id: 9, title: "3D Model Generation", icon: Box, file: "factory_model.glb", type: "model3d", statusText: "Modélisation 3D..." },
-    { id: 10, title: "Video Model Presentation", icon: Video, file: "Presentation_HD.mp4", type: "video", statusText: "Rendu vidéo HD..." },
-    { id: 11, title: "Digital Twin", icon: BrainCircuit, file: "Digital_Twin_Live.json", type: "twin", statusText: "Initialisation du Jumeau Numérique..." }
+    { id: 6, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." },
+    { id: 7, title: "2D Layout Design", icon: Layers, file: "layout_square.dxf", type: "layout2d", statusText: "Génération du layout 2D..." },
+    { id: 8, title: "3D Model Generation", icon: Box, file: "factory_model.glb", type: "model3d", statusText: "Modélisation 3D..." },
+    { id: 9, title: "Video Model Presentation", icon: Video, file: "Presentation_HD.mp4", type: "video", statusText: "Rendu vidéo HD..." },
+    { id: 10, title: "Digital Twin", icon: BrainCircuit, file: "Digital_Twin_Live.json", type: "twin", statusText: "Initialisation du Jumeau Numérique..." }
 ];
 
 export const MODULE_LOADING_META: Record<
