@@ -25,6 +25,7 @@ from utils.app_helpers import (
     sanitize_for_json,
 )
 from utils.image_selector import find_best_image, get_random_image
+from utils.job_manager import job_manager
 from vertex_utils import generate_image
 
 import time
@@ -33,6 +34,10 @@ from datetime import datetime
 
 bp_module1 = Blueprint("module1", __name__)
 extractor = RIBIFExtractor()
+
+# Module 1 timeout configuration
+MODULE1_TOTAL_TIMEOUT = int(os.getenv("MODULE1_TOTAL_TIMEOUT", "300"))  # 5 minutes default
+MODULE1_ENRICHMENT_TIMEOUT = int(os.getenv("MODULE1_ENRICHMENT_TIMEOUT", "120"))  # 2 minutes for enrichment
 
 
 def generate_machine_image(machine_name: str, machine_type: str, manufacturer: str = None) -> dict:
@@ -67,9 +72,53 @@ The image should be:
         return {"image_url": None, "status": "error", "error": str(e)}
 
 
+# =========================================================
+# ASYNC JOB ENDPOINTS
+# =========================================================
+
+@bp_module1.route("/api/module1/status", methods=["GET"])
+def module1_job_status():
+    """Poll job status."""
+    job_id = request.args.get("job_id")
+    if not job_id:
+        return jsonify({"error": "Missing job_id parameter"}), 400
+    
+    status = job_manager.get_status(job_id)
+    if not status:
+        return jsonify({"error": "Job not found", "job_id": job_id}), 404
+    
+    return jsonify(status)
+
+
+@bp_module1.route("/api/module1/result", methods=["GET"])
+def module1_job_result():
+    """Get job result (only when completed)."""
+    job_id = request.args.get("job_id")
+    if not job_id:
+        return jsonify({"error": "Missing job_id parameter"}), 400
+    
+    result = job_manager.get_result(job_id)
+    if not result:
+        return jsonify({"error": "Job not found", "job_id": job_id}), 404
+    
+    # Sanitize result for JSON
+    return jsonify(sanitize_for_json(result))
+
+
 @bp_module1.route("/api/module1/process", methods=["POST"])
 def process_module_1():
+    """
+    Process Module 1 - supports both sync and async modes.
+    
+    Query params:
+        async=true: Return job_id immediately, poll /status and /result
+        async=false (default): Wait for completion (legacy behavior)
+    """
     module1_logger = get_logger("module1")
+    
+    # Check for async mode
+    async_mode = request.args.get("async", "false").lower() == "true"
+    
     try:
         if SKIP_MODULE_1:
             log_skip("module1.process", reason="SKIP_MODULE_1")
@@ -83,11 +132,16 @@ def process_module_1():
             response_payload = {"message": "Success", "data": payload, "status": "skipped"}
             return jsonify(response_payload)
 
-        start_time = time.time()
+        # Extract request data before async (request context won't be available in thread)
+        start_time = time.time()  # Track processing time
         project_id = get_request_project_id(include_form=True, include_json=True)
-        download_error = None
+        settings = get_pipeline_settings()
+        owner_id = get_request_user_id()
+        
+        # Handle file upload synchronously (must happen in request context)
         filepath = None
         filename = "source.pdf"
+        download_error = None
 
         if "file" in request.files:
             file = request.files["file"]
@@ -384,6 +438,7 @@ def process_module_1():
 
         module1_id = None
         if client and project_id:
+            # WRAP ALL DB/STORAGE OPERATIONS IN TRY/EXCEPT - failures shouldn't crash response
             try:
                 # Metadata stats
                 processing_time = int(time.time() - start_time)
@@ -399,7 +454,11 @@ def process_module_1():
                 
                 # module1_id is now just project_id
                 module1_id = insert_module1_extraction(client, project_id, source_file_id, final_result, project_metadata=proj_meta)
-                
+            except Exception as e:
+                module1_logger.warning(f"Failed to insert module1 extraction: {e}")
+            
+            # Upload output file - non-blocking
+            try:
                 output_file_id, output_file_url = upload_and_register_file(
                     client=client,
                     project_id=project_id,
@@ -410,39 +469,46 @@ def process_module_1():
                 )
                 final_result["module1_output_file_id"] = output_file_id
                 final_result["module1_output_file_url"] = output_file_url
+            except Exception as e:
+                module1_logger.warning(f"Failed to upload module1 output file: {e}")
 
-                image_meta = {}
-                for m in enriched_machines:
-                    image_path = m.get("image_local_path")
-                    name = m.get("nom_machine")
-                    if image_path and name and Path(image_path).exists():
-                        try:
-                            img_file_id, img_url, img_object_path = upload_with_name_timestamp(
-                                client=client,
-                                project_id=project_id,
-                                owner_id=owner_id,
-                                local_path=image_path,
-                                category="machine-images",
-                                label=name,
-                            )
-                            image_meta[name] = {
-                                "image_file_id": img_file_id,
-                                "image_url": img_url,
-                                "image_object_path": img_object_path,
-                            }
-                        except Exception:
-                            continue
+            # Upload machine images - non-blocking, don't crash on individual failures
+            image_meta = {}
+            for m in enriched_machines:
+                image_path = m.get("image_local_path")
+                name = m.get("nom_machine")
+                if image_path and name and Path(image_path).exists():
+                    try:
+                        img_file_id, img_url, img_object_path = upload_with_name_timestamp(
+                            client=client,
+                            project_id=project_id,
+                            owner_id=owner_id,
+                            local_path=image_path,
+                            category="machine-images",
+                            label=name,
+                        )
+                        image_meta[name] = {
+                            "image_file_id": img_file_id,
+                            "image_url": img_url,
+                            "image_object_path": img_object_path,
+                        }
+                    except Exception as img_err:
+                        module1_logger.warning(f"Failed to upload image for {name}: {img_err}")
+                        continue
 
+            # Insert machines to DB - non-blocking
+            try:
                 machine_ids = insert_machines_from_stage(client, project_id, machines, image_meta)
                 for name, meta in image_meta.items():
                     machine_id = machine_ids.get(name)
                     file_id = meta.get("image_file_id")
                     if machine_id and file_id:
-                        insert_machine_assets(client, machine_id, file_id, asset_type="image", label=name)
-
-            except Exception as e:
-                module1_logger = get_logger("module1")
-                module1_logger.warning(f"Failed to upload module1 output or enrich machines: {e}")
+                        try:
+                            insert_machine_assets(client, machine_id, file_id, asset_type="image", label=name)
+                        except Exception as asset_err:
+                            module1_logger.warning(f"Failed to insert machine asset for {name}: {asset_err}")
+            except Exception as db_err:
+                module1_logger.warning(f"Failed to insert machines to DB: {db_err}")
 
         final_result.setdefault("ribif_metadata", {})
         final_result["ribif_metadata"]["module1_id"] = module1_id
