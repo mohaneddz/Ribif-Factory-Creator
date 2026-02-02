@@ -16,7 +16,6 @@ from .base import (
     SupplierResult,
     SearchError,
     safe_request,
-    get_cache,
     rate_limit,
 )
 
@@ -26,16 +25,10 @@ INDIAMART_SEARCH_URL = "https://dir.indiamart.com/search.mp"
 @rate_limit(min_gap_s=3.0)
 def search_products(query: str, max_results: int = 10) -> List[ProductResult]:
     """Search IndiaMart for products."""
-    cache = get_cache()
-    cached = cache.get(query, "indiamart_products")
-    if cached:
-        return [ProductResult(**r) if isinstance(r, dict) else r for r in cached]
-    
     try:
         search_url = f"{INDIAMART_SEARCH_URL}?ss={quote_plus(query)}"
         response = safe_request(url=search_url, timeout=20)
         results = _parse_search_results(response.text, max_results)
-        cache.set(query, "indiamart_products", [r.to_dict() for r in results])
         return results
     except Exception as e:
         raise SearchError(f"IndiaMart search failed: {e}")
@@ -124,16 +117,9 @@ def _parse_price(price_text: str) -> tuple[float, float]:
 @rate_limit(min_gap_s=3.0)
 def get_price_range(product_url: str) -> Optional[Dict[str, Any]]:
     """Get detailed price information from product page."""
-    cache = get_cache()
-    cached = cache.get(product_url, "indiamart_price")
-    if cached:
-        return cached
-    
     try:
         response = safe_request(url=product_url, timeout=20)
         result = _parse_product_page(response.text)
-        if result:
-            cache.set(product_url, "indiamart_price", result)
         return result
     except Exception:
         return None
@@ -165,16 +151,9 @@ def _parse_product_page(html: str) -> Optional[Dict[str, Any]]:
 @rate_limit(min_gap_s=3.0)
 def get_supplier_info(supplier_url: str) -> Optional[SupplierResult]:
     """Get supplier information from their IndiaMart profile."""
-    cache = get_cache()
-    cached = cache.get(supplier_url, "indiamart_supplier")
-    if cached:
-        return SupplierResult(**cached) if isinstance(cached, dict) else cached
-    
     try:
         response = safe_request(url=supplier_url, timeout=20)
         result = _parse_supplier_page(response.text, supplier_url)
-        if result:
-            cache.set(supplier_url, "indiamart_supplier", result.to_dict())
         return result
     except Exception:
         return None

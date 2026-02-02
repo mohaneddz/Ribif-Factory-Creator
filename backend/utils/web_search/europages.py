@@ -16,7 +16,6 @@ from .base import (
     SupplierResult,
     SearchError,
     safe_request,
-    get_cache,
     rate_limit,
 )
 
@@ -26,12 +25,6 @@ EUROPAGES_SEARCH_URL = "https://www.europages.com/search"
 @rate_limit(min_gap_s=2.0)
 def search_companies(query: str, country: Optional[str] = None, max_results: int = 10) -> List[SupplierResult]:
     """Search Europages for companies/suppliers."""
-    cache_key = f"{query}:{country or 'all'}"
-    cache = get_cache()
-    cached = cache.get(cache_key, "europages_companies")
-    if cached:
-        return [SupplierResult(**r) if isinstance(r, dict) else r for r in cached]
-    
     try:
         params = f"?q={quote_plus(query)}"
         if country:
@@ -39,7 +32,6 @@ def search_companies(query: str, country: Optional[str] = None, max_results: int
         
         response = safe_request(url=f"{EUROPAGES_SEARCH_URL}{params}", timeout=20)
         results = _parse_search_results(response.text, max_results)
-        cache.set(cache_key, "europages_companies", [r.to_dict() for r in results])
         return results
     except Exception as e:
         raise SearchError(f"Europages search failed: {e}")
@@ -102,16 +94,9 @@ def _parse_search_results(html: str, max_results: int) -> List[SupplierResult]:
 @rate_limit(min_gap_s=2.0)
 def get_company_details(company_url: str) -> Optional[SupplierResult]:
     """Get detailed company information from Europages profile."""
-    cache = get_cache()
-    cached = cache.get(company_url, "europages_company")
-    if cached:
-        return SupplierResult(**cached) if isinstance(cached, dict) else cached
-    
     try:
         response = safe_request(url=company_url, timeout=20)
         result = _parse_company_page(response.text, company_url)
-        if result:
-            cache.set(company_url, "europages_company", result.to_dict())
         return result
     except Exception:
         return None

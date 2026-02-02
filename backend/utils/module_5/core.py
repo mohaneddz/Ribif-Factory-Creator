@@ -31,7 +31,7 @@ logger = get_logger(__name__)
 # Config
 # ================================
 
-DEFAULT_CURRENCY = os.getenv("NEGOTIATION_DEFAULT_CURRENCY", "USD")
+DEFAULT_CURRENCY = os.getenv("NEGOTIATION_DEFAULT_CURRENCY", "DZD")
 DEFAULT_LANGUAGE = os.getenv("NEGOTIATION_DEFAULT_LANGUAGE", "English")
 DEFAULT_VOICE_STT_PROVIDER = os.getenv("VOICE_STT_PROVIDER", "none").strip().lower()
 DEFAULT_VOICE_TTS_PROVIDER = os.getenv("VOICE_TTS_PROVIDER", "none").strip().lower()

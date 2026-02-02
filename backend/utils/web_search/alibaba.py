@@ -17,7 +17,6 @@ from .base import (
     SupplierResult,
     SearchError,
     safe_request,
-    get_cache,
     rate_limit,
     HEADERS,
 )
@@ -203,24 +202,9 @@ def _get_alibaba() -> AlibabaSearch:
 
 def search_products(query: str, max_results: int = 10) -> List[ProductResult]:
     """Search Alibaba products."""
-    cache = get_cache()
-    cached = cache.get(query, "alibaba_products")
-    if cached:
-        return [ProductResult(**r) if isinstance(r, dict) else r for r in cached]
-    
-    results = _get_alibaba().search_products(query, max_results)
-    cache.set(query, "alibaba_products", [r.to_dict() for r in results])
-    return results
+    return _get_alibaba().search_products(query, max_results)
 
 
 def get_supplier_details(supplier_url: str) -> Optional[SupplierResult]:
     """Get supplier details from Alibaba URL."""
-    cache = get_cache()
-    cached = cache.get(supplier_url, "alibaba_supplier")
-    if cached:
-        return SupplierResult(**cached) if isinstance(cached, dict) else cached
-    
-    result = _get_alibaba().get_supplier_details(supplier_url)
-    if result:
-        cache.set(supplier_url, "alibaba_supplier", result.to_dict())
-    return result
+    return _get_alibaba().get_supplier_details(supplier_url)

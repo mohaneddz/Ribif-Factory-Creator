@@ -4,12 +4,35 @@ Consolidated module following ribif_module_1 structure
 Uses Gemini API for cost estimations
 
 TCO Formula: TCO = Ci + Co + Cm + Cd - Rv
-Where:
-- Ci (Initial Costs): Purchase price + implementation
-- Co (Operating Costs): Costs to run over lifespan
-- Cm (Maintenance Costs): Repairs and upgrades
-- Cd (Downtime/Hidden Costs): Productivity loss
-- Rv (Residual Value): Resale/salvage value
+
+Component Breakdown:
+- Ci (Initial Costs) = Cp + Cins + Ctr + Cinf + Ci_training
+  * Cp: Purchase price (equipment cost + import duties + taxes)
+  * Cins: Installation (site prep, connections, commissioning)
+  * Ctr: Transportation (shipping, freight, handling, insurance)
+  * Cinf: Infrastructure (building mods, utilities upgrade)
+  * Ci_training: Training (operator training, documentation)
+
+- Co (Operating Costs) = Ce + Clab + Ccons + Cutil
+  * Ce: Energy (electricity, gas, fuel)
+  * Clab: Labor (operators, supervision, benefits)
+  * Ccons: Consumables (lubricants, filters, tooling)
+  * Cutil: Utilities (water, compressed air, cooling)
+
+- Cm (Maintenance Costs) = Cpm + Ccm + Csp
+  * Cpm: Preventive maintenance (scheduled inspections)
+  * Ccm: Corrective maintenance (unplanned repairs)
+  * Csp: Spare parts (replacement components)
+
+- Cd (Downtime/Hidden Costs) = Cprod_loss + Cqual + Cenv + Ccompliance
+  * Cprod_loss: Production loss (lost output × margin)
+  * Cqual: Quality costs (scrap, rework, returns)
+  * Cenv: Environmental (waste, emissions)
+  * Ccompliance: Regulatory (permits, certifications)
+
+- Rv (Residual Value) = (Cp × depreciation_factor) - Cdisposal
+  * Depreciation factor: 10-30% after 10-15 years
+  * Cdisposal: Decommissioning and removal costs
 """
 import os
 import json
@@ -184,7 +207,62 @@ ASSUME USED OR ENTRY-LEVEL EQUIPMENT unless explicitly specified as "new" or "pr
 
 ALL VALUES MUST BE IN ALGERIAN DINAR (DZD).
 
-IMPORTANT ALGERIAN MARKET CONTEXT:
+=== TCO CALCULATION METHODOLOGY ===
+TCO Formula: TCO = Ci + Co + Cm + Cd - Rv
+
+Where the components are calculated as follows:
+
+1. INITIAL/ACQUISITION COSTS (Ci):
+   Ci = Cp + Cins + Ctr + Cinf + Ci_training
+   - Cp (Purchase Price): Base equipment cost, including import duties and taxes
+   - Cins (Installation): Site preparation, electrical/plumbing connections, commissioning
+   - Ctr (Transportation): Shipping, freight, handling, insurance during transit
+   - Cinf (Infrastructure): Building modifications, utilities upgrade, foundations
+   - Ci_training (Training): Operator training, technical documentation, certification
+
+2. OPERATING COSTS (Co) - Annual:
+   Co = Ce + Clab + Ccons + Cutil
+   - Ce (Energy): Electricity, gas, fuel consumption based on machine power rating
+   - Clab (Labor): Operator wages, supervision, benefits (direct labor allocation)
+   - Ccons (Consumables): Lubricants, filters, tooling, safety equipment
+   - Cutil (Utilities): Water, compressed air, cooling, waste disposal
+
+3. MAINTENANCE COSTS (Cm) - Annual:
+   Cm = Cpm + Ccm + Csp
+   - Cpm (Preventive Maintenance): Scheduled inspections, cleaning, calibration
+   - Ccm (Corrective Maintenance): Unplanned repairs, emergency interventions
+   - Csp (Spare Parts): Replacement components, wear parts inventory
+
+4. DOWNTIME/HIDDEN COSTS (Cd) - Annual:
+   Cd = Cprod_loss + Cqual + Cenv + Ccompliance
+   - Cprod_loss (Production Loss): Lost output during breakdowns × margin per unit
+   - Cqual (Quality Costs): Scrap, rework, customer returns, warranty claims
+   - Cenv (Environmental): Waste treatment, emissions control, compliance monitoring
+   - Ccompliance (Regulatory): Permits, inspections, certifications, safety audits
+
+5. RESIDUAL VALUE (Rv):
+   Rv = (Cp × depreciation_factor) - Cdisposal
+   - Depreciation factor: Typically 10-30% of original value after 10-15 years
+   - Cdisposal: Decommissioning, removal, environmental remediation if negative value
+
+=== COST ESTIMATION GUIDELINES ===
+As percentage of Purchase Price (Cp):
+- Installation (Cins): 5-15% of Cp
+- Transportation (Ctr): 3-10% of Cp (higher for overseas imports)
+- Infrastructure (Cinf): 2-10% of Cp (depends on facility readiness)
+- Training (Ci_training): 1-3% of Cp
+- Annual Energy (Ce): 2-8% of Cp (depends on utilization and power rating)
+- Annual Labor (Clab): 3-10% of Cp (depends on automation level)
+- Annual Consumables (Ccons): 1-3% of Cp
+- Annual Utilities (Cutil): 0.5-2% of Cp
+- Annual Preventive Maintenance (Cpm): 2-4% of Cp
+- Annual Corrective Maintenance (Ccm): 1-3% of Cp
+- Annual Spare Parts (Csp): 1-3% of Cp
+- Annual Production Loss (Cprod_loss): 0.5-2% of annual production value
+- Annual Quality Costs (Cqual): 0.5-2% of production value
+- Residual Value (Rv): 10-30% of Cp at end of life
+
+=== IMPORTANT ALGERIAN MARKET CONTEXT ===
 - Labor costs: Technician salary 50,000-80,000 DZD/month, Engineer 100,000-150,000 DZD/month
 - Energy costs: Industrial electricity ~5-8 DZD/kWh
 - Spare parts: Often imported, add 30-50% markup on international prices

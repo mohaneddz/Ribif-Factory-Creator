@@ -18,7 +18,6 @@ from .base import (
     ImageResult,
     SearchError,
     safe_request,
-    get_cache,
 )
 
 BING_API_URL = "https://api.bing.microsoft.com/v7.0"
@@ -128,36 +127,14 @@ def _get_bing() -> BingSearch:
 
 def search_web(query: str, count: int = 10) -> List[SearchResult]:
     """Search Bing Web."""
-    cache = get_cache()
-    cached = cache.get(query, "bing_web")
-    if cached:
-        return [SearchResult(**r) if isinstance(r, dict) else r for r in cached]
-    
-    results = _get_bing().search(query, count)
-    cache.set(query, "bing_web", [r.to_dict() for r in results])
-    return results
+    return _get_bing().search(query, count)
 
 
 def search_images(query: str, count: int = 10) -> List[ImageResult]:
     """Search Bing Images."""
-    cache = get_cache()
-    cached = cache.get(query, "bing_images")
-    if cached:
-        return [ImageResult(**r) if isinstance(r, dict) else r for r in cached]
-    
-    results = _get_bing().search_images(query, count)
-    cache.set(query, "bing_images", [r.to_dict() for r in results])
-    return results
+    return _get_bing().search_images(query, count)
 
 
 def search_entities(query: str) -> Optional[Dict[str, Any]]:
     """Search Bing Entity Search."""
-    cache = get_cache()
-    cached = cache.get(query, "bing_entities")
-    if cached:
-        return cached
-    
-    result = _get_bing().search_entities(query)
-    if result:
-        cache.set(query, "bing_entities", result)
-    return result
+    return _get_bing().search_entities(query)
