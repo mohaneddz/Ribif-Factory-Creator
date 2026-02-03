@@ -70,4 +70,3 @@ certifi==2025.11.12
 moviepy==2.2.1
 
 phonenumbers
-pdflatex
