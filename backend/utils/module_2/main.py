@@ -90,19 +90,47 @@ def _ensure_dirs() -> None:
 
 
 def _parse_pipeline_response(text: str) -> Dict[str, Any]:
-    # Try to extract JSON payload even if wrapped in fences
-    if "```" in text:
-        # prefer ```json block
-        if "```json" in text:
-            body = text.split("```json", 1)[1].split("```", 1)[0]
+    """Parse LLM response, extracting JSON even from markdown fences."""
+    import re
+    
+    if not text or not text.strip():
+        raise ValueError("Empty response from LLM")
+    
+    body = text.strip()
+    
+    # Try to extract JSON from markdown code fences
+    if "```" in body:
+        # Try ```json block first
+        json_match = re.search(r'```json\s*([\s\S]*?)```', body)
+        if json_match:
+            body = json_match.group(1).strip()
         else:
-            body = text.split("```", 1)[1].split("```", 1)[0]
-    else:
-        body = text
+            # Try generic ``` block
+            generic_match = re.search(r'```\s*([\s\S]*?)```', body)
+            if generic_match:
+                body = generic_match.group(1).strip()
+    
+    # Try to find JSON object if response has extra text
+    if not body.startswith('{'):
+        json_start = body.find('{')
+        if json_start != -1:
+            # Find matching closing brace
+            depth = 0
+            for i, c in enumerate(body[json_start:], json_start):
+                if c == '{':
+                    depth += 1
+                elif c == '}':
+                    depth -= 1
+                    if depth == 0:
+                        body = body[json_start:i+1]
+                        break
+    
     try:
         return json.loads(body)
     except json.JSONDecodeError as exc:
-        raise ValueError("Pipeline response is not valid JSON. Check model output or prompt.") from exc
+        # Log the problematic response for debugging
+        warn(f"Failed to parse JSON. Response head: {body[:500]}...")
+        raise ValueError(f"Pipeline response is not valid JSON: {exc}") from exc
 
 
 def _build_flows(machines: List[Dict[str, Any]], links_path: str, force_regen: bool) -> List[Tuple[str, str]]:
@@ -110,13 +138,18 @@ def _build_flows(machines: List[Dict[str, Any]], links_path: str, force_regen: b
     if should_regenerate_links(links_path, force_regen):
         m_list_str = format_machine_list(machines)
         prompt = MACHINE_PIPELINE_PROMPT.replace("{machines_list}", m_list_str)
-        resp = generate_message(
-            prompt=prompt,
-            system_instruction="You are a factory systems engineer.",
-        )
-        pipeline = _parse_pipeline_response(resp)
-        with open(links_path, "w", encoding="utf-8") as f:
-            json.dump(pipeline, f, indent=2)
+        try:
+            resp = generate_message(
+                prompt=prompt,
+                system_instruction="You are a factory systems engineer.",
+            )
+            pipeline = _parse_pipeline_response(resp)
+            with open(links_path, "w", encoding="utf-8") as f:
+                json.dump(pipeline, f, indent=2)
+        except Exception as exc:
+            warn(f"LLM pipeline generation failed: {exc}")
+            warn("Falling back to linear flow based on machine order.")
+            pipeline = None  # Will use fallback below
     else:
         pipeline = load_pipeline(links_path)
 

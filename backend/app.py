@@ -99,77 +99,98 @@ app.register_blueprint(bp_validation)
 app.register_blueprint(health_bp)
 
 # =========================================================
-# GLOBAL ERROR HANDLERS - ALWAYS RETURN JSON
+# GLOBAL ERROR HANDLERS - ALWAYS RETURN JSON WITH CORS
 # =========================================================
+
+def _add_cors_to_response(response):
+    """Helper to add CORS headers to error responses."""
+    origin = request.headers.get("Origin", "*")
+    if CORS_ORIGINS == "*":
+        response.headers["Access-Control-Allow-Origin"] = origin if origin else "*"
+    elif isinstance(CORS_ORIGINS, list) and origin in CORS_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+    else:
+        response.headers["Access-Control-Allow-Origin"] = CORS_ORIGINS[0] if isinstance(CORS_ORIGINS, list) else "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, X-User-Id, X-Project-Id, Accept, Origin"
+    return response
+
 
 @app.errorhandler(400)
 def bad_request_error(error):
     from flask import jsonify, request
-    return jsonify({
+    response = jsonify({
         "error": "Bad Request",
         "message": str(error.description) if hasattr(error, 'description') else str(error),
         "path": request.path,
         "method": request.method,
         "hint": "Check Content-Type header and request body format"
-    }), 400
+    })
+    return _add_cors_to_response(response), 400
 
 
 @app.errorhandler(404)
 def not_found_error(error):
     from flask import jsonify, request
-    return jsonify({
+    response = jsonify({
         "error": "Not Found",
         "message": f"The requested URL {request.path} was not found on this server.",
         "path": request.path
-    }), 404
+    })
+    return _add_cors_to_response(response), 404
 
 
 @app.errorhandler(405)
 def method_not_allowed_error(error):
     from flask import jsonify, request
-    return jsonify({
+    response = jsonify({
         "error": "Method Not Allowed",
         "message": f"The method {request.method} is not allowed for {request.path}",
         "path": request.path,
         "method": request.method
-    }), 405
+    })
+    return _add_cors_to_response(response), 405
 
 
 @app.errorhandler(413)
 def request_entity_too_large(error):
     from flask import jsonify
-    return jsonify({
+    response = jsonify({
         "error": "Request too large",
         "message": "The request body exceeds the maximum allowed size (100MB)"
-    }), 413
+    })
+    return _add_cors_to_response(response), 413
 
 
 @app.errorhandler(500)
 def internal_server_error(error):
     from flask import jsonify, request
-    return jsonify({
+    response = jsonify({
         "error": "Internal Server Error",
         "message": "An unexpected error occurred. Please check server logs.",
         "path": request.path,
         "details": str(error) if app.debug else None
-    }), 500
+    })
+    return _add_cors_to_response(response), 500
 
 
 @app.errorhandler(Exception)
 def handle_uncaught_exception(error):
-    """Catch-all for any unhandled exceptions - ALWAYS return JSON."""
+    """Catch-all for any unhandled exceptions - ALWAYS return JSON with CORS."""
     from flask import jsonify, request
     
     # Log the full traceback
     tb = traceback.format_exc()
     logging.getLogger("flask").error(f"Uncaught exception on {request.path}: {error}\n{tb}")
     
-    return jsonify({
+    response = jsonify({
         "error": "Internal Server Error",
         "message": str(error) if app.debug else "An unexpected error occurred",
         "path": request.path,
         "type": type(error).__name__
-    }), 500
+    })
+    return _add_cors_to_response(response), 500
 
 
 if __name__ == "__main__":
