@@ -31,18 +31,22 @@ def generate_business_plan():
         project_id = data.get("project_id") or data.get("ribif_metadata", {}).get("project_id")
         tco_run_id = data.get("tco_run_id")
 
+        # Safely extract nested values with null checks
+        stage_1 = data.get("stage_1_informations_generales") or {}
+        info_gen = stage_1.get("informations_generales") or {} if stage_1 else {}
+        
         bp_input = BusinessPlanInput(
-            project_name=data.get("project_name", data.get("stage_1_informations_generales", {}).get("informations_generales", {}).get("nom_projet", "Untitled Project")),
-            company_name=data.get("company_name", data.get("stage_1_informations_generales", {}).get("informations_generales", {}).get("nom_entreprise", "RIBIF Industries")),
+            project_name=data.get("project_name") or info_gen.get("nom_projet") or "Untitled Project",
+            company_name=data.get("company_name") or info_gen.get("nom_entreprise") or "RIBIF Industries",
             total_tco=data.get("total_tco", 0),
             average_annual_tco=data.get("average_annual_tco", 0),
             total_machines_tco=data.get("total_machines_tco", 0),
             total_products_tco=data.get("total_products_tco", 0),
             total_raw_materials_tco=data.get("total_raw_materials_tco", 0),
-            machine_tco=data.get("machine_tco", []),
-            product_tco=data.get("product_tco", []),
-            raw_materials_tco=data.get("raw_materials_tco", []),
-            annual_tco=data.get("annual_tco", []),
+            machine_tco=data.get("machine_tco") or [],
+            product_tco=data.get("product_tco") or [],
+            raw_materials_tco=data.get("raw_materials_tco") or [],
+            annual_tco=data.get("annual_tco") or [],
             stage_1_informations_generales=data.get("stage_1_informations_generales"),
             stage_2_matieres_premieres=data.get("stage_2_matieres_premieres"),
             stage_3_produits_fabriques=data.get("stage_3_produits_fabriques"),
@@ -118,26 +122,30 @@ def generate_pitch_deck():
         project_id = data.get("project_id") or data.get("ribif_metadata", {}).get("project_id")
         tco_run_id = data.get("tco_run_id")
 
+        # Safely extract nested values with null checks
+        stage_1 = data.get("stage_1_informations_generales") or {}
+        info_gen = stage_1.get("informations_generales") or {} if stage_1 else {}
+
         pd_input = PitchDeckInput(
-            project_name=data.get("project_name", data.get("stage_1_informations_generales", {}).get("informations_generales", {}).get("nom_projet", "Untitled Project")),
-            company_name=data.get("company_name", data.get("stage_1_informations_generales", {}).get("informations_generales", {}).get("nom_entreprise", "RIBIF Industries")),
+            project_name=data.get("project_name") or info_gen.get("nom_projet") or "Untitled Project",
+            company_name=data.get("company_name") or info_gen.get("nom_entreprise") or "RIBIF Industries",
             total_tco=data.get("total_tco", 0),
             average_annual_tco=data.get("average_annual_tco", 0),
             total_machines_tco=data.get("total_machines_tco", 0),
             total_products_tco=data.get("total_products_tco", 0),
             total_raw_materials_tco=data.get("total_raw_materials_tco", 0),
-            machine_tco=data.get("machine_tco", []),
-            product_tco=data.get("product_tco", []),
-            raw_materials_tco=data.get("raw_materials_tco", []),
-            annual_tco=data.get("annual_tco", []),
+            machine_tco=data.get("machine_tco") or [],
+            product_tco=data.get("product_tco") or [],
+            raw_materials_tco=data.get("raw_materials_tco") or [],
+            annual_tco=data.get("annual_tco") or [],
             stage_1_informations_generales=data.get("stage_1_informations_generales"),
             stage_2_matieres_premieres=data.get("stage_2_matieres_premieres"),
             stage_3_produits_fabriques=data.get("stage_3_produits_fabriques"),
             stage_4_machines_equipements=data.get("stage_4_machines_equipements"),
             stage_5_processus_production=data.get("stage_5_processus_production"),
             stage_6_informations_complementaires=data.get("stage_6_informations_complementaires"),
-            presenter_name=data.get("presenter_name", ""),
-            presenter_title=data.get("presenter_title", ""),
+            presenter_name=data.get("presenter_name") or "",
+            presenter_title=data.get("presenter_title") or "",
         )
 
         generator = RIBIFModule8PitchDeck()

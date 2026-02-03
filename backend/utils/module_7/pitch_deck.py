@@ -110,10 +110,10 @@ class RIBIFModule8PitchDeck:
         ]
         french_count = sum(1 for ind in french_indicators if ind in data_str)
         
-        # Check description for French words  
-        stage_1 = data.get("stage_1_informations_generales", {})
-        info_gen = stage_1.get("informations_generales", {})
-        description = info_gen.get("description_projet", "")
+        # Check description for French words (with null safety)
+        stage_1 = data.get("stage_1_informations_generales") if data else None
+        info_gen = stage_1.get("informations_generales", {}) if stage_1 else {}
+        description = info_gen.get("description_projet", "") if info_gen else ""
         
         if description:
             french_words = ["le", "la", "les", "une", "des", "pour", "dans", "avec", "projet", "entreprise"]
@@ -301,13 +301,15 @@ class RIBIFModule8PitchDeck:
         """Generate pitch deck using Presenton API."""
         if not self.presenton_api_key:
             raise ValueError("Missing PRESENTON_API_KEY in environment.")
+        if not input_data:
+            raise ValueError("Input data is None or empty.")
         if not input_data.project_name or not input_data.company_name:
             raise ValueError("Missing required project or company name for pitch deck generation.")
         if input_data.total_tco <= 0 or input_data.average_annual_tco <= 0:
             raise ValueError("Missing or invalid TCO inputs; cannot generate pitch deck without real data.")
-        # Detect language
-        data_dict = input_data.model_dump()
-        language = self.detect_language(data_dict)
+        # Detect language (with null-safe data)
+        data_dict = input_data.model_dump() if input_data else {}
+        language = self.detect_language(data_dict or {})
         is_french = self._detected_language == "fr"
         
         # Build pitch content

@@ -248,10 +248,11 @@ Respond ONLY with the requested JSON, no explanatory text."""
         if input_data.total_tco <= 0 or input_data.average_annual_tco <= 0:
             raise ValueError("Missing or invalid TCO inputs; cannot generate business plan without real TCO output.")
         
-        # Detect language from input
+        # Detect language from input (with null safety)
         stage1 = input_data.stage_1_informations_generales or {}
-        info_gen = stage1.get("informations_generales", {})
-        combined_text = f"{input_data.project_name} {input_data.company_name} {info_gen.get('description_projet', '')}"
+        info_gen = stage1.get("informations_generales") or {} if stage1 else {}
+        description = info_gen.get('description_projet', '') if info_gen else ''
+        combined_text = f"{input_data.project_name} {input_data.company_name} {description}"
         self.detect_language(combined_text)
         
         # Ensure output directory exists
@@ -455,11 +456,12 @@ Respond ONLY with the requested JSON, no explanatory text."""
     def _estimate_capex_with_llm(self, input_data: BusinessPlanInput) -> Dict[str, Any]:
         """Estimate Capital Expenditures using LLM."""
         stage1 = input_data.stage_1_informations_generales or {}
-        info_gen = stage1.get("informations_generales", {})
+        info_gen = stage1.get("informations_generales") or {}
         stage3 = input_data.stage_3_produits_fabriques or {}
         
-        secteur = info_gen.get("secteur_activite", "industrie")
-        produits = [p.get("nom_produit", "") for p in stage3.get("produits_fabriques", [])]
+        secteur = info_gen.get("secteur_activite", "industrie") if info_gen else "industrie"
+        produits_list = stage3.get("produits_fabriques") or [] if stage3 else []
+        produits = [p.get("nom_produit", "") for p in produits_list if p]
         machines = [m.get("machine_name", "") for m in input_data.machine_tco]
         
         lang = "French" if self._detected_language == "fr" else "English"
@@ -507,11 +509,12 @@ Respond in JSON:
     def _estimate_opex_with_llm(self, input_data: BusinessPlanInput) -> Dict[str, Any]:
         """Estimate Operating Expenses using LLM."""
         stage1 = input_data.stage_1_informations_generales or {}
-        info_gen = stage1.get("informations_generales", {})
+        info_gen = stage1.get("informations_generales") or {}
         stage2 = input_data.stage_2_matieres_premieres or {}
         
-        secteur = info_gen.get("secteur_activite", "industrie")
-        materials = [m.get("nom_materiau", "") for m in stage2.get("matieres_premieres", [])]
+        secteur = info_gen.get("secteur_activite", "industrie") if info_gen else "industrie"
+        materials_list = stage2.get("matieres_premieres") or [] if stage2 else []
+        materials = [m.get("nom_materiau", "") for m in materials_list if m]
         
         lang = "French" if self._detected_language == "fr" else "English"
         
@@ -563,11 +566,11 @@ Respond in JSON:
     def _estimate_pricing_with_llm(self, input_data: BusinessPlanInput) -> Dict[str, Any]:
         """Estimate Product Pricing using LLM."""
         stage1 = input_data.stage_1_informations_generales or {}
-        info_gen = stage1.get("informations_generales", {})
+        info_gen = stage1.get("informations_generales") or {} if stage1 else {}
         stage3 = input_data.stage_3_produits_fabriques or {}
         
-        secteur = info_gen.get("secteur_activite", "industrie")
-        produits = stage3.get("produits_fabriques", [])
+        secteur = info_gen.get("secteur_activite", "industrie") if info_gen else "industrie"
+        produits = stage3.get("produits_fabriques") or [] if stage3 else []
         
         lang = "French" if self._detected_language == "fr" else "English"
         
@@ -628,19 +631,21 @@ Respond in JSON:
 
     def _generate_bmc_with_llm(self, input_data: BusinessPlanInput, financial_data: Dict) -> Dict[str, str]:
         """Generate all BMC sections using Gemini LLM."""
-        # Extract context
+        # Extract context (with null safety)
         stage1 = input_data.stage_1_informations_generales or {}
-        info_gen = stage1.get("informations_generales", {})
+        info_gen = stage1.get("informations_generales") or {} if stage1 else {}
         stage3 = input_data.stage_3_produits_fabriques or {}
         stage6 = input_data.stage_6_informations_complementaires or {}
         
-        projet = info_gen.get("nom_projet", input_data.project_name)
-        entreprise = info_gen.get("nom_entreprise", input_data.company_name)
-        secteur = info_gen.get("secteur_activite", "industrie")
-        description = info_gen.get("description_projet", "")
-        objectifs = info_gen.get("objectifs_strategiques", [])
-        produits = [p.get("nom_produit", "") for p in stage3.get("produits_fabriques", [])]
-        certifications = stage6.get("aspects_reglementaires", {}).get("certifications", [])
+        projet = info_gen.get("nom_projet", input_data.project_name) if info_gen else input_data.project_name
+        entreprise = info_gen.get("nom_entreprise", input_data.company_name) if info_gen else input_data.company_name
+        secteur = info_gen.get("secteur_activite", "industrie") if info_gen else "industrie"
+        description = info_gen.get("description_projet", "") if info_gen else ""
+        objectifs = info_gen.get("objectifs_strategiques") or [] if info_gen else []
+        produits_list = stage3.get("produits_fabriques") or [] if stage3 else []
+        produits = [p.get("nom_produit", "") for p in produits_list if p]
+        aspects_reg = stage6.get("aspects_reglementaires") or {} if stage6 else {}
+        certifications = aspects_reg.get("certifications") or [] if aspects_reg else []
         
         lang = "French" if self._detected_language == "fr" else "English"
         
