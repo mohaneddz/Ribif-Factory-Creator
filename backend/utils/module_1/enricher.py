@@ -650,6 +650,13 @@ class RIBIFEnricher:
                 return raw
             
             raw = _make_call()
+            logger.debug(f"Task '{tag}' raw LLM response type: {type(raw).__name__}, length: {len(raw) if raw else 0}")
+            
+            # HARDENED: Ensure raw is a string before passing to safe_json_loader
+            if not isinstance(raw, str):
+                logger.warning(f"Task '{tag}' received non-string response: {type(raw).__name__}. Converting...")
+                raw = str(raw) if raw is not None else "{}"
+            
             data = safe_json_loader(raw)
             
             # NO long retry loops - if parsing failed, try ONE more time then give up

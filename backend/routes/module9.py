@@ -6,6 +6,7 @@ from supabase_utils import get_supabase, insert_catalog
 # Heavy imports moved to lazy loading for faster startup
 from utils.app_helpers import get_request_user_id, load_template_payload, upload_and_register_file, upload_bytes_and_register_file
 from utils.logger import log_skip, get_logger
+from utils.module_9.core import CatalogInput, RIBIFModule9Catalog
 
 logger = get_logger(__name__)
 bp_module9 = Blueprint("module9", __name__)

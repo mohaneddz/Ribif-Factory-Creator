@@ -262,7 +262,7 @@ def score_supplier_signals(
 
 def filter_and_score_supplier(
     supplier: Dict,
-    min_score: float = 0.3,
+    min_score: float = 0.15,
     machine_name: str = ""
 ) -> Tuple[bool, float, str, str]:
     """
@@ -282,6 +282,17 @@ def filter_and_score_supplier(
     if should_reject:
         return False, 0.0, f"REJECTED: {reject_reason}", 'rejected'
     
+    # SAFETY NET: Fuzzy name match bypass - if supplier name closely matches machine_name, allow through
+    if machine_name and supplier_name:
+        name_lower = supplier_name.lower()
+        machine_lower = machine_name.lower()
+        # Check if any significant word from machine_name appears in supplier_name
+        machine_words = [w for w in machine_lower.split() if len(w) > 3]
+        name_match_ratio = sum(1 for w in machine_words if w in name_lower) / max(len(machine_words), 1)
+        if name_match_ratio >= 0.5:  # 50% of significant words match
+            reason = f"ACCEPTED via fuzzy name match ({name_match_ratio:.0%} word overlap with '{machine_name}')"
+            return True, 0.6, reason, 'name_matched'
+    
     # Classify supplier type
     supplier_type = classify_supplier_type(supplier_name, notes, url)
     
@@ -290,11 +301,11 @@ def filter_and_score_supplier(
         supplier_name, url, title, snippet, notes, supplier_type
     )
     
-    # Require at least one signal from each of two categories
+    # RELAXED: Require at least one signal from ONE category (was 2)
     categories_with_signals = sum(1 for count in signal_breakdown.values() if count > 0)
     
-    if categories_with_signals < 2:
-        reason = f"REJECTED: Insufficient signals (only {categories_with_signals}/4 categories). Breakdown: {signal_breakdown}"
+    if categories_with_signals < 1:
+        reason = f"REJECTED: No signals found (0/4 categories). Breakdown: {signal_breakdown}"
         return False, score, reason, supplier_type
     
     if score < min_score:
@@ -309,54 +320,64 @@ def filter_suppliers(
     suppliers: List[Dict],
     machine_name: str = "",
     machine_type: str = "",
-    min_score: float = 0.3,
+    min_score: float = 0.15,
     log_decisions: bool = True
 ) -> List[Dict]:
     """
-    Filter suppliers with hard requirements:
+    Filter suppliers with relaxed requirements:
     - Machine suppliers only (OEM, distributor, integrator)
     - Exclude materials/consumables
-    - Require ≥1 OEM OR ≥2 verified integrators when possible
+    - Fuzzy name matching allows through known manufacturers
     - Calibrate scores by evidence strength
     
     Args:
         suppliers: List of supplier dictionaries
-        machine_name: Original machine name (for logging)
+        machine_name: Original machine name (for logging and fuzzy matching)
         machine_type: Canonical machine type (for logging)
-        min_score: Minimum score threshold
+        min_score: Minimum score threshold (default lowered to 0.15)
         log_decisions: Whether to log keep/reject decisions
     
     Returns:
         Filtered list of suppliers with added 'quality_score' and 'supplier_type' fields
     """
     filtered = []
-    supplier_type_counts = {'oem': 0, 'integrator': 0, 'distributor': 0, 'unknown': 0}
+    supplier_type_counts = {'oem': 0, 'integrator': 0, 'distributor': 0, 'unknown': 0, 'name_matched': 0}
+    rejected_count = 0
+    rejected_reasons = {}
     
     for supplier in suppliers:
         keep, score, reason, supplier_type = filter_and_score_supplier(
             supplier, min_score, machine_name
         )
         
-        if log_decisions:
-            supplier_name = supplier.get('supplier_name', 'Unknown')
-            logger.info(f"Supplier '{supplier_name}': {reason}")
+        supplier_name = supplier.get('supplier_name', 'Unknown')
         
         if keep:
             supplier['quality_score'] = round(score, 3)
             supplier['quality_signals'] = reason
             supplier['supplier_type'] = supplier_type
             filtered.append(supplier)
-            supplier_type_counts[supplier_type] += 1
+            if supplier_type in supplier_type_counts:
+                supplier_type_counts[supplier_type] += 1
+            else:
+                supplier_type_counts['unknown'] += 1
+        else:
+            rejected_count += 1
+            # Summarize rejection reasons
+            reject_key = reason.split(':')[1].split('(')[0].strip() if ':' in reason else 'Other'
+            rejected_reasons[reject_key] = rejected_reasons.get(reject_key, 0) + 1
     
-    # Log supplier type distribution
+    # SUMMARIZED LOGGING (not per-supplier verbose)
     if log_decisions:
         logger.info(
-            f"Supplier types for '{machine_name}': "
-            f"OEM={supplier_type_counts['oem']}, "
-            f"Integrators={supplier_type_counts['integrator']}, "
-            f"Distributors={supplier_type_counts['distributor']}, "
-            f"Unknown={supplier_type_counts['unknown']}"
+            f"Supplier filter for '{machine_name}': "
+            f"{len(filtered)}/{len(suppliers)} passed | "
+            f"Types: OEM={supplier_type_counts['oem']}, Int={supplier_type_counts['integrator']}, "
+            f"Dist={supplier_type_counts['distributor']}, Match={supplier_type_counts['name_matched']}, "
+            f"Unk={supplier_type_counts['unknown']}"
         )
+        if rejected_reasons:
+            logger.debug(f"Rejection summary: {rejected_reasons}")
         
         # Warn if requirements not met
         if supplier_type_counts['oem'] == 0 and supplier_type_counts['integrator'] < 2:
@@ -604,23 +625,23 @@ def compute_quality_score(
 
 def apply_quality_threshold(
     suppliers: List[Dict],
-    min_quality_score: float = 0.55,
+    min_quality_score: float = 0.35,
     canonical_name: str = "",
     typical_manufacturers: List[str] = None,
-    allow_fallback: bool = False
+    allow_fallback: bool = True
 ) -> List[Dict]:
     """
     Apply quality score threshold to suppliers.
     
     Computes quality_score for each supplier and filters by threshold.
-    If allow_fallback=True and no suppliers pass, returns suppliers above 0.40.
+    If allow_fallback=True and no suppliers pass, returns suppliers above 0.20.
     
     Args:
         suppliers: List of supplier dictionaries
-        min_quality_score: Minimum quality score (default 0.55)
+        min_quality_score: Minimum quality score (default lowered to 0.35)
         canonical_name: Machine canonical name for relevance
         typical_manufacturers: Known manufacturers for bonus scoring
-        allow_fallback: Allow lower threshold (0.40) if no suppliers pass
+        allow_fallback: Allow lower threshold (0.20) if no suppliers pass (default True)
         
     Returns:
         Filtered suppliers with quality_score and evidence fields
@@ -645,9 +666,18 @@ def apply_quality_threshold(
     if allow_fallback and not passing_suppliers:
         logger.warning(
             f"No suppliers passed quality threshold {min_quality_score}. "
-            f"Using fallback threshold 0.40"
+            f"Using fallback threshold 0.20"
         )
-        passing_suppliers = [s for s in scored_suppliers if s['quality_score'] >= 0.40]
+        passing_suppliers = [s for s in scored_suppliers if s['quality_score'] >= 0.20]
+    
+    # SAFETY NET: If still no suppliers and we have candidates, return top 3 by score
+    if not passing_suppliers and scored_suppliers:
+        logger.warning(
+            f"⚠ All {len(scored_suppliers)} suppliers below fallback threshold. "
+            f"Returning top 3 by score as safety net."
+        )
+        sorted_suppliers = sorted(scored_suppliers, key=lambda x: x['quality_score'], reverse=True)
+        passing_suppliers = sorted_suppliers[:3]
     
     logger.info(
         f"Quality filtering: {len(passing_suppliers)}/{len(suppliers)} suppliers passed "

@@ -244,11 +244,14 @@ def with_rate_limit(service_name: str, min_delay: float = 0.5):
 def with_retry(
     max_attempts: int = 3,
     backoff: bool = True,
-    catch_quota_errors: bool = True
+    catch_quota_errors: bool = True,
+    initial_wait: float = 2.0,
+    max_wait: float = 120.0
 ):
     """
     Decorator to retry a function with exponential backoff.
-    Stops retrying on quota errors.
+    For 429/rate limit errors, uses longer initial wait (30s).
+    Stops retrying on persistent quota errors.
     
     Usage:
         @with_retry(max_attempts=3, backoff=True)
@@ -265,9 +268,13 @@ def with_retry(
                     return func(*args, **kwargs)
                 except Exception as e:
                     last_exception = e
+                    error_str = str(e).lower()
                     
-                    # Don't retry quota errors
-                    if catch_quota_errors and is_quota_error(e):
+                    # Check for 429 rate limit specifically
+                    is_429 = "429" in error_str or "resource_exhausted" in error_str
+                    
+                    # Don't retry persistent quota errors (but DO retry 429 rate limits)
+                    if catch_quota_errors and is_quota_error(e) and not is_429:
                         logger.warning(f"Quota error detected, stopping retries: {e}")
                         raise
                     
@@ -278,8 +285,13 @@ def with_retry(
                     
                     if attempt < max_attempts - 1:
                         if backoff:
-                            sleep_time = 2 ** attempt
-                            logger.warning(f"Attempt {attempt + 1} failed, retrying in {sleep_time}s: {e}")
+                            # For 429 errors, use longer initial wait (30s minimum)
+                            if is_429:
+                                sleep_time = min(30 * (2 ** attempt), max_wait)  # 30s, 60s, 120s
+                                logger.warning(f"Rate limit 429, waiting {sleep_time}s before retry {attempt + 2}/{max_attempts}")
+                            else:
+                                sleep_time = min(initial_wait * (2 ** attempt), max_wait)
+                                logger.warning(f"Attempt {attempt + 1} failed, retrying in {sleep_time}s: {e}")
                             time.sleep(sleep_time)
                         else:
                             logger.warning(f"Attempt {attempt + 1} failed, retrying: {e}")

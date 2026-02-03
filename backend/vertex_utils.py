@@ -174,6 +174,8 @@ def generate_image(
             raise e
     return []
 
+@with_quota_check("vertex_ai", max_calls=100)
+@with_retry(max_attempts=4, backoff=True, catch_quota_errors=True)
 def generate_video(
     prompt: str,
     image: Optional[Union[bytes, str]] = None,
@@ -182,6 +184,8 @@ def generate_video(
 ) -> str:
     """
     Generates video using Veo 2 (veo-2.0-generate-001).
+    
+    Includes automatic retry with exponential backoff for 429 RESOURCE_EXHAUSTED errors.
     
     Args:
         prompt: Text description of the video to generate (English only)

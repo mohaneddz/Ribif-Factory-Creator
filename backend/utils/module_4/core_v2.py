@@ -72,15 +72,15 @@ logger = get_logger(__name__)
 FAST_MODE_MODULE4 = os.getenv("FAST_MODE_MODULE4", "0").lower() in ("1", "true", "yes")
 
 # Global budget - INCREASED for better supplier discovery
-# Each machine gets ~15 calls for thorough search (queries + pages)
-GLOBAL_WEB_CALL_MULTIPLIER = 2 if FAST_MODE_MODULE4 else 15  # 15 calls per machine in normal mode
+# Each machine gets ~18 calls for thorough search (queries + pages)
+GLOBAL_WEB_CALL_MULTIPLIER = 2 if FAST_MODE_MODULE4 else 18  # 18 calls per machine in normal mode
 
-# Per-machine budgets (Phase C only) - Balanced for quality
-MAX_SEARCH_QUERIES_PER_MACHINE = 1 if FAST_MODE_MODULE4 else 5  # 5 queries per machine
-MAX_RESULTS_PER_QUERY = 5 if FAST_MODE_MODULE4 else 15  # 15 results per query
-MAX_FETCH_PAGES_TOTAL = 3 if FAST_MODE_MODULE4 else 10  # 10 page fetches per machine
-MAX_LLM_CALLS_PER_MACHINE = 1 if FAST_MODE_MODULE4 else 2  # 2 LLM calls per machine
-MAX_RUNTIME_PER_MACHINE_S = 15 if FAST_MODE_MODULE4 else 120  # 2 min timeout in normal mode
+# Per-machine budgets (Phase C only) - Increased for better coverage
+MAX_SEARCH_QUERIES_PER_MACHINE = 1 if FAST_MODE_MODULE4 else 6  # 6 queries per machine
+MAX_RESULTS_PER_QUERY = 5 if FAST_MODE_MODULE4 else 20  # 20 results per query
+MAX_FETCH_PAGES_TOTAL = 3 if FAST_MODE_MODULE4 else 15  # 15 page fetches per machine (increased from 10)
+MAX_LLM_CALLS_PER_MACHINE = 1 if FAST_MODE_MODULE4 else 3  # 3 LLM calls per machine
+MAX_RUNTIME_PER_MACHINE_S = 15 if FAST_MODE_MODULE4 else 150  # 2.5 min timeout in normal mode
 
 # Cache TTL
 CACHE_TTL_DAYS = 7
