@@ -78,14 +78,14 @@ MACHINE_HEURISTICS = {
 }
 
 MATERIAL_HEURISTICS = {
-    "polymer": {"unit_price": 180_000, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
-    "resin": {"unit_price": 250_000, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
-    "plastic": {"unit_price": 160_000, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
-    "glass": {"unit_price": 280_000, "transport_pct": 0.10, "storage_pct": 0.03, "wastage_pct": 0.02},
-    "metal": {"unit_price": 220_000, "transport_pct": 0.10, "storage_pct": 0.02, "wastage_pct": 0.015},
-    "additive": {"unit_price": 400_000, "transport_pct": 0.06, "storage_pct": 0.015, "wastage_pct": 0.01},
-    "colorant": {"unit_price": 450_000, "transport_pct": 0.06, "storage_pct": 0.015, "wastage_pct": 0.01},
-    "default": {"unit_price": 200_000, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
+    "polymer": {"unit_price": 2_500, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
+    "resin": {"unit_price": 3_200, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
+    "plastic": {"unit_price": 1_800, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
+    "glass": {"unit_price": 4_500, "transport_pct": 0.10, "storage_pct": 0.03, "wastage_pct": 0.02},
+    "metal": {"unit_price": 3_800, "transport_pct": 0.10, "storage_pct": 0.02, "wastage_pct": 0.015},
+    "additive": {"unit_price": 8_000, "transport_pct": 0.06, "storage_pct": 0.015, "wastage_pct": 0.01},
+    "colorant": {"unit_price": 9_500, "transport_pct": 0.06, "storage_pct": 0.015, "wastage_pct": 0.01},
+    "default": {"unit_price": 2_800, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
 }
 
 
