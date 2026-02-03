@@ -8,7 +8,7 @@ from flask import Blueprint, jsonify, request
 from config import OUTPUT_DIRS, write_json
 # Heavy imports moved to lazy loading for faster startup
 # from utils.module_5.core import ...
-# from utils.module_5.negotiation_manager import ...
+from utils.module_5.negotiation_manager import (
     update_supplier_offer,
     update_counter_offer,
     increment_round,
