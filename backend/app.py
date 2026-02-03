@@ -1,5 +1,5 @@
 from flask import Flask
-from flask_cors import CORS, cross_origin
+from flask_cors import CORS
 import logging
 import warnings
 import traceback
@@ -28,15 +28,19 @@ from routes.validation import bp_validation
 from routes.health import health_bp
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
-# Add CORS headers to ALL responses including errors
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
+# Ensure CORS headers are added even when Flask error handlers run
+app.config["CORS_INTERCEPT_EXCEPTIONS"] = True  # Flask-CORS config
+
+# Single source of truth for CORS (do NOT also manually add headers in after_request)
+CORS(
+    app,
+    resources={r"/api/*": {"origins": "*"}},
+    supports_credentials=False,  # IMPORTANT: keep False if using "*" origin
+    allow_headers=["Content-Type", "Authorization", "x-project-id"],
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    max_age=86400,
+)
 
 # Increase timeouts for long-running enrichment operations
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
