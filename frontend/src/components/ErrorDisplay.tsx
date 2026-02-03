@@ -95,7 +95,7 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
     }
 
     return (
-        <div className={`h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 p-6 ${className}`}>
+        <div className={`min-h-screen w-full fixed inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 p-6 z-50 ${className}`}>
             <div className="max-w-lg w-full bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 shadow-2xl p-8">
                 {/* Icon and Title */}
                 <div className="flex flex-col items-center text-center mb-6">

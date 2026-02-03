@@ -24,6 +24,273 @@ logger = get_logger(__name__)
 # Enable zero-shot enrichment mode
 ENABLE_ZERO_SHOT = True
 
+# =========================================================
+# Machine Specification Defaults (for filling N/A values)
+# =========================================================
+
+MACHINE_SPEC_DEFAULTS = {
+    # Injection molding machines
+    "injection": {
+        "capacite": "100-5000T de force de fermeture",
+        "puissance": "50-250 kW",
+        "dimensions": "6m x 2m x 2.5m",
+        "alimentation": "380V triphasé",
+        "cadence": "20-60 cycles/heure",
+        "rendement": "85%",
+        "temps_cycle": "30-90 secondes"
+    },
+    # Extrusion machines
+    "extrusion": {
+        "capacite": "50-500 kg/h",
+        "puissance": "30-150 kW",
+        "dimensions": "8m x 1.5m x 2m",
+        "alimentation": "380V triphasé",
+        "cadence": "continu",
+        "rendement": "90%",
+        "temps_cycle": "continu"
+    },
+    # CNC machines
+    "cnc": {
+        "capacite": "Pièces jusqu'à 500mm",
+        "puissance": "15-45 kW",
+        "dimensions": "3m x 2.5m x 2.5m",
+        "alimentation": "380V triphasé",
+        "cadence": "Variable selon pièce",
+        "rendement": "85%",
+        "temps_cycle": "2-30 minutes/pièce"
+    },
+    # Welding/soudure
+    "soudure": {
+        "capacite": "Épaisseur 1-50mm",
+        "puissance": "10-40 kW",
+        "dimensions": "2m x 1.5m x 1.8m",
+        "alimentation": "380V triphasé",
+        "cadence": "5-20 soudures/heure",
+        "rendement": "80%",
+        "temps_cycle": "1-5 minutes/joint"
+    },
+    # Press/presse
+    "presse": {
+        "capacite": "50-2000 tonnes",
+        "puissance": "20-100 kW",
+        "dimensions": "4m x 3m x 4m",
+        "alimentation": "380V triphasé",
+        "cadence": "10-60 cycles/heure",
+        "rendement": "85%",
+        "temps_cycle": "15-60 secondes"
+    },
+    # Robot/automate
+    "robot": {
+        "capacite": "Charge utile 5-200 kg",
+        "puissance": "5-20 kW",
+        "dimensions": "Rayon d'action 1-3m",
+        "alimentation": "380V triphasé",
+        "cadence": "20-120 cycles/minute",
+        "rendement": "95%",
+        "temps_cycle": "3-15 secondes"
+    },
+    # Conveyeur/transport
+    "convoyeur": {
+        "capacite": "100-1000 kg/m",
+        "puissance": "1-10 kW",
+        "dimensions": "Variable selon installation",
+        "alimentation": "380V triphasé",
+        "cadence": "5-30 m/min",
+        "rendement": "98%",
+        "temps_cycle": "continu"
+    },
+    # Assemblage/assembly
+    "assemblage": {
+        "capacite": "10-100 unités/heure",
+        "puissance": "3-15 kW",
+        "dimensions": "2m x 1m x 1.5m",
+        "alimentation": "380V triphasé",
+        "cadence": "Variable",
+        "rendement": "90%",
+        "temps_cycle": "30-120 secondes"
+    },
+    # Découpe/cutting
+    "découpe": {
+        "capacite": "Épaisseur 0.5-50mm",
+        "puissance": "10-50 kW",
+        "dimensions": "4m x 2m x 2m",
+        "alimentation": "380V triphasé",
+        "cadence": "1-10 m/min",
+        "rendement": "85%",
+        "temps_cycle": "Variable selon pièce"
+    },
+    # Moulage/molding
+    "moulage": {
+        "capacite": "Volume 0.1-500 L",
+        "puissance": "30-200 kW",
+        "dimensions": "5m x 3m x 3m",
+        "alimentation": "380V triphasé",
+        "cadence": "5-30 cycles/heure",
+        "rendement": "85%",
+        "temps_cycle": "2-15 minutes"
+    },
+    # Compresseur
+    "compresseur": {
+        "capacite": "5-100 m³/min",
+        "puissance": "15-250 kW",
+        "dimensions": "2m x 1.5m x 1.8m",
+        "alimentation": "380V triphasé",
+        "cadence": "continu",
+        "rendement": "90%",
+        "temps_cycle": "continu"
+    },
+    # Four/oven
+    "four": {
+        "capacite": "Volume 0.5-50 m³",
+        "puissance": "50-500 kW",
+        "dimensions": "4m x 3m x 3m",
+        "alimentation": "380V triphasé ou gaz",
+        "cadence": "1-10 cycles/jour",
+        "rendement": "75%",
+        "temps_cycle": "1-24 heures"
+    },
+    # Pompe/pump
+    "pompe": {
+        "capacite": "10-1000 L/min",
+        "puissance": "1-50 kW",
+        "dimensions": "1m x 0.5m x 0.8m",
+        "alimentation": "380V triphasé",
+        "cadence": "continu",
+        "rendement": "85%",
+        "temps_cycle": "continu"
+    },
+    # Mélangeur/mixer
+    "mélangeur": {
+        "capacite": "50-5000 L",
+        "puissance": "5-75 kW",
+        "dimensions": "2m x 2m x 3m",
+        "alimentation": "380V triphasé",
+        "cadence": "2-10 lots/heure",
+        "rendement": "90%",
+        "temps_cycle": "10-60 minutes"
+    },
+    # Contrôle qualité/QC
+    "contrôle": {
+        "capacite": "Variable selon équipement",
+        "puissance": "1-5 kW",
+        "dimensions": "1.5m x 1m x 1.5m",
+        "alimentation": "220V monophasé",
+        "cadence": "10-100 tests/heure",
+        "rendement": "99%",
+        "temps_cycle": "30-180 secondes"
+    },
+    # Thermoforming/thermoformage
+    "thermoformage": {
+        "capacite": "Feuilles 0.5-10mm épaisseur",
+        "puissance": "30-100 kW",
+        "dimensions": "4m x 2.5m x 2.5m",
+        "alimentation": "380V triphasé",
+        "cadence": "5-30 cycles/heure",
+        "rendement": "85%",
+        "temps_cycle": "30-120 secondes"
+    },
+    # Broyeur/grinder/crusher
+    "broyeur": {
+        "capacite": "100-5000 kg/h",
+        "puissance": "20-150 kW",
+        "dimensions": "3m x 2m x 2.5m",
+        "alimentation": "380V triphasé",
+        "cadence": "continu",
+        "rendement": "90%",
+        "temps_cycle": "continu"
+    },
+    # Sécheur/dryer
+    "sécheur": {
+        "capacite": "100-2000 kg/lot",
+        "puissance": "20-100 kW",
+        "dimensions": "3m x 2m x 3m",
+        "alimentation": "380V triphasé ou gaz",
+        "cadence": "1-5 lots/jour",
+        "rendement": "85%",
+        "temps_cycle": "2-8 heures"
+    },
+    # Rectifieuse/grinding machine
+    "rectifieuse": {
+        "capacite": "Précision 0.001-0.01mm",
+        "puissance": "10-30 kW",
+        "dimensions": "2.5m x 2m x 2m",
+        "alimentation": "380V triphasé",
+        "cadence": "5-20 pièces/heure",
+        "rendement": "90%",
+        "temps_cycle": "5-30 minutes/pièce"
+    },
+    # Plieuse/bending machine
+    "plieuse": {
+        "capacite": "Force 50-500 tonnes",
+        "puissance": "15-75 kW",
+        "dimensions": "4m x 2m x 2.5m",
+        "alimentation": "380V triphasé",
+        "cadence": "10-60 plis/heure",
+        "rendement": "90%",
+        "temps_cycle": "10-60 secondes"
+    },
+    # Cisaille/shearing machine
+    "cisaille": {
+        "capacite": "Épaisseur 1-25mm, largeur 3-6m",
+        "puissance": "15-50 kW",
+        "dimensions": "5m x 2m x 2.5m",
+        "alimentation": "380V triphasé",
+        "cadence": "10-40 coupes/heure",
+        "rendement": "90%",
+        "temps_cycle": "15-60 secondes"
+    },
+    # Poinçonneuse/punching machine
+    "poinçonneuse": {
+        "capacite": "Force 10-100 tonnes",
+        "puissance": "10-40 kW",
+        "dimensions": "3m x 2m x 2.5m",
+        "alimentation": "380V triphasé",
+        "cadence": "20-200 coups/minute",
+        "rendement": "85%",
+        "temps_cycle": "0.3-3 secondes/coup"
+    },
+    # Emballage/packaging
+    "emballage": {
+        "capacite": "10-100 unités/minute",
+        "puissance": "5-20 kW",
+        "dimensions": "3m x 1.5m x 2m",
+        "alimentation": "380V triphasé",
+        "cadence": "Variable selon produit",
+        "rendement": "95%",
+        "temps_cycle": "1-6 secondes/unité"
+    },
+    # Palettiseur/palletizer
+    "palettiseur": {
+        "capacite": "5-30 palettes/heure",
+        "puissance": "10-30 kW",
+        "dimensions": "4m x 3m x 3m",
+        "alimentation": "380V triphasé",
+        "cadence": "Variable selon configuration",
+        "rendement": "95%",
+        "temps_cycle": "2-10 minutes/palette"
+    },
+    # Étiqueteuse/labeling machine
+    "étiqueteuse": {
+        "capacite": "50-500 produits/minute",
+        "puissance": "2-5 kW",
+        "dimensions": "2m x 1m x 1.5m",
+        "alimentation": "220V monophasé",
+        "cadence": "Variable selon produit",
+        "rendement": "98%",
+        "temps_cycle": "0.1-1 seconde/produit"
+    },
+    # Default/generic
+    "default": {
+        "capacite": "Variable selon modèle",
+        "puissance": "5-50 kW",
+        "dimensions": "2m x 1.5m x 2m",
+        "alimentation": "380V triphasé",
+        "cadence": "Variable",
+        "rendement": "85%",
+        "temps_cycle": "Variable selon opération"
+    }
+}
+
 # FAST MODE: Skip web searches and use LLM estimation only (much faster)
 # Can be controlled via environment variable FAST_MODE_ENRICHMENT=0 to disable
 FAST_MODE = os.getenv("FAST_MODE_ENRICHMENT", "1").lower() in ("1", "true", "yes")
@@ -152,6 +419,211 @@ OUTPUT: Return the FULL COMPLETED JSON with the SAME machines list and NO "N/A" 
 """
 
 # =========================================================
+# Machine N/A Value Filler Function
+# =========================================================
+
+def get_machine_type_key(machine: Dict[str, Any]) -> str:
+    """
+    Determine the machine type key for looking up default specifications.
+    Analyzes machine name, type, and use to find the best match.
+    """
+    # Build search text from machine info
+    name = str(machine.get("nom_machine", "")).lower()
+    machine_type = str(machine.get("type", "")).lower()
+    use = str(machine.get("use", "")).lower()
+    search_text = f"{name} {machine_type} {use}"
+    
+    # Priority order of machine type keys to check
+    type_keywords = [
+        ("injection", ["injection", "injecter", "injecting"]),
+        ("extrusion", ["extrusion", "extruder", "extrudeuse"]),
+        ("cnc", ["cnc", "usinage", "machining", "fraisage", "tournage", "milling", "turning"]),
+        ("soudure", ["soudure", "soudage", "welding", "souder"]),
+        ("presse", ["presse", "press", "emboutissage", "stamping", "hydraulique"]),
+        ("robot", ["robot", "automate", "bras", "manipulateur", "cobot"]),
+        ("convoyeur", ["convoyeur", "conveyor", "transport", "manutention", "tapis", "band"]),
+        ("assemblage", ["assemblage", "assembly", "montage"]),
+        ("découpe", ["découpe", "cutting", "coupe", "laser", "plasma", "oxycoupage"]),
+        ("moulage", ["moulage", "molding", "moule", "mold", "rotomoulage"]),
+        ("compresseur", ["compresseur", "compressor", "air comprimé"]),
+        ("four", ["four", "oven", "furnace", "étuve"]),
+        ("pompe", ["pompe", "pump", "pompage"]),
+        ("mélangeur", ["mélangeur", "mixer", "malaxeur", "agitateur", "mixing"]),
+        ("contrôle", ["contrôle", "control", "inspection", "test", "mesure", "qc", "qualité"]),
+        ("thermoformage", ["thermoformage", "thermoforming", "formage", "vacuum forming"]),
+        ("broyeur", ["broyeur", "grinder", "crusher", "broyage", "concasseur"]),
+        ("sécheur", ["sécheur", "dryer", "séchage", "dessiccateur"]),
+        ("rectifieuse", ["rectifieuse", "grinding", "rectification", "surfaçage"]),
+        ("plieuse", ["plieuse", "pliage", "bending", "cintreuse"]),
+        ("cisaille", ["cisaille", "shearing", "cisaillement", "guillotine"]),
+        ("poinçonneuse", ["poinçonneuse", "punching", "poinçonnage", "perforatrice"]),
+        ("emballage", ["emballage", "packaging", "conditionneur", "emballer"]),
+        ("palettiseur", ["palettiseur", "palletizer", "palettisation"]),
+        ("étiqueteuse", ["étiqueteuse", "labeling", "étiquetage", "marquage"]),
+    ]
+    
+    for type_key, keywords in type_keywords:
+        for kw in keywords:
+            if kw in search_text:
+                return type_key
+    
+    return "default"
+
+
+def fill_machine_na_values(machine: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Fill all N/A values in a machine with educated estimates based on machine type.
+    This ensures no N/A values remain in the final output.
+    
+    Args:
+        machine: Machine dict that may contain N/A values
+    
+    Returns:
+        Machine dict with all N/A values replaced by estimates
+    """
+    if not machine:
+        return machine
+    
+    # Get default specs for this machine type
+    type_key = get_machine_type_key(machine)
+    defaults = MACHINE_SPEC_DEFAULTS.get(type_key, MACHINE_SPEC_DEFAULTS["default"])
+    
+    logger.debug(f"Filling N/A values for machine '{machine.get('nom_machine')}' using type '{type_key}'")
+    
+    def is_na(value: Any) -> bool:
+        """Check if a value is N/A or effectively empty."""
+        if value is None:
+            return True
+        if isinstance(value, str):
+            v = value.strip().lower()
+            return v in ("", "n/a", "na", "none", "null", "undefined", "-", "--")
+        return False
+    
+    def fill_dict_na(d: Dict[str, Any], default_values: Dict[str, Any], path: str = "") -> Dict[str, Any]:
+        """Recursively fill N/A values in a dict."""
+        result = d.copy() if d else {}
+        
+        for key, default_val in default_values.items():
+            current_val = result.get(key)
+            
+            if is_na(current_val):
+                result[key] = default_val
+                result[f"{key}_source"] = "estimated"
+                result[f"{key}_confidence"] = "medium"
+            elif isinstance(current_val, dict) and isinstance(default_val, dict):
+                result[key] = fill_dict_na(current_val, default_val, f"{path}.{key}")
+        
+        return result
+    
+    # Fill top-level fields
+    top_level_defaults = {
+        "nom_machine": f"Machine industrielle ({type_key})",
+        "type": type_key.capitalize(),
+        "fabricant_recommande": "OEM standard industrie",
+        "use": f"Opération de {type_key} industrielle",
+        "source_reference": "Estimation basée sur le type de machine"
+    }
+    
+    for key, default_val in top_level_defaults.items():
+        if is_na(machine.get(key)):
+            machine[key] = default_val
+            if key not in ("nom_machine",):  # Don't mark name as estimated
+                machine[f"{key}_estimated"] = True
+    
+    # Fill specifications
+    specs = machine.get("specifications", {})
+    if not specs or not isinstance(specs, dict):
+        specs = {}
+    
+    spec_defaults = {
+        "capacite": defaults["capacite"],
+        "puissance": defaults["puissance"],
+        "dimensions": defaults["dimensions"],
+        "alimentation": defaults["alimentation"]
+    }
+    
+    for key, default_val in spec_defaults.items():
+        if is_na(specs.get(key)):
+            specs[key] = default_val
+            specs[f"{key}_source"] = "estimated"
+    
+    machine["specifications"] = specs
+    
+    # Fill performance
+    perf = machine.get("performance", {})
+    if not perf or not isinstance(perf, dict):
+        perf = {}
+    
+    perf_defaults = {
+        "cadence": defaults["cadence"],
+        "rendement": defaults["rendement"],
+        "temps_cycle": defaults["temps_cycle"]
+    }
+    
+    for key, default_val in perf_defaults.items():
+        if is_na(perf.get(key)):
+            perf[key] = default_val
+            perf[f"{key}_source"] = "estimated"
+    
+    machine["performance"] = perf
+    
+    # Fill quantite_necessaire if missing or 0
+    qty = machine.get("quantite_necessaire", 0)
+    if isinstance(qty, dict):
+        qty = qty.get("value", qty.get("quantity", 0))
+    try:
+        qty = int(qty) if qty else 0
+    except (TypeError, ValueError):
+        qty = 0
+    if qty == 0:
+        machine["quantite_necessaire"] = 1
+        machine["quantite_rationale"] = "Valeur par défaut (1 unité minimum)."
+    
+    # Ensure suppliers exist
+    if not machine.get("suppliers") or len(machine.get("suppliers", [])) == 0:
+        machine["suppliers"] = [
+            {"supplier_name": "Alibaba Industrial", "role": "Marketplace", "region": "Chine", "confidence": "medium"},
+            {"supplier_name": "Made-in-China", "role": "Marketplace", "region": "Chine", "confidence": "medium"},
+            {"supplier_name": "Europages", "role": "Directory", "region": "Europe", "confidence": "medium"}
+        ]
+        machine["suppliers_estimated"] = True
+    
+    # Ensure selected_models exist
+    if not machine.get("selected_models") or len(machine.get("selected_models", [])) == 0:
+        machine["selected_models"] = [
+            {"brand": "OEM Standard", "model": f"{type_key.capitalize()} Model Standard", "type": "primary"},
+            {"brand": "Alternative OEM", "model": "Modèle équivalent", "type": "alternative"}
+        ]
+    
+    # Mark as filled
+    machine["_na_filled"] = True
+    machine["_fill_type_key"] = type_key
+    
+    return machine
+
+
+def fill_all_machines_na_values(machines: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Fill N/A values for all machines in a list.
+    
+    Args:
+        machines: List of machine dicts
+    
+    Returns:
+        List of machines with all N/A values filled
+    """
+    logger.info(f"Filling N/A values for {len(machines)} machines...")
+    filled_machines = []
+    
+    for machine in machines:
+        filled_machine = fill_machine_na_values(machine)
+        filled_machines.append(filled_machine)
+    
+    logger.info(f"Completed N/A filling for {len(filled_machines)} machines")
+    return filled_machines
+
+
+# =========================================================
 # 1) Enricher Class
 # =========================================================
 
@@ -231,7 +703,7 @@ class RIBIFEnricher:
             return machine
 
     def _normalize_zero_shot_output(self, enriched: Dict[str, Any], original: Dict[str, Any]) -> Dict[str, Any]:
-        """Normalize zero-shot output to match expected Module 1 format."""
+        """Normalize zero-shot output to match expected Module 1 format and ensure no N/A values."""
         # Start with original machine structure
         result = original.copy()
         
@@ -280,6 +752,9 @@ class RIBIFEnricher:
                 "method": "zero_shot_intelligent"
             }
         
+        # CRITICAL: Fill any remaining N/A values using the filler
+        result = fill_machine_na_values(result)
+        
         return result
 
     def enrich_one_machine_fast(self, machine: Dict[str, Any]) -> Dict[str, Any]:
@@ -287,17 +762,23 @@ class RIBIFEnricher:
         FAST MODE: LLM-only enrichment without web searches.
         Uses engineering knowledge to estimate specs, suppliers, and pricing.
         Much faster than web search approach (~2-5s per machine vs 15-30s).
+        Ensures NO N/A values remain by using fill_machine_na_values.
         """
         name = machine.get("nom_machine")
         machine_type = machine.get("type", "")
         
         if not name or name == "N/A":
+            # Even for machines without names, fill in the defaults
+            machine = fill_machine_na_values(machine)
             return machine
 
         logger.info(f"Fast enrichment for: {name}")
         t_start = time.time()
         
-        # Set reasonable defaults based on machine type
+        # First, use the N/A filler to set all default values based on machine type
+        machine = fill_machine_na_values(machine)
+        
+        # Then override/enhance with specific enrichment logic
         machine["selected_models"] = [
             {"brand": "Industry Standard OEM", "model": f"{name} Standard Model", "type": "primary"},
             {"brand": "Alternative OEM", "model": "Equivalent Model", "type": "alternative"}
@@ -310,22 +791,6 @@ class RIBIFEnricher:
             {"supplier_name": "Europages", "role": "Directory", "region": "Europe", "confidence": "medium"},
         ]
         machine["algeria_distributor_found"] = False
-        
-        # Ensure specs exist
-        if not machine.get("specifications"):
-            machine["specifications"] = {}
-        
-        # Quantity estimation
-        qty = machine.get("quantite_necessaire", 0)
-        if isinstance(qty, dict):
-            qty = qty.get("value", qty.get("quantity", 0))
-        try:
-            qty = int(qty) if qty else 0
-        except (TypeError, ValueError):
-            qty = 0
-        if qty == 0:
-            machine["quantite_necessaire"] = 1
-            machine["quantite_rationale"] = "Defaulted to 1 unit as baseline."
         
         # Metadata
         machine["_web_enrichment"] = {
@@ -360,6 +825,8 @@ class RIBIFEnricher:
         manufacturer = machine.get("fabricant_recommande", "")
         
         if not name or name == "N/A":
+            # Even for machines without names, fill in the defaults
+            machine = fill_machine_na_values(machine)
             return machine
 
         logger.info(f"Global enrichment starting for: {name}")
@@ -455,6 +922,9 @@ class RIBIFEnricher:
             machine["confidence"] = "low"
             machine["rationale"] = f"Enrichment timeout or failure ({str(e)}). Using basic template."
 
+        # CRITICAL: Final N/A value filling for this machine
+        machine = fill_machine_na_values(machine)
+        
         logger.info(f"Machine {name} enriched in {round(time.time() - t_start, 2)}s")
         return machine
 
@@ -573,6 +1043,16 @@ class RIBIFEnricher:
                     f"Restoring original machines."
                 )
                 final_json["stage_4_machines_equipements"]["machines_production"] = enriched_machines
+
+        # =========================================================
+        # CRITICAL: Final N/A Value Filling Pass
+        # This ensures NO N/A values remain in machine specifications
+        # =========================================================
+        logger.info("Running final N/A value filling pass for all machines...")
+        final_machines = final_json.get("stage_4_machines_equipements", {}).get("machines_production", [])
+        filled_machines = fill_all_machines_na_values(final_machines)
+        final_json["stage_4_machines_equipements"]["machines_production"] = filled_machines
+        logger.info(f"Completed N/A filling for {len(filled_machines)} machines - all values now estimated")
 
         # Add enrichment summary with metrics
         processing_time = round(time.time() - t0, 3)

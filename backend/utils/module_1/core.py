@@ -571,8 +571,8 @@ class RIBIFExtractor:
 
         # Final cleanup: remove empty template list rows
         final_json = _drop_empty_items(final_json)
-        # NOTE: We no longer call _global_fill_no_nulls because we want to preserve
-        # "N/A" and missing values rather than fabricating data.
+        # NOTE: N/A values will be filled by the RIBIFEnricher with educated estimates
+        # based on machine type and industry standards.
 
         # Web enrichment is now handled by the RIBIFEnricher in the pipeline route.
 
