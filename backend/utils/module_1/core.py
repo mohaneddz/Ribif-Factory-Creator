@@ -538,17 +538,17 @@ class RIBIFExtractor:
         # Build final JSON (exact format)
         processing_time = round(time.time() - t0, 3)
 
-        meta_note = "Explicit-only extraction; N/A or 0 if missing. No guessing."
+        meta_note = "Explicit-only extraction; N/A or 0 if missing. Enricher will fill N/A values with estimates."
         if warnings:
             meta_note = (meta_note + " | WARNINGS: " + " ; ".join(warnings))[:4000]
 
         final_json: Dict[str, Any] = {
             "ribif_metadata": {
-                "extraction_method": "Module1 Parallel 6-stage (Vertex Gemini + Explicit-only)",
+                "extraction_method": "Module1 Parallel 6-stage (Vertex Gemini + No-Nulls)",
                 "extraction_date": _now_iso(),
                 "model_used": self.llm.vertex_model,
                 "api_provider": "Vertex",
-                "extraction_mode": "Document Only (No Fabrications)",
+                "extraction_mode": "Document + Industry Guessing (no nulls)",
                 "ribif_modules_support": [1],
                 "note": meta_note,
                 "processing_time_seconds": processing_time,
@@ -564,8 +564,8 @@ class RIBIFExtractor:
 
         # Final cleanup: remove empty template list rows
         final_json = _drop_empty_items(final_json)
-        # NOTE: We no longer call _global_fill_no_nulls because we want to preserve
-        # "N/A" and missing values rather than fabricating data.
+        # NOTE: N/A values will be filled by the RIBIFEnricher with educated estimates
+        # based on machine type and industry standards.
 
         # Web enrichment is now handled by the RIBIFEnricher in the pipeline route.
 
