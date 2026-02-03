@@ -4,18 +4,84 @@ Merges config/constants/prompts.
 Pure configuration only (no logic imports).
 """
 import os
+import tempfile
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_DIR = os.path.join(BASE_DIR, "output")
-ASSETS_DIR = os.path.join(BASE_DIR, "assets_cache")
-LOCAL_IMAGES_DIR = os.path.join(BASE_DIR, "images")
+
+# Determine writable base directory for outputs
+# Falls back to /tmp for read-only filesystems (serverless/containerized)
+def _get_writable_output_dir():
+    """Get a writable output directory, falling back to /tmp if needed."""
+    local_output = os.path.join(BASE_DIR, "output")
+    try:
+        os.makedirs(local_output, exist_ok=True)
+        # Test if we can actually write
+        test_file = os.path.join(local_output, ".write_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        return local_output
+    except (OSError, PermissionError, IOError):
+        # Fall back to /tmp for serverless environments
+        tmp_output = os.path.join(tempfile.gettempdir(), "ribif", "module_2", "output")
+        os.makedirs(tmp_output, exist_ok=True)
+        return tmp_output
+
+def _get_writable_assets_dir():
+    """Get a writable assets cache directory, falling back to /tmp if needed."""
+    local_assets = os.path.join(BASE_DIR, "assets_cache")
+    try:
+        os.makedirs(local_assets, exist_ok=True)
+        test_file = os.path.join(local_assets, ".write_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        return local_assets
+    except (OSError, PermissionError, IOError):
+        tmp_assets = os.path.join(tempfile.gettempdir(), "ribif", "module_2", "assets_cache")
+        os.makedirs(tmp_assets, exist_ok=True)
+        return tmp_assets
+
+def _get_writable_public_models_dir():
+    """Get a writable public models directory, falling back to /tmp if needed."""
+    local_models = os.path.join(os.path.dirname(os.path.dirname(BASE_DIR)), "public", "models")
+    try:
+        os.makedirs(local_models, exist_ok=True)
+        test_file = os.path.join(local_models, ".write_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        return local_models
+    except (OSError, PermissionError, IOError):
+        tmp_models = os.path.join(tempfile.gettempdir(), "ribif", "public", "models")
+        os.makedirs(tmp_models, exist_ok=True)
+        return tmp_models
+
+def _get_writable_images_dir():
+    """Get a writable images directory for downloaded/processed images."""
+    local_images = os.path.join(BASE_DIR, "images")
+    try:
+        os.makedirs(local_images, exist_ok=True)
+        test_file = os.path.join(local_images, ".write_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        return local_images
+    except (OSError, PermissionError, IOError):
+        tmp_images = os.path.join(tempfile.gettempdir(), "ribif", "module_2", "images")
+        os.makedirs(tmp_images, exist_ok=True)
+        return tmp_images
+
+OUTPUT_DIR = _get_writable_output_dir()
+ASSETS_DIR = _get_writable_assets_dir()
+LOCAL_IMAGES_DIR = _get_writable_images_dir()
 
 OUTPUT_DXF = os.path.join(OUTPUT_DIR, "layout_square.dxf")
 OUTPUT_PNG = os.path.join(OUTPUT_DIR, "layout_square.png")
 REALISTIC_PNG = os.path.join(OUTPUT_DIR, "realistic_layout.png")
 REALISTIC_CLEAN_PNG = os.path.join(OUTPUT_DIR, "realistic_clean.png")
 
-PUBLIC_MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(BASE_DIR)), "public", "models")
+PUBLIC_MODELS_DIR = _get_writable_public_models_dir()
 FINAL_GLB_PATH = os.path.join(PUBLIC_MODELS_DIR, "sample.glb")
 
 CACHE_FILE = os.path.join(ASSETS_DIR, "cache.json")

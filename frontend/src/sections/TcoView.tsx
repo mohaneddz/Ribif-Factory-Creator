@@ -60,48 +60,48 @@ export const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
     }
 
     return (
-        <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-[#0b0c10] transition-colors overflow-y-auto">
+        <div className="h-full flex flex-col p-4 sm:p-6 gap-4 sm:gap-6 bg-slate-50 dark:bg-[#0b0c10] transition-colors overflow-y-auto">
             {/* Top Card: Total TCO */}
-            <div className="bg-slate-900 dark:bg-[#13141c] rounded-3xl p-8 text-white relative overflow-hidden">
+            <div className="bg-slate-900 dark:bg-[#13141c] rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 text-white relative overflow-visible min-h-fit flex-shrink-0">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full blur-[60px] opacity-20" />
                 <div className="relative z-10">
-                    <div className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-2">TCO Total (5 ans)</div>
-                    <div className="text-4xl font-black mb-2">
+                    <div className="text-slate-400 font-bold uppercase tracking-widest text-[10px] sm:text-xs mb-1 sm:mb-2">TCO Total (5 ans)</div>
+                    <div className="text-2xl sm:text-3xl lg:text-4xl font-black mb-2 break-words">
                         {(totalTco / 1000000000).toFixed(2)} Milliards
-                        <span className="text-lg font-bold text-indigo-400 ml-2">DZD</span>
+                        <span className="text-sm sm:text-lg font-bold text-indigo-400 ml-2">DZD</span>
                     </div>
-                    <div className="flex items-center gap-4 mt-4">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-xs font-medium">
-                            <Sparkles size={12} className="text-indigo-300" />
-                            <span>Calculé le {calcDate}</span>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-3 sm:mt-4">
+                        <div className="inline-flex items-center gap-2 px-2 sm:px-3 py-1 bg-white/10 rounded-full text-[10px] sm:text-xs font-medium">
+                            <Sparkles size={12} className="text-indigo-300 flex-shrink-0" />
+                            <span className="truncate">Calculé le {calcDate}</span>
                         </div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 rounded-full text-xs font-medium text-emerald-300">
-                            <span>Moyenne annuelle: {(avgAnnualTco / 1000000000).toFixed(2)} Mrd DZD/an</span>
+                        <div className="inline-flex items-center gap-2 px-2 sm:px-3 py-1 bg-emerald-500/20 rounded-full text-[10px] sm:text-xs font-medium text-emerald-300">
+                            <span className="truncate">Moyenne: {(avgAnnualTco / 1000000000).toFixed(2)} Mrd DZD/an</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* 5 Year TCO Calculation */}
-            <div className="bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/5 rounded-3xl p-6 transition-colors">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center">
-                        <Calendar size={20} className="text-indigo-600 dark:text-indigo-400" />
+            <div className="bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/5 rounded-2xl sm:rounded-3xl p-4 sm:p-6 transition-colors flex-shrink-0">
+                <div className="flex items-center gap-3 mb-4 sm:mb-6">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+                        <Calendar size={18} className="text-indigo-600 dark:text-indigo-400" />
                     </div>
-                    <h3 className="font-bold text-lg text-slate-800 dark:text-white">Calcul TCO sur 5 Ans</h3>
+                    <h3 className="font-bold text-base sm:text-lg text-slate-800 dark:text-white">Calcul TCO sur 5 Ans</h3>
                 </div>
                 
                 {annualTco.length > 0 ? (
-                    <div className="grid grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
                         {annualTco.map((year: any, i: number) => (
-                            <div key={i} className="bg-slate-50 dark:bg-white/5 rounded-2xl p-4 text-center border border-slate-100 dark:border-white/5">
-                                <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2">
+                            <div key={i} className="bg-slate-50 dark:bg-white/5 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center border border-slate-100 dark:border-white/5">
+                                <div className="text-[10px] sm:text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-1 sm:mb-2">
                                     Année {year.year ?? i + 1}
                                 </div>
-                                <div className="text-2xl font-black text-slate-800 dark:text-white mb-1">
+                                <div className="text-lg sm:text-2xl font-black text-slate-800 dark:text-white mb-0.5 sm:mb-1">
                                     {((year.total_tco || 0) / 1000000000).toFixed(2)}
                                 </div>
-                                <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Mrd DZD</div>
+                                <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Mrd DZD</div>
                             </div>
                         ))}
                     </div>
@@ -111,20 +111,20 @@ export const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
             </div>
 
             {/* Machines TCO Section */}
-            <div className="bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/5 rounded-3xl p-6 transition-colors">
-                <div className="flex items-center justify-between mb-6">
+            <div className="bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/5 rounded-2xl sm:rounded-3xl p-4 sm:p-6 transition-colors flex-shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center">
-                            <Cpu size={20} className="text-purple-600 dark:text-purple-400" />
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                            <Cpu size={18} className="text-purple-600 dark:text-purple-400" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-lg text-slate-800 dark:text-white">TCO Machines</h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{machineTco.length} machine(s) identifiée(s)</p>
+                            <h3 className="font-bold text-base sm:text-lg text-slate-800 dark:text-white">TCO Machines</h3>
+                            <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">{machineTco.length} machine(s) identifiée(s)</p>
                         </div>
                     </div>
-                    <div className="bg-purple-100 dark:bg-purple-500/20 px-4 py-2 rounded-xl">
-                        <div className="text-xs text-purple-600 dark:text-purple-300 font-medium">Total Machines</div>
-                        <div className="text-xl font-black text-purple-700 dark:text-purple-300">{formatCurrency(totalMachinesTco)}</div>
+                    <div className="bg-purple-100 dark:bg-purple-500/20 px-3 sm:px-4 py-2 rounded-xl self-start sm:self-auto">
+                        <div className="text-[10px] sm:text-xs text-purple-600 dark:text-purple-300 font-medium">Total Machines</div>
+                        <div className="text-lg sm:text-xl font-black text-purple-700 dark:text-purple-300">{formatCurrency(totalMachinesTco)}</div>
                     </div>
                 </div>
 
@@ -150,41 +150,41 @@ export const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
                                 (mac.cost_breakdown?.maintenance_pct ? totalCost * mac.cost_breakdown.maintenance_pct / 100 : null);
                             
                             return (
-                                <div key={i} className="bg-slate-50 dark:bg-white/5 rounded-2xl p-4 border border-slate-100 dark:border-white/5">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 font-bold text-sm">
+                                <div key={i} className="bg-slate-50 dark:bg-white/5 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-slate-100 dark:border-white/5">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                                        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 font-bold text-xs sm:text-sm flex-shrink-0">
                                                 {i + 1}
                                             </div>
-                                            <div>
-                                                <div className="font-bold text-slate-800 dark:text-white">{renderValue(mac.machine_name)}</div>
+                                            <div className="min-w-0">
+                                                <div className="font-bold text-sm sm:text-base text-slate-800 dark:text-white truncate">{renderValue(mac.machine_name)}</div>
                                                 {mac.quantity && (
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400">Quantité: {mac.quantity}</div>
+                                                    <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">Quantité: {mac.quantity}</div>
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(mac.total_tco || 0)}</div>
+                                        <div className="text-left sm:text-right ml-9 sm:ml-0">
+                                            <div className="text-base sm:text-lg font-black text-slate-800 dark:text-white">{formatCurrency(mac.total_tco || 0)}</div>
                                         </div>
                                     </div>
                                     {hasBreakdown && (
-                                        <div className="grid grid-cols-3 gap-2 mt-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
                                             {initialCost !== null && (
                                                 <div className="bg-indigo-50 dark:bg-indigo-500/10 rounded-lg p-2 text-center">
                                                     <div className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium uppercase">Initial</div>
-                                                    <div className="text-sm font-bold text-indigo-700 dark:text-indigo-300">{formatCurrency(initialCost)}</div>
+                                                    <div className="text-xs sm:text-sm font-bold text-indigo-700 dark:text-indigo-300">{formatCurrency(initialCost)}</div>
                                                 </div>
                                             )}
                                             {operationsCost !== null && (
                                                 <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-lg p-2 text-center">
                                                     <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium uppercase">Opérations</div>
-                                                    <div className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{formatCurrency(operationsCost)}</div>
+                                                    <div className="text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-300">{formatCurrency(operationsCost)}</div>
                                                 </div>
                                             )}
                                             {maintenanceCost !== null && (
                                                 <div className="bg-amber-50 dark:bg-amber-500/10 rounded-lg p-2 text-center">
                                                     <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium uppercase">Maintenance</div>
-                                                    <div className="text-sm font-bold text-amber-700 dark:text-amber-300">{formatCurrency(maintenanceCost)}</div>
+                                                    <div className="text-xs sm:text-sm font-bold text-amber-700 dark:text-amber-300">{formatCurrency(maintenanceCost)}</div>
                                                 </div>
                                             )}
                                         </div>
@@ -199,20 +199,20 @@ export const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
             </div>
 
             {/* Materials TCO Section */}
-            <div className="bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/5 rounded-3xl p-6 transition-colors">
-                <div className="flex items-center justify-between mb-6">
+            <div className="bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/5 rounded-2xl sm:rounded-3xl p-4 sm:p-6 transition-colors flex-shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center">
-                            <Package size={20} className="text-amber-600 dark:text-amber-400" />
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                            <Package size={18} className="text-amber-600 dark:text-amber-400" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-lg text-slate-800 dark:text-white">TCO Matières Premières</h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{rawMaterialsTco.length} matériau(x) identifié(s)</p>
+                            <h3 className="font-bold text-base sm:text-lg text-slate-800 dark:text-white">TCO Matières Premières</h3>
+                            <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">{rawMaterialsTco.length} matériau(x) identifié(s)</p>
                         </div>
                     </div>
-                    <div className="bg-amber-100 dark:bg-amber-500/20 px-4 py-2 rounded-xl">
-                        <div className="text-xs text-amber-600 dark:text-amber-300 font-medium">Total Matières</div>
-                        <div className="text-xl font-black text-amber-700 dark:text-amber-300">{formatCurrency(totalMaterialsTco)}</div>
+                    <div className="bg-amber-100 dark:bg-amber-500/20 px-3 sm:px-4 py-2 rounded-xl self-start sm:self-auto">
+                        <div className="text-[10px] sm:text-xs text-amber-600 dark:text-amber-300 font-medium">Total Matières</div>
+                        <div className="text-lg sm:text-xl font-black text-amber-700 dark:text-amber-300">{formatCurrency(totalMaterialsTco)}</div>
                     </div>
                 </div>
 
