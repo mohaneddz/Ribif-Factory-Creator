@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import os
 import re
 import shutil
@@ -19,6 +20,8 @@ from typing import Dict, Any, Optional, List
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 try:
     from reportlab.lib import colors
@@ -915,8 +918,15 @@ class RIBIFModule9Catalog:
         fmt = input_data.output_format.lower()
         if fmt in ("both", "pdf"):
             pdf_path = os.path.join(output_dir, f"{base}.pdf")
-            pdf_path = self.generate_pdf_catalog(module1_data, module4_data, pdf_path)
-        if fmt in ("both", "html"):
+            try:
+                pdf_path = self.generate_pdf_catalog(module1_data, module4_data, pdf_path)
+            except Exception as e:
+                logger.warning(f"PDF generation failed (pdflatex may not be installed): {e}")
+                pdf_path = None
+                # If PDF was requested and failed, fall back to HTML
+                if fmt == "pdf":
+                    fmt = "html"
+        if fmt in ("both", "html") or pdf_path is None:
             html_path = os.path.join(output_dir, f"{base}.html")
             html_path = self.generate_web_catalog(module1_data, module4_data, html_path)
 

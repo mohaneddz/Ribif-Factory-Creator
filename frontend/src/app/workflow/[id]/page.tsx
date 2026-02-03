@@ -1057,7 +1057,7 @@ export default function FactoryCopilot() {
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
                                                 {selectedModuleItem.type === 'pitchdeck' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
-                                                {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url || catalogData?.pdf_download_url} htmlUrl={catalogData?.data?.html_download_url || catalogData?.html_download_url} />}
+                                                {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url || catalogData?.pdf_download_url} htmlUrl={catalogData?.data?.html_download_url || catalogData?.html_download_url} loading={catalogLoading} />}
                                                 {selectedModuleItem.type === 'twin' && <DigitalTwinView pipelineModelUrl={pipelineModelUrl} />}
                                             </>
                                         )}

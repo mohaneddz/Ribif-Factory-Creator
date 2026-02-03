@@ -25,7 +25,7 @@ export const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: {
     const totalPages = pitchDeckData?.data?.n_slides || pitchDeckData?.data?.slides?.length || 10;
 
     // Create a unique key from pitchDeckData to detect when it changes
-    const pitchDeckKey = pitchDeckData ? `${pitchDeckData.pdf_download_url || ''}_${pitchDeckData.pdf_filename || ''}_${pitchDeckData.data?.created_at || ''}` : null;
+    const pitchDeckKey = pitchDeckData ? `${pitchDeckData.pdf_download_url || pitchDeckData.data?.pdf_download_url || ''}_${pitchDeckData.pdf_filename || pitchDeckData.data?.pdf_filename || ''}_${pitchDeckData.data?.created_at || ''}` : null;
 
     // Get pitch deck file info - resolve relative URLs to full URLs
     const resolvePdfUrl = (url: string | undefined): string => {
@@ -42,7 +42,7 @@ export const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: {
         return resolved.includes("?") ? `${resolved}&inline=true` : `${resolved}?inline=true`;
     };
     
-    const pitchDeckPdfUrl = resolveInlinePdfUrl(pitchDeckData?.pdf_download_url);
+    const pitchDeckPdfUrl = resolveInlinePdfUrl(pitchDeckData?.pdf_download_url || pitchDeckData?.data?.pdf_download_url);
     const businessPlanDownloadUrl = resolvePdfUrl(businessPlanData?.download_url);
 
     // Fetch PDF as blob and create object URL for iframe display
