@@ -886,16 +886,49 @@ export default function FactoryCopilot() {
         }
     };
 
-    const handleArtifactDownload = (idx: number) => {
-        const url = getArtifactDownloadUrl(MODULES[idx]?.type);
-        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    const handleArtifactDownload = async (idx: number) => {
+        const moduleType = MODULES[idx]?.type;
+        const url = getArtifactDownloadUrl(moduleType);
+        if (!url) return;
+        
+        try {
+            // For Supabase URLs or direct URLs, fetch and trigger download
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Download failed');
+            
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            
+            // Set appropriate filename based on module type
+            const filenames: Record<string, string> = {
+                pitchdeck: 'Pitch_Deck.pdf',
+                businessplan: 'Business_Plan.pdf',
+                catalogue: 'Catalogue_Technique.pdf',
+                layout2d: 'Layout_2D.dxf',
+                model3d: 'Model_3D.glb',
+                video: 'Presentation_Video.mp4',
+            };
+            link.download = filenames[moduleType || ''] || MODULES[idx]?.file || 'download';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(downloadUrl);
+        } catch (err) {
+            console.error('Download error:', err);
+            // Fallback to opening in new tab
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
     };
 
-    const handleDownloadAll = () => {
-        downloadableArtifacts.forEach(idx => {
-            const url = getArtifactDownloadUrl(MODULES[idx]?.type);
-            if (url) window.open(url, '_blank', 'noopener,noreferrer');
-        });
+    const handleDownloadAll = async () => {
+        for (const idx of downloadableArtifacts) {
+            await handleArtifactDownload(idx);
+            // Small delay between downloads to prevent browser blocking
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
     };
 
     // 2D Layout Image URL - prefer Supabase signed URLs, fallback to backend proxy
@@ -926,7 +959,8 @@ export default function FactoryCopilot() {
     const isSelectedDone = artifacts.includes(selectedModule) || status === 'finished' || selectedModule < currentModule;
     const selectedProgress = isSelectedProcessing ? subStep : isSelectedDone ? 100 : 0;
     const displayArtifacts = status === 'finished' ? MODULES.map((_, idx) => idx) : artifacts;
-    const deliverableTypes = new Set(["specs", "sourcing", "tco", "businessplan", "pitchdeck", "catalogue", "layout2d", "model3d", "video", "twin"]);
+    // Only show these 6 deliverables: pitch deck, business plan, catalogue, 2D layout, 3D model, video
+    const deliverableTypes = new Set(["pitchdeck", "businessplan", "catalogue", "layout2d", "model3d", "video"]);
     const downloadableArtifacts = displayArtifacts.filter(idx => deliverableTypes.has(MODULES[idx]?.type));
 
     return (

@@ -112,8 +112,13 @@ INPUT JSON: {raw_json}
 REQUIREMENTS:
 1. For each Raw Material in Stage 2, estimate `quantite_estimee` (valeur, unite, periode).
 2. For each Product in Stage 3, estimate `volume_production` (capacite, unite, periode).
-3. Base estimates on typical factory capacities (e.g., SPC line 30-60 t/day, Injection mold cycles 20-60s).
-4. Assume 2 shifts/day, 300 days/year unless stated otherwise.
+3. IMPORTANT: These are SMALL factories, NOT large industrial plants.
+   - Raw material consumption: typically 5-50 tonnes/month (MAX 100 tonnes/month)
+   - Production volumes: typically 500-5000 units/month for manufactured goods
+   - NEVER exceed 200 tonnes/month for any material
+   - Total annual production should be 50-500 tonnes/year for most small factories
+4. Assume 1 shift/day, 250 days/year for small enterprises.
+5. Use "tonnes" for bulk materials, "kg" for smaller quantities, "unités" for discrete products.
 
 OUTPUT FORMAT (Fragment):
 {{

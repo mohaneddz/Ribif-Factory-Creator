@@ -277,6 +277,81 @@ def fill_kpi_nulls(kpi: Dict[str, Any]) -> Dict[str, Any]:
     return kpi
 
 
+def cap_quantity(qty: Dict[str, Any], max_tonnes_per_year: float = 1000) -> Dict[str, Any]:
+    """
+    Cap quantity values to prevent unrealistically high estimates.
+    Maximum allowed is 1000 tonnes/year for small-to-medium enterprises.
+    
+    Args:
+        qty: Dict with valeur, unite, periode
+        max_tonnes_per_year: Maximum tonnes per year (default 1000)
+    
+    Returns:
+        Capped quantity dict
+    """
+    if not isinstance(qty, dict):
+        return qty
+    
+    valeur = qty.get("valeur", 0)
+    if not isinstance(valeur, (int, float)) or valeur <= 0:
+        return qty
+    
+    unite = str(qty.get("unite", "")).lower()
+    periode = str(qty.get("periode", "")).lower()
+    
+    # Convert to tonnes/year for comparison
+    tonnes_per_year = 0
+    
+    # Conversion factors to tonnes
+    if "tonne" in unite or "t" == unite:
+        tonnes = valeur
+    elif "kg" in unite or "kilogram" in unite:
+        tonnes = valeur / 1000
+    elif "g" == unite or "gram" in unite:
+        tonnes = valeur / 1000000
+    else:
+        # For units (discrete products), skip capping
+        return qty
+    
+    # Convert to yearly
+    if "jour" in periode or "day" in periode or "j" == periode:
+        tonnes_per_year = tonnes * 250  # 250 working days
+    elif "semaine" in periode or "week" in periode:
+        tonnes_per_year = tonnes * 50  # 50 weeks
+    elif "mois" in periode or "month" in periode or "m" == periode:
+        tonnes_per_year = tonnes * 12
+    elif "an" in periode or "year" in periode or "a" == periode:
+        tonnes_per_year = tonnes
+    else:
+        tonnes_per_year = tonnes * 12  # Default to monthly
+    
+    # If over limit, cap it
+    if tonnes_per_year > max_tonnes_per_year:
+        logger.warning(f"Capping quantity from {tonnes_per_year:.1f} tonnes/year to {max_tonnes_per_year} tonnes/year")
+        
+        # Convert back to original units and period
+        capped_tonnes = max_tonnes_per_year
+        
+        # Convert from yearly to original period
+        if "jour" in periode or "day" in periode or "j" == periode:
+            capped_tonnes = capped_tonnes / 250
+        elif "semaine" in periode or "week" in periode:
+            capped_tonnes = capped_tonnes / 50
+        elif "mois" in periode or "month" in periode or "m" == periode:
+            capped_tonnes = capped_tonnes / 12
+        # else already in yearly
+        
+        # Convert from tonnes to original unit
+        if "kg" in unite or "kilogram" in unite:
+            qty["valeur"] = round(capped_tonnes * 1000, 1)
+        elif "g" == unite or "gram" in unite:
+            qty["valeur"] = round(capped_tonnes * 1000000, 1)
+        else:
+            qty["valeur"] = round(capped_tonnes, 1)
+    
+    return qty
+
+
 def fill_material_nulls(material: Dict[str, Any]) -> Dict[str, Any]:
     """Fill null values in raw material data."""
     if is_null_or_empty(material.get("nom_materiau")):
@@ -300,6 +375,9 @@ def fill_material_nulls(material: Dict[str, Any]) -> Dict[str, Any]:
         qty["unite"] = "kg"
     if is_null_or_empty(qty.get("periode")):
         qty["periode"] = "mois"
+    
+    # Cap quantities to max 1000 tonnes/year
+    qty = cap_quantity(qty, max_tonnes_per_year=1000)
     material["quantite_estimee"] = qty
     
     # Regulations
@@ -345,6 +423,12 @@ def fill_product_nulls(product: Dict[str, Any]) -> Dict[str, Any]:
         vol["unite"] = "unités"
     if is_null_or_empty(vol.get("periode")):
         vol["periode"] = "mois"
+    
+    # Cap production volumes if they're in weight units (tonnes/kg)
+    # Create a quantity-like dict for capping
+    vol_as_qty = {"valeur": vol.get("capacite"), "unite": vol.get("unite"), "periode": vol.get("periode")}
+    vol_as_qty = cap_quantity(vol_as_qty, max_tonnes_per_year=1000)
+    vol["capacite"] = vol_as_qty.get("valeur", vol.get("capacite"))
     product["volume_production"] = vol
     
     return product
