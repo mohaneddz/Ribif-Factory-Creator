@@ -78,14 +78,14 @@ MACHINE_HEURISTICS = {
 }
 
 MATERIAL_HEURISTICS = {
-    "polymer": {"unit_price": 200, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
-    "resin": {"unit_price": 450, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
-    "plastic": {"unit_price": 180, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
-    "glass": {"unit_price": 280, "transport_pct": 0.10, "storage_pct": 0.03, "wastage_pct": 0.02},
-    "metal": {"unit_price": 260, "transport_pct": 0.10, "storage_pct": 0.02, "wastage_pct": 0.015},
-    "additive": {"unit_price": 650, "transport_pct": 0.06, "storage_pct": 0.015, "wastage_pct": 0.01},
-    "colorant": {"unit_price": 700, "transport_pct": 0.06, "storage_pct": 0.015, "wastage_pct": 0.01},
-    "default": {"unit_price": 250, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
+    "polymer": {"unit_price": 80, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
+    "resin": {"unit_price": 180, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
+    "plastic": {"unit_price": 72, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
+    "glass": {"unit_price": 112, "transport_pct": 0.10, "storage_pct": 0.03, "wastage_pct": 0.02},
+    "metal": {"unit_price": 104, "transport_pct": 0.10, "storage_pct": 0.02, "wastage_pct": 0.015},
+    "additive": {"unit_price": 260, "transport_pct": 0.06, "storage_pct": 0.015, "wastage_pct": 0.01},
+    "colorant": {"unit_price": 280, "transport_pct": 0.06, "storage_pct": 0.015, "wastage_pct": 0.01},
+    "default": {"unit_price": 100, "transport_pct": 0.08, "storage_pct": 0.02, "wastage_pct": 0.015},
 }
 
 
@@ -432,12 +432,12 @@ PRODUCTION LINES (multiple integrated machines):
 - Medium production line: 40,000,000 - 80,000,000 DZD
 
 RAW MATERIALS (DZD per kg, CIF Algeria):
-- Standard polymers (PP, PE, PVC): 150 - 280 DZD/kg
-- Engineering plastics (ABS, PC): 280 - 450 DZD/kg
-- Specialty resins (epoxy, PU): 400 - 650 DZD/kg
-- Additives/colorants: 500 - 900 DZD/kg
-- Glass materials: 180 - 400 DZD/kg
-- Metal materials: 200 - 380 DZD/kg
+- Standard polymers (PP, PE, PVC): 120 - 224 DZD/kg
+- Engineering plastics (ABS, PC): 224 - 360 DZD/kg
+- Specialty resins (epoxy, PU): 320 - 520 DZD/kg
+- Additives/colorants: 400 - 720 DZD/kg
+- Glass materials: 144 - 320 DZD/kg
+- Metal materials: 160 - 304 DZD/kg
 
 ANNUAL COST RATIOS (as % of purchase price):
 - Implementation/installation: 5-12%
@@ -1120,13 +1120,13 @@ MATERIALS LIST:
 {materials_text}
 
 CONSERVATIVE PRICE GUIDELINES (DZD per tonne, CIF Algeria):
-- Standard polymers (PP, PE, PVC): 150,000 - 200,000 DZD/tonne
-- Engineering plastics (ABS, PC, Nylon): 200,000 - 300,000 DZD/tonne
-- Specialty resins (epoxy, PU): 250,000 - 400,000 DZD/tonne
-- Additives/colorants: 350,000 - 550,000 DZD/tonne
-- Glass materials: 150,000 - 300,000 DZD/tonne
-- Metal materials: 150,000 - 250,000 DZD/tonne
-- Industrial solvents/chemicals: 100,000 - 250,000 DZD/tonne
+- Standard polymers (PP, PE, PVC): 60,000 - 80,000 DZD/tonne
+- Engineering plastics (ABS, PC, Nylon): 80,000 - 120,000 DZD/tonne
+- Specialty resins (epoxy, PU): 100,000 - 160,000 DZD/tonne
+- Additives/colorants: 140,000 - 220,000 DZD/tonne
+- Glass materials: 60,000 - 120,000 DZD/tonne
+- Metal materials: 60,000 - 100,000 DZD/tonne
+- Industrial solvents/chemicals: 40,000 - 100,000 DZD/tonne
 
 OVERHEAD RATIOS (as fraction of material cost):
 - transport_pct: 0.05 - 0.10 (5-10%)
@@ -1228,12 +1228,12 @@ Return JSON with ALL {len(materials)} materials. Use EXACT material names as key
 {materials_text}
 
 RAW MATERIAL PRICE GUIDELINES (DZD per tonne, CIF Algeria):
-- Standard polymers (PP, PE, PVC): 180,000 - 280,000 DZD/tonne
-- Engineering plastics (ABS, PC): 280,000 - 400,000 DZD/tonne
-- Specialty resins (epoxy, PU): 350,000 - 550,000 DZD/tonne
-- Additives/colorants: 400,000 - 800,000 DZD/tonne
-- Industrial solvents: 150,000 - 300,000 DZD/tonne
-- Glass materials: 200,000 - 500,000 DZD/tonne
+- Standard polymers (PP, PE, PVC): 72,000 - 112,000 DZD/tonne
+- Engineering plastics (ABS, PC): 112,000 - 160,000 DZD/tonne
+- Specialty resins (epoxy, PU): 140,000 - 220,000 DZD/tonne
+- Additives/colorants: 160,000 - 320,000 DZD/tonne
+- Industrial solvents: 60,000 - 120,000 DZD/tonne
+- Glass materials: 80,000 - 200,000 DZD/tonne
 
 Return ONLY a JSON object with material names as keys:
 {{

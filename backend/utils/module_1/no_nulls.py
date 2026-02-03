@@ -370,14 +370,14 @@ def fill_material_nulls(material: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(qty, dict):
         qty = {}
     if is_null_or_empty(qty.get("valeur")):
-        qty["valeur"] = 100
+        qty["valeur"] = 50
     if is_null_or_empty(qty.get("unite")):
         qty["unite"] = "kg"
     if is_null_or_empty(qty.get("periode")):
         qty["periode"] = "mois"
     
-    # Cap quantities to max 1000 tonnes/year
-    qty = cap_quantity(qty, max_tonnes_per_year=1000)
+    # Cap quantities to max 500 tonnes/year (half of previous limit)
+    qty = cap_quantity(qty, max_tonnes_per_year=500)
     material["quantite_estimee"] = qty
     
     # Regulations

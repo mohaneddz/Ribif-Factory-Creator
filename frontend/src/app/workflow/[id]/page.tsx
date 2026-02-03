@@ -904,7 +904,7 @@ export default function FactoryCopilot() {
             // Set appropriate filename based on module type
             const filenames: Record<string, string> = {
                 pitchdeck: 'Pitch_Deck.pdf',
-                businessplan: 'Business_Plan.pdf',
+                businessplan: 'Business_Plan.xlsx',
                 catalogue: 'Catalogue_Technique.pdf',
                 layout2d: 'Layout_2D.dxf',
                 model3d: 'Model_3D.glb',
