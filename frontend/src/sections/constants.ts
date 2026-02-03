@@ -136,10 +136,10 @@ export const MOCK_TCO_DATA = {
         }
     ],
     "raw_materials_tco": [
-        { "nom_materiau": "Polyuréthane (PU)", "total_tco": 526500000.0, "unit_price": 3500 },
-        { "nom_materiau": "Polyurée (2K)", "total_tco": 394875000.0, "unit_price": 4800 },
-        { "nom_materiau": "Résines époxy", "total_tco": 102060000.0, "unit_price": 2900 },
-        { "nom_materiau": "UTG (verre flexible)", "total_tco": 530550000.0, "unit_price": 28000 }
+        { "nom_materiau": "Polyuréthane (PU)", "total_tco": 526500000.0, "unit_price": 450 },
+        { "nom_materiau": "Polyurée (2K)", "total_tco": 394875000.0, "unit_price": 520 },
+        { "nom_materiau": "Résines époxy", "total_tco": 102060000.0, "unit_price": 400 },
+        { "nom_materiau": "UTG (verre flexible)", "total_tco": 530550000.0, "unit_price": 350 }
     ]
 };
 
