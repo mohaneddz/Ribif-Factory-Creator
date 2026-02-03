@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import HTMLFlipBook from "react-pageflip";
-import { BookOpen, ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Download, Loader2, CheckCircle2, Sparkles, FileText } from "lucide-react";
 import clsx from "clsx";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
 
@@ -249,11 +249,63 @@ export const CatalogueTechniqueView = ({ pdfUrl, htmlUrl, loading = false }: { p
     // No PDF URL available (but might have HTML)
     if (!resolvedPdfUrl && !resolvedHtmlUrl) {
         return (
-            <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-[#0b0c10] bg-none dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 transition-colors">
-                <div className="text-center">
-                    <BookOpen className="text-indigo-600 dark:text-indigo-400 mx-auto mb-4" size={48} />
-                    <p className="text-slate-800 dark:text-white font-bold">Catalogue non disponible</p>
-                    <p className="text-indigo-600 dark:text-indigo-300 text-sm mt-2">Le catalogue sera généré automatiquement</p>
+            <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/20 dark:from-[#0b0c10] dark:via-slate-900 dark:to-indigo-950 transition-colors relative overflow-hidden">
+                {/* Animated background decorations */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1/4 -left-20 w-72 h-72 bg-indigo-400/20 dark:bg-indigo-500/10 rounded-full blur-3xl animate-pulse" />
+                    <div className="absolute bottom-1/4 -right-20 w-72 h-72 bg-purple-400/20 dark:bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-400/10 dark:bg-emerald-500/5 rounded-full blur-3xl" />
+                </div>
+                
+                <div className="relative z-10 text-center max-w-md mx-auto px-6">
+                    {/* Success icon with animated ring */}
+                    <div className="relative inline-flex items-center justify-center mb-6">
+                        <div className="absolute inset-0 w-24 h-24 bg-emerald-500/20 dark:bg-emerald-400/20 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
+                        <div className="relative w-24 h-24 bg-gradient-to-br from-emerald-400 to-emerald-600 dark:from-emerald-500 dark:to-emerald-700 rounded-full flex items-center justify-center shadow-2xl shadow-emerald-500/30">
+                            <CheckCircle2 className="text-white" size={48} strokeWidth={2.5} />
+                        </div>
+                    </div>
+                    
+                    {/* Success message */}
+                    <div className="space-y-3 mb-8">
+                        <div className="flex items-center justify-center gap-2">
+                            <Sparkles className="text-amber-500 dark:text-amber-400" size={20} />
+                            <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-800 via-indigo-700 to-purple-700 dark:from-white dark:via-indigo-200 dark:to-purple-200 bg-clip-text text-transparent">
+                                Catalogue Prêt !
+                            </h2>
+                            <Sparkles className="text-amber-500 dark:text-amber-400" size={20} />
+                        </div>
+                        <p className="text-slate-600 dark:text-slate-300 text-base">
+                            Votre catalogue technique a été généré avec succès
+                        </p>
+                    </div>
+                    
+                    {/* Feature badges */}
+                    <div className="flex flex-wrap justify-center gap-3 mb-8">
+                        <div className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-full shadow-lg border border-slate-200/50 dark:border-slate-700/50">
+                            <FileText className="text-indigo-500 dark:text-indigo-400" size={16} />
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Document PDF</span>
+                        </div>
+                        <div className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-full shadow-lg border border-slate-200/50 dark:border-slate-700/50">
+                            <BookOpen className="text-purple-500 dark:text-purple-400" size={16} />
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Consultation interactive</span>
+                        </div>
+                    </div>
+                    
+                    {/* Info card */}
+                    <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-slate-200/50 dark:border-slate-700/50">
+                        <div className="flex items-start gap-4">
+                            <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center">
+                                <BookOpen className="text-indigo-600 dark:text-indigo-400" size={20} />
+                            </div>
+                            <div className="text-left">
+                                <h3 className="font-semibold text-slate-800 dark:text-white mb-1">Prochaine étape</h3>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">
+                                    Le catalogue sera disponible automatiquement une fois le traitement terminé. Vous pourrez le consulter en mode livre interactif.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         );

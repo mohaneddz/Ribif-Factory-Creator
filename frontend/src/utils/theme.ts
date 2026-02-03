@@ -6,7 +6,7 @@ export const THEME_COOKIE = "ribif_theme";
 
 export const getTheme = (): ThemeMode => {
   const raw = getCookie(THEME_COOKIE);
-  return raw === "light" ? "light" : "dark";
+  return raw === "dark" ? "dark" : "light";
 };
 
 export const setTheme = (mode: ThemeMode) => {

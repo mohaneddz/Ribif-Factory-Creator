@@ -1,8 +1,9 @@
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 import logging
 import warnings
 import traceback
+import os
 
 # =========================================================
 # GLOBAL LOGGING/WARNING SUPPRESSION
@@ -29,18 +30,54 @@ from routes.health import health_bp
 
 app = Flask(__name__)
 
-# Ensure CORS headers are added even when Flask error handlers run
-app.config["CORS_INTERCEPT_EXCEPTIONS"] = True  # Flask-CORS config
+# =========================================================
+# CORS CONFIGURATION - ALLOW ALL ORIGINS (DIE CORS DIE)
+# =========================================================
+# Get allowed origins from environment or allow all
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")
+if CORS_ORIGINS != "*":
+    CORS_ORIGINS = [origin.strip() for origin in CORS_ORIGINS.split(",")]
 
-# Single source of truth for CORS (do NOT also manually add headers in after_request)
 CORS(
     app,
-    resources={r"/api/*": {"origins": "*"}},
-    supports_credentials=False,  # IMPORTANT: keep False if using "*" origin
-    allow_headers=["Content-Type", "Authorization", "x-project-id"],
-    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    max_age=86400,
+    resources={r"/*": {"origins": CORS_ORIGINS}},
+    supports_credentials=True,
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-User-Id", "X-Project-Id", "Accept", "Origin"],
+    methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    expose_headers=["Content-Type", "X-Total-Count", "Content-Disposition"],
+    max_age=86400,  # Cache preflight requests for 24 hours
 )
+
+
+@app.before_request
+def handle_preflight():
+    """Handle OPTIONS preflight requests explicitly."""
+    if request.method == "OPTIONS":
+        response = app.make_default_options_response()
+        return response
+
+
+@app.after_request
+def add_cors_headers(response):
+    """Add CORS headers to every response as a fallback."""
+    origin = request.headers.get("Origin", "*")
+    
+    # If CORS_ORIGINS is "*", allow any origin
+    if CORS_ORIGINS == "*":
+        response.headers["Access-Control-Allow-Origin"] = origin if origin else "*"
+    elif origin in CORS_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+    else:
+        # Still allow the request but with the first allowed origin
+        response.headers["Access-Control-Allow-Origin"] = CORS_ORIGINS[0] if isinstance(CORS_ORIGINS, list) else "*"
+    
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, X-User-Id, X-Project-Id, Accept, Origin"
+    response.headers["Access-Control-Expose-Headers"] = "Content-Type, X-Total-Count, Content-Disposition"
+    response.headers["Access-Control-Max-Age"] = "86400"
+    
+    return response
 
 # Increase timeouts for long-running enrichment operations
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -60,7 +97,6 @@ app.register_blueprint(bp_module9)
 app.register_blueprint(bp_email_service)
 app.register_blueprint(bp_validation)
 app.register_blueprint(health_bp)
-
 
 # =========================================================
 # GLOBAL ERROR HANDLERS - ALWAYS RETURN JSON

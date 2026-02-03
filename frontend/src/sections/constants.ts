@@ -19,6 +19,15 @@ export const fontStyle = `
 
 export const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
+/**
+ * Build the full API URL for a given path.
+ * Handles both local development (relative paths) and production (absolute URLs).
+ */
+export function getApiUrl(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return API_BASE ? `${API_BASE.replace(/\/$/, "")}${normalizedPath}` : normalizedPath;
+}
+
 export const MODULES = [
     { id: 1, title: "Analyse Specs", icon: FileText, file: "Specs_V1.pdf", type: "specs", statusText: "Extraction des données..." },
     { id: 2, title: "Sourcing Global", icon: Globe, file: "Liste_Sourcing.xlsx", type: "sourcing", statusText: "Recherche fournisseurs..." },

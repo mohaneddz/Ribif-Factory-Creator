@@ -54,37 +54,37 @@ export function DigitalTwinView({ pipelineModelUrl }: DigitalTwinViewProps) {
     }: {
         label: string, value: string | number, unit: string, icon: any, color: string, trend?: string, iconBg: string
     }) => (
-        <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 p-4 rounded-2xl shadow-sm">
-            <div className="flex justify-between items-start mb-2">
-                <div className={`p-2 rounded-xl ${iconBg} ${color}`}>
-                    <Icon size={18} />
+        <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start mb-1 sm:mb-2">
+                <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${iconBg} ${color}`}>
+                    <Icon className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
                 </div>
                 {trend && (
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${trend.startsWith('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                    <span className={`text-[9px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded-md ${trend.startsWith('+') ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
                         {trend}
                     </span>
                 )}
             </div>
             <div>
-                <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">{label}</div>
+                <div className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5 truncate">{label}</div>
                 <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-black text-slate-900 dark:text-white">{value}</span>
-                    <span className="text-xs font-bold text-slate-400">{unit}</span>
+                    <span className="text-base sm:text-xl font-black text-slate-900 dark:text-white">{value}</span>
+                    <span className="text-[10px] sm:text-xs font-bold text-slate-400">{unit}</span>
                 </div>
             </div>
         </div>
     );
 
     return (
-        <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-transparent overflow-y-auto">
+        <div className="h-full flex flex-col p-3 sm:p-4 md:p-6 gap-3 sm:gap-4 md:gap-6 bg-slate-50 dark:bg-transparent overflow-y-auto">
             {/* TOP SECTION: 3D + KEY METRICS */}
-            <div className="grid grid-cols-12 gap-6 min-h-[400px]">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 md:gap-6 min-h-[280px] sm:min-h-[320px] lg:min-h-[400px]">
                 {/* 3D Viewer (1/4th of page width approx) */}
-                <div className="col-span-12 lg:col-span-4 bg-white dark:bg-[#1f2937] rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden relative">
-                    <div className="absolute top-4 left-4 z-10 flex items-center gap-2 px-3 py-1.5 bg-white/80 dark:bg-black/40 backdrop-blur-md rounded-full border border-slate-200 dark:border-white/10">
-                        <div className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                        <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-widest">
-                            {isPlaying ? 'Live Simulation' : 'Simulation Paused'}
+                <div className="col-span-1 lg:col-span-4 h-[250px] sm:h-[300px] lg:h-auto bg-white dark:bg-[#1f2937] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden relative">
+                    <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-10 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-white/80 dark:bg-black/40 backdrop-blur-md rounded-full border border-slate-200 dark:border-white/10">
+                        <div className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full ${isPlaying ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                        <span className="text-[8px] sm:text-[10px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-widest">
+                            {isPlaying ? 'Live' : 'Paused'}
                         </span>
                     </div>
 
@@ -95,23 +95,23 @@ export function DigitalTwinView({ pipelineModelUrl }: DigitalTwinViewProps) {
                         className="w-full h-full"
                     />
 
-                    <div className="absolute bottom-4 left-4 right-4 z-10 flex justify-between items-center">
+                    <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 right-2 sm:right-4 z-10 flex justify-between items-center">
                         <button
                             onClick={() => setIsPlaying(!isPlaying)}
-                            className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg hover:bg-indigo-500 transition-colors"
+                            className="p-2 sm:p-2.5 bg-indigo-600 text-white rounded-lg sm:rounded-xl shadow-lg hover:bg-indigo-500 transition-colors"
                         >
-                            {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
+                            {isPlaying ? <Pause className="w-4 h-4 sm:w-[18px] sm:h-[18px]" fill="currentColor" /> : <Play className="w-4 h-4 sm:w-[18px] sm:h-[18px]" fill="currentColor" />}
                         </button>
                         <div className="flex gap-2">
-                            <button className="p-2.5 bg-white/90 dark:bg-white/10 backdrop-blur rounded-xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300">
-                                <Settings2 size={18} />
+                            <button className="p-2 sm:p-2.5 bg-white/90 dark:bg-white/10 backdrop-blur rounded-lg sm:rounded-xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300">
+                                <Settings2 className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
                             </button>
                         </div>
                     </div>
                 </div>
 
                 {/* METRICS GRID */}
-                <div className="col-span-12 lg:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="col-span-1 lg:col-span-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
                     <MetricCard
                         label="Température"
                         value={currentData?.temperature.toFixed(1) || "0"}
@@ -181,23 +181,23 @@ export function DigitalTwinView({ pipelineModelUrl }: DigitalTwinViewProps) {
             </div>
 
             {/* MIDDLE SECTION: CHARTS */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-[#1f2937] p-6 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
-                    <div className="flex justify-between items-center mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+                <div className="bg-white dark:bg-[#1f2937] p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-4 sm:mb-6">
                         <div className="flex items-center gap-2">
-                            <BarChart3 size={18} className="text-indigo-600" />
-                            <h3 className="font-bold text-slate-800 dark:text-white">Trend Analytics</h3>
+                            <BarChart3 className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-indigo-600" />
+                            <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-white">Trend Analytics</h3>
                         </div>
-                        <div className="flex gap-2">
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-50 dark:bg-white/5 px-2 py-1 rounded-md">
-                                <div className="w-2 h-2 rounded-full bg-rose-500" /> Temp
+                        <div className="flex gap-1.5 sm:gap-2">
+                            <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-[10px] font-bold text-slate-500 bg-slate-50 dark:bg-white/5 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md">
+                                <div className="w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full bg-rose-500" /> Temp
                             </div>
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-50 dark:bg-white/5 px-2 py-1 rounded-md">
-                                <div className="w-2 h-2 rounded-full bg-indigo-500" /> Power
+                            <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-[10px] font-bold text-slate-500 bg-slate-50 dark:bg-white/5 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md">
+                                <div className="w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full bg-indigo-500" /> Power
                             </div>
                         </div>
                     </div>
-                    <div className="h-64 w-full">
+                    <div className="h-48 sm:h-56 md:h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={history}>
                                 <defs>
@@ -223,14 +223,14 @@ export function DigitalTwinView({ pipelineModelUrl }: DigitalTwinViewProps) {
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-[#1f2937] p-6 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
-                    <div className="flex justify-between items-center mb-6">
+                <div className="bg-white dark:bg-[#1f2937] p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
+                    <div className="flex justify-between items-center mb-4 sm:mb-6">
                         <div className="flex items-center gap-2">
-                            <Activity size={18} className="text-indigo-600" />
-                            <h3 className="font-bold text-slate-800 dark:text-white">Performance Stability</h3>
+                            <Activity className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-indigo-600" />
+                            <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-white">Performance Stability</h3>
                         </div>
                     </div>
-                    <div className="h-64 w-full">
+                    <div className="h-48 sm:h-56 md:h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={history}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -246,74 +246,77 @@ export function DigitalTwinView({ pipelineModelUrl }: DigitalTwinViewProps) {
             </div>
 
             {/* BOTTOM SECTION: SIMULATION CONTROLS */}
-            <div className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500 rounded-full blur-[100px] opacity-10" />
+            <div className="bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 text-white relative overflow-visible">
+                <div className="absolute top-0 right-0 w-48 sm:w-64 h-48 sm:h-64 bg-indigo-500 rounded-full blur-[100px] opacity-10 pointer-events-none" />
                 <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-6">
-                        <Settings2 className="text-indigo-400" />
-                        <h3 className="text-lg font-bold">Dynamic Simulation Control</h3>
+                    <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                        <Settings2 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
+                        <h3 className="text-sm sm:text-base md:text-lg font-bold">Dynamic Simulation Control</h3>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        <div className="space-y-4">
-                            <div className="flex justify-between">
-                                <label className="text-xs font-bold text-slate-400 uppercase">Target Temp</label>
-                                <span className="text-xs font-mono font-bold text-indigo-400">{params.tempTarget}°C</span>
+                    <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+                        <div className="space-y-3 sm:space-y-4">
+                            <div className="flex justify-between items-center">
+                                <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase truncate mr-2">Target Temp</label>
+                                <span className="text-[10px] sm:text-xs font-mono font-bold text-indigo-400 whitespace-nowrap">{params.tempTarget}°C</span>
                             </div>
                             <input
                                 type="range" min="20" max="150"
                                 value={params.tempTarget}
                                 onChange={(e) => setParams({ ...params, tempTarget: Number(e.target.value) })}
-                                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                className="w-full h-2 sm:h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                             />
                         </div>
-                        <div className="space-y-4">
-                            <div className="flex justify-between">
-                                <label className="text-xs font-bold text-slate-400 uppercase">Base Power</label>
-                                <span className="text-xs font-mono font-bold text-indigo-400">{params.powerBase}kW</span>
+                        <div className="space-y-3 sm:space-y-4">
+                            <div className="flex justify-between items-center">
+                                <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase truncate mr-2">Base Power</label>
+                                <span className="text-[10px] sm:text-xs font-mono font-bold text-indigo-400 whitespace-nowrap">{params.powerBase}kW</span>
                             </div>
                             <input
                                 type="range" min="0" max="500"
                                 value={params.powerBase}
                                 onChange={(e) => setParams({ ...params, powerBase: Number(e.target.value) })}
-                                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                className="w-full h-2 sm:h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                             />
                         </div>
-                        <div className="space-y-4">
-                            <div className="flex justify-between">
-                                <label className="text-xs font-bold text-slate-400 uppercase">Usage Goal</label>
-                                <span className="text-xs font-mono font-bold text-indigo-400">{params.usageTarget}%</span>
+                        <div className="space-y-3 sm:space-y-4">
+                            <div className="flex justify-between items-center">
+                                <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase truncate mr-2">Usage Goal</label>
+                                <span className="text-[10px] sm:text-xs font-mono font-bold text-indigo-400 whitespace-nowrap">{params.usageTarget}%</span>
                             </div>
                             <input
                                 type="range" min="0" max="100"
                                 value={params.usageTarget}
                                 onChange={(e) => setParams({ ...params, usageTarget: Number(e.target.value) })}
-                                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                className="w-full h-2 sm:h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                             />
                         </div>
-                        <div className="space-y-4">
-                            <div className="flex justify-between">
-                                <label className="text-xs font-bold text-slate-400 uppercase">Prod Rate</label>
-                                <span className="text-xs font-mono font-bold text-indigo-400">{params.prodRateBase}u/h</span>
+                        <div className="space-y-3 sm:space-y-4">
+                            <div className="flex justify-between items-center">
+                                <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase truncate mr-2">Prod Rate</label>
+                                <span className="text-[10px] sm:text-xs font-mono font-bold text-indigo-400 whitespace-nowrap">{params.prodRateBase}u/h</span>
                             </div>
                             <input
                                 type="range" min="0" max="1000"
                                 value={params.prodRateBase}
                                 onChange={(e) => setParams({ ...params, prodRateBase: Number(e.target.value) })}
-                                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                className="w-full h-2 sm:h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                             />
                         </div>
                     </div>
 
-                    <div className="mt-8 pt-6 border-t border-white/5 flex flex-wrap gap-4">
-                        <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
-                            <ShieldCheck size={14} className="text-emerald-500" /> IA Safety Checks: <span className="text-emerald-500">Normal</span>
+                    <div className="mt-4 sm:mt-6 md:mt-8 pt-4 sm:pt-6 border-t border-white/5 flex flex-wrap gap-3 sm:gap-4">
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-medium text-slate-400">
+                            <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 flex-shrink-0" />
+                            <span className="text-emerald-500">Normal</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
-                            <Hammer size={14} className="text-indigo-400" /> Maintenance Risk: <span className="text-indigo-400">{currentData && currentData.vibration > 4 ? 'High' : 'Low'}</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-medium text-slate-400">
+                            <Hammer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 flex-shrink-0" />
+                            <span className="text-indigo-400">{currentData && currentData.vibration > 4 ? 'High' : 'Low'}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
-                            <Clock size={14} className="text-slate-400" /> Runtime: <span className="text-white">{(timeStepRef.current / 60).toFixed(1)} mins</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-medium text-slate-400">
+                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0" />
+                            <span className="text-white">{(timeStepRef.current / 60).toFixed(1)}m</span>
                         </div>
                     </div>
                 </div>

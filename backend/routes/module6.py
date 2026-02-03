@@ -6,6 +6,14 @@ from config import OUTPUT_DIRS, SKIP_MODULE_6, write_json
 from supabase_utils import get_supabase, insert_tco_run
 # Heavy imports moved to lazy loading for faster startup
 from utils.logger import log_skip, get_logger
+from utils.module_6.core import (
+    compute_input_fingerprint,
+    MODULE6_VERSION,
+    RIBIFModule6TCO,
+    ProductTCO,
+    RawMaterialTCO,
+    get_heuristic_machine_estimate,
+)
 from utils.app_helpers import (
     get_request_project_id,
     get_request_user_id,
@@ -176,7 +184,6 @@ def calculate_tco_from_sourcing():
                 estimate = batch_estimates.get(machine_name)
                 if not estimate:
                     logger.warning("No batch estimate for '%s', using heuristic", machine_name)
-                    from utils.module_6.core import get_heuristic_machine_estimate
                     estimate = get_heuristic_machine_estimate(machine_name, machine_input.get("category", ""))
                 
                 # Calculate TCO from estimate

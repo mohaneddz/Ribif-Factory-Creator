@@ -14,7 +14,7 @@ const applyTheme = (mode: ThemeMode) => {
 };
 
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>("dark");
+  const [theme, setThemeState] = useState<ThemeMode>("light");
 
   useEffect(() => {
     const mode = getTheme();
@@ -23,7 +23,7 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
 
     const handler = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
-      const next = (event.detail as ThemeMode) || "dark";
+      const next = (event.detail as ThemeMode) || "light";
       setThemeState(next);
       applyTheme(next);
     };

@@ -45,7 +45,5 @@ next-env.d.ts
 *__pycache__/*
 *.pyc
 
-public/models/**.glb
-
 backend/mohaned/__pycache__/*
 backend/mohaned/assets_cache/*
