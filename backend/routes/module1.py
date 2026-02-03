@@ -34,7 +34,16 @@ import uuid
 from datetime import datetime
 
 bp_module1 = Blueprint("module1", __name__)
-extractor = RIBIFExtractor()
+
+# Lazy initialization to prevent slow startup blocking health checks
+_extractor = None
+
+def get_extractor():
+    """Lazy initialization of RIBIFExtractor to prevent slow startup."""
+    global _extractor
+    if _extractor is None:
+        _extractor = RIBIFExtractor()
+    return _extractor
 
 # Module 1 timeout configuration
 MODULE1_TOTAL_TIMEOUT = int(os.getenv("MODULE1_TOTAL_TIMEOUT", "300"))  # 5 minutes default
@@ -248,7 +257,7 @@ def process_module_1():
                 module1_logger = get_logger("module1")
                 module1_logger.warning(f"Failed to upload source file copy: {e}")
 
-        extraction_result = extractor.process_document(str(filepath), str(OUTPUT_DIRS["module1"]))
+        extraction_result = get_extractor().process_document(str(filepath), str(OUTPUT_DIRS["module1"]))
 
         # --- COMPREHENSIVE ENRICHMENT (Module 1 Stages 1-6) ---
         module1_logger = get_logger("module1")

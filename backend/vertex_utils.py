@@ -14,11 +14,18 @@ from utils.quota_manager import with_quota_check, with_retry, is_quota_error
 logger = get_logger(__name__)
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
-api_key = os.getenv("GOOGLE_API_KEY")
-if not api_key:
-    raise ValueError("API Key not found! Make sure you created a .env file.")
+# Lazy initialization to prevent slow startup blocking health checks
+_client = None
 
-client = genai.Client(api_key=api_key)
+def _get_client():
+    """Lazy initialization of genai Client to prevent slow startup."""
+    global _client
+    if _client is None:
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("API Key not found! Make sure you created a .env file.")
+        _client = genai.Client(api_key=api_key)
+    return _client
 
 @with_quota_check("vertex_ai", max_calls=1000)
 @with_retry(max_attempts=2, catch_quota_errors=True)
@@ -87,7 +94,7 @@ def generate_message(
         top_k=64,
     )
 
-    response = client.models.generate_content(
+    response = _get_client().models.generate_content(
         model=model_id,
         contents=contents,
         config=gen_config,
@@ -131,7 +138,7 @@ def generate_image(
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            response = client.models.generate_content(
+            response = _get_client().models.generate_content(
                 model=model_id,
                 contents=contents,
                 config=types.GenerateContentConfig(
@@ -195,7 +202,7 @@ def generate_video(
             img_bytes = base64.b64decode(image) if isinstance(image, str) else image
             contents.append(types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg"))
 
-    operation = client.models.generate_videos(
+    operation = _get_client().models.generate_videos(
         model=model_id,
         prompt=prompt,
         config=types.GenerateVideosConfig(
@@ -208,7 +215,7 @@ def generate_video(
     import time
     while not operation.done:
         time.sleep(5)
-        operation = client.operations.get(operation)
+        operation = _get_client().operations.get(operation)
 
     return operation.result.generated_videos[0].video.uri
 
