@@ -665,8 +665,7 @@ def web_validate_minimal(
         # Get fallback suppliers for this machine type
         fallback = get_fallback_suppliers(canonical_name)
         
-        # Generate AI fallback to supplement
-        from utils.module_4.ai_fallback import generate_ai_fallback_suppliers
+        # Generate AI fallback to supplement (using module-level import)
         typical_mfrs = INDUSTRY_KNOWLEDGE.get(canonical_name, {}).get('typical_manufacturers', [])
         ai_suppliers = generate_ai_fallback_suppliers(canonical_name, typical_mfrs, max_suppliers=3)
         
@@ -1444,8 +1443,7 @@ def enrich_machine_bounded(
             # Budget allocation says to skip - use AI fallback instead of empty suppliers
             logger.info(f"Phase C: Skipping {nom_machine} per budget allocation (SKIP_REASON=budget_limited) - generating AI fallback")
             
-            # Generate AI fallback suppliers since we can't do web search
-            from utils.module_4.ai_fallback import generate_ai_fallback_suppliers
+            # Generate AI fallback suppliers since we can't do web search (using module-level import)
             typical_mfrs = INDUSTRY_KNOWLEDGE.get(canonical_name, {}).get('typical_manufacturers', [])
             ai_suppliers = generate_ai_fallback_suppliers(canonical_name, typical_mfrs, max_suppliers=5)
             for s in ai_suppliers:
@@ -1480,9 +1478,8 @@ def enrich_machine_bounded(
             )
             web_validation_executed = True
         else:
-            # No budget available - use AI fallback
+            # No budget available - use AI fallback (using module-level import)
             logger.info(f"Phase C: Global budget exhausted for {nom_machine} - generating AI fallback")
-            from utils.module_4.ai_fallback import generate_ai_fallback_suppliers
             typical_mfrs = INDUSTRY_KNOWLEDGE.get(canonical_name, {}).get('typical_manufacturers', [])
             ai_suppliers = generate_ai_fallback_suppliers(canonical_name, typical_mfrs, max_suppliers=5)
             for s in ai_suppliers:
@@ -1528,8 +1525,7 @@ def enrich_machine_bounded(
                 "Subsystem - no OEM supplier needed"
             )
         elif machine_class == CLASS_OPTIONAL:
-            # Optional systems get AI fallback suppliers
-            from utils.module_4.ai_fallback import generate_ai_fallback_suppliers
+            # Optional systems get AI fallback suppliers (using module-level import)
             typical_mfrs = INDUSTRY_KNOWLEDGE.get(canonical_name, {}).get('typical_manufacturers', [])
             ai_suppliers = generate_ai_fallback_suppliers(canonical_name, typical_mfrs, max_suppliers=4)
             for s in ai_suppliers:
@@ -1543,8 +1539,7 @@ def enrich_machine_bounded(
                 f"Optional system - using {len(ai_suppliers)} AI fallback suppliers"
             )
         elif not global_budget.can_allocate_machine():
-            # Budget exhausted - still provide AI fallback
-            from utils.module_4.ai_fallback import generate_ai_fallback_suppliers
+            # Budget exhausted - still provide AI fallback (using module-level import)
             typical_mfrs = INDUSTRY_KNOWLEDGE.get(canonical_name, {}).get('typical_manufacturers', [])
             ai_suppliers = generate_ai_fallback_suppliers(canonical_name, typical_mfrs, max_suppliers=4)
             for s in ai_suppliers:
@@ -1558,8 +1553,7 @@ def enrich_machine_bounded(
                 f"Global budget exhausted - using {len(ai_suppliers)} AI fallback suppliers"
             )
         else:
-            # Core stable machine with good confidence - provide suppliers from industry knowledge + AI
-            from utils.module_4.ai_fallback import generate_ai_fallback_suppliers
+            # Core stable machine with good confidence - provide suppliers from industry knowledge + AI (using module-level import)
             typical_mfrs = INDUSTRY_KNOWLEDGE.get(canonical_name, {}).get('typical_manufacturers', [])
             ai_suppliers = generate_ai_fallback_suppliers(canonical_name, typical_mfrs, max_suppliers=5)
             for s in ai_suppliers:

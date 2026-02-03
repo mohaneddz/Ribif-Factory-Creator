@@ -18,11 +18,14 @@ export const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: {
     const [activeTab, setActiveTab] = useState<string | null>(null);
     const [showOverlay, setShowOverlay] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
-    const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+    const [pdfDoc, setPdfDoc] = useState<any>(null);
     const [pdfLoading, setPdfLoading] = useState(false);
     const [pdfError, setPdfError] = useState<string | null>(null);
+    const [pdfJsLoaded, setPdfJsLoaded] = useState(false);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const renderTaskRef = useRef<any>(null);
     const lastFetchedRef = useRef<string | null>(null);
-    const totalPages = pitchDeckData?.data?.n_slides || pitchDeckData?.data?.slides?.length || 10;
+    const totalPages = pdfDoc?.numPages || pitchDeckData?.data?.n_slides || pitchDeckData?.data?.slides?.length || 10;
 
     // Create a unique key from pitchDeckData to detect when it changes
     const pitchDeckKey = pitchDeckData ? `${pitchDeckData.pdf_download_url || pitchDeckData.data?.pdf_download_url || ''}_${pitchDeckData.pdf_filename || pitchDeckData.data?.pdf_filename || ''}_${pitchDeckData.data?.created_at || ''}` : null;
@@ -45,58 +48,126 @@ export const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: {
     const pitchDeckPdfUrl = resolveInlinePdfUrl(pitchDeckData?.pdf_download_url || pitchDeckData?.data?.pdf_download_url);
     const businessPlanDownloadUrl = resolvePdfUrl(businessPlanData?.download_url);
 
-    // Fetch PDF as blob and create object URL for iframe display
-    const fetchPdfAsBlob = useCallback(async (url: string) => {
-        setPdfLoading(true);
-        setPdfError(null);
-        try {
-            // Add cache-busting parameter to ensure fresh download
-            const cacheBustUrl = url.includes('?') ? `${url}&_t=${Date.now()}` : `${url}?_t=${Date.now()}`;
-            const response = await fetch(cacheBustUrl, {
-                cache: 'no-store',
-                headers: {
-                    'Cache-Control': 'no-cache',
-                }
-            });
-            if (!response.ok) {
-                throw new Error(`Failed to fetch PDF: ${response.status}`);
-            }
-            const blob = await response.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            setPdfBlobUrl(blobUrl);
-        } catch (err) {
-            console.error("Error fetching PDF:", err);
-            setPdfError(err instanceof Error ? err.message : "Failed to load PDF");
-        } finally {
-            setPdfLoading(false);
+    // Load PDF.js from CDN
+    useEffect(() => {
+        if (typeof window !== 'undefined' && !(window as any).pdfjsLib) {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            script.onload = () => {
+                const pdfjsLib = (window as any).pdfjsLib;
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                setPdfJsLoaded(true);
+            };
+            document.head.appendChild(script);
+        } else if ((window as any).pdfjsLib) {
+            setPdfJsLoaded(true);
         }
     }, []);
 
-    // Fetch PDF when pitchDeckData changes (not just URL)
+    // Load PDF document when URL changes
     useEffect(() => {
-        if (!pitchDeckPdfUrl || !pitchDeckKey) return;
+        if (!pdfJsLoaded || !pitchDeckPdfUrl || !pitchDeckKey) return;
         
         // Skip if we already fetched this exact data
         if (lastFetchedRef.current === pitchDeckKey) return;
         lastFetchedRef.current = pitchDeckKey;
         
-        // Revoke previous blob URL to prevent memory leaks
-        if (pdfBlobUrl) {
-            URL.revokeObjectURL(pdfBlobUrl);
-            setPdfBlobUrl(null);
-        }
-        
-        fetchPdfAsBlob(pitchDeckPdfUrl);
-    }, [pitchDeckPdfUrl, pitchDeckKey, fetchPdfAsBlob]);
-
-    // Cleanup blob URL on unmount
-    useEffect(() => {
-        return () => {
-            if (pdfBlobUrl) {
-                URL.revokeObjectURL(pdfBlobUrl);
+        const loadPdf = async () => {
+            setPdfLoading(true);
+            setPdfError(null);
+            setPdfDoc(null);
+            
+            try {
+                const pdfjsLib = (window as any).pdfjsLib;
+                
+                // Fetch PDF as blob for cross-origin URLs
+                const cacheBustUrl = pitchDeckPdfUrl.includes('?') ? `${pitchDeckPdfUrl}&_t=${Date.now()}` : `${pitchDeckPdfUrl}?_t=${Date.now()}`;
+                const response = await fetch(cacheBustUrl, {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch PDF: ${response.status}`);
+                }
+                
+                const blob = await response.blob();
+                const arrayBuffer = await blob.arrayBuffer();
+                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                const doc = await loadingTask.promise;
+                
+                setPdfDoc(doc);
+                setCurrentPage(1);
+            } catch (err) {
+                console.error("Error loading PDF:", err);
+                setPdfError(err instanceof Error ? err.message : "Failed to load PDF");
+            } finally {
+                setPdfLoading(false);
             }
         };
-    }, [pdfBlobUrl]);
+        
+        loadPdf();
+    }, [pdfJsLoaded, pitchDeckPdfUrl, pitchDeckKey]);
+
+    // Render current page to canvas
+    useEffect(() => {
+        if (!pdfDoc || !canvasRef.current) return;
+        
+        const renderPage = async () => {
+            // Cancel any existing render task
+            if (renderTaskRef.current) {
+                try {
+                    renderTaskRef.current.cancel();
+                } catch (e) { /* ignore */ }
+                renderTaskRef.current = null;
+            }
+            
+            try {
+                const page = await pdfDoc.getPage(currentPage);
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                
+                const context = canvas.getContext('2d');
+                if (!context) return;
+                
+                // Calculate scale to fit the container while maintaining aspect ratio
+                const containerWidth = canvas.parentElement?.clientWidth || 800;
+                const containerHeight = canvas.parentElement?.clientHeight || 600;
+                const viewport = page.getViewport({ scale: 1 });
+                
+                const scaleX = containerWidth / viewport.width;
+                const scaleY = containerHeight / viewport.height;
+                const scale = Math.min(scaleX, scaleY) * 0.95; // 95% to add some padding
+                
+                const scaledViewport = page.getViewport({ scale });
+                
+                canvas.width = scaledViewport.width;
+                canvas.height = scaledViewport.height;
+                
+                const renderTask = page.render({
+                    canvasContext: context,
+                    viewport: scaledViewport
+                });
+                renderTaskRef.current = renderTask;
+                
+                await renderTask.promise;
+            } catch (err: any) {
+                if (err?.name !== 'RenderingCancelledException') {
+                    console.error('Error rendering page:', err);
+                }
+            }
+        };
+        
+        renderPage();
+        
+        return () => {
+            if (renderTaskRef.current) {
+                try {
+                    renderTaskRef.current.cancel();
+                } catch (e) { /* ignore */ }
+            }
+        };
+    }, [pdfDoc, currentPage]);
 
     const handleTabClick = (tabId: string) => {
         setActiveTab(tabId);
@@ -320,9 +391,9 @@ export const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: {
                                 Business Plan XLSX
                             </a>
                         )}
-                        {pdfBlobUrl && (
+                        {pitchDeckPdfUrl && (
                             <a
-                                href={pdfBlobUrl}
+                                href={pitchDeckPdfUrl}
                                 download={pitchDeckData?.pdf_filename || 'Pitch_Deck.pdf'}
                                 className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all"
                             >
@@ -397,7 +468,7 @@ export const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: {
                 </div>
 
                 {/* PDF Preview or Placeholder */}
-                <div className="w-full h-full flex items-center justify-center">
+                <div className="w-full h-full flex items-center justify-center p-8">
                     {pdfLoading ? (
                         <div className="text-center text-white/80">
                             <Loader2 size={64} className="mx-auto mb-4 animate-spin" />
@@ -408,14 +479,17 @@ export const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: {
                         <ErrorDisplay 
                             error={pdfError}
                             title="Erreur de chargement du Pitch Deck"
-                            onRetry={() => pitchDeckPdfUrl && fetchPdfAsBlob(pitchDeckPdfUrl)}
+                            onRetry={() => {
+                                lastFetchedRef.current = null;
+                                setPdfDoc(null);
+                            }}
                             compact={true}
                         />
-                    ) : pdfBlobUrl ? (
-                        <iframe
-                            src={`${pdfBlobUrl}#page=${currentPage}&toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-                            className="w-full h-full border-0"
-                            title="Pitch Deck Preview"
+                    ) : pdfDoc ? (
+                        <canvas
+                            ref={canvasRef}
+                            className="max-w-full max-h-full shadow-2xl rounded-lg"
+                            style={{ background: 'white' }}
                         />
                     ) : (
                         <div className="text-center text-white/60">

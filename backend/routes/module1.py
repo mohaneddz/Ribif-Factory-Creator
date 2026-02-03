@@ -255,6 +255,7 @@ def process_module_1():
         source_file_url = None
         source_object_path = None
         if client and project_id and "file" in request.files:
+            # File was uploaded directly - upload a copy to storage
             try:
                 source_file_id, source_file_url, source_object_path = upload_with_name_timestamp(
                     client=client,
@@ -267,6 +268,24 @@ def process_module_1():
             except Exception as e:
                 module1_logger = get_logger("module1")
                 module1_logger.warning(f"Failed to upload source file copy: {e}")
+        elif client and object_path:
+            # File was downloaded from storage - populate metadata from the object_path
+            source_object_path = object_path
+            try:
+                # Get a signed URL for the file
+                url_response = client.storage.from_("project-files").create_signed_url(object_path, 3600)
+                if url_response and url_response.get("signedURL"):
+                    source_file_url = url_response["signedURL"]
+                # Try to get file_id from the files table if it exists
+                try:
+                    file_record = client.table("files").select("id").eq("object_path", object_path).single().execute()
+                    if file_record.data:
+                        source_file_id = file_record.data.get("id")
+                except Exception:
+                    pass  # file_id is optional, object_path and URL are more important
+            except Exception as e:
+                module1_logger = get_logger("module1")
+                module1_logger.warning(f"Failed to derive metadata from object_path: {e}")
 
         extraction_result = get_extractor().process_document(str(filepath), str(OUTPUT_DIRS["module1"]))
 

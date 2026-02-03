@@ -33,6 +33,7 @@ try:
         Spacer, PageBreak, Image, Flowable
     )
     from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+    from reportlab.graphics.shapes import Drawing
     from PIL import Image as PILImage
 except Exception as e:  # pragma: no cover - handled at runtime
     raise ImportError(

@@ -22,8 +22,16 @@ def sanitize_unicode_escapes(text: str) -> str:
     
     # Pattern: \u NOT followed by exactly 4 hex digits
     # We need to be careful to not break valid unicode escapes
-    def fix_invalid_unicode(match):
-        full = match.group(0)
+    def fix_invalid_unicode(text: str) -> str:
+        """Check if a \\uXXXX sequence is valid and fix if not.
+        
+        Args:
+            text: The string starting with \\u (e.g., '\\u0041' or '\\uNOPE')
+        
+        Returns:
+            The original text if valid, or escaped version if invalid.
+        """
+        full = text
         # Check if the 4 chars after \u are all hex
         after_u = full[2:6] if len(full) >= 6 else ""
         if len(after_u) == 4 and all(c in '0123456789abcdefABCDEF' for c in after_u):
