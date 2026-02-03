@@ -7,6 +7,7 @@ import {
     ChevronRight, AlertCircle, CheckCircle2, XCircle,
     MessageSquare, User, Building2, Loader2, Play, Pause, Phone
 } from "lucide-react";
+import { loadPipelineSettings } from "@/utils/pipelineSettings";
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
@@ -359,15 +360,18 @@ export const EmailNegotiationView = ({
         setError(null);
 
         try {
+            // Get test recipient email from settings
+            const settings = loadPipelineSettings();
+            const testRecipientEmail = settings.testRecipientEmail?.trim() || "";
+            
             // Build suppliers list from module4 data
-            // Email override is handled by backend via TEST_RECIPIENT_EMAIL env variable
             const suppliers = module4Data.machines_enriched.flatMap(machine =>
                 machine.suppliers.map(supplier => ({
                     machine_name: machine.machine_input.nom_machine,
                     machine_type: machine.machine_input.type,
                     quantity_needed: machine.machine_input.quantite_necessaire,
                     supplier_name: supplier.supplier_name,
-                    email_address: supplier.email_address || "", // Backend will override if TEST_RECIPIENT_EMAIL is set
+                    email_address: supplier.email_address || "", // Backend will override if test_recipient_email is set
                     price_estimate: supplier.price_estimate,
                     price_type: supplier.price_type,
                     region: supplier.region,
@@ -383,7 +387,8 @@ export const EmailNegotiationView = ({
                     suppliers,
                     send_emails: true,
                     buyer_email: "blib645@gmail.com",
-                    buyer_company: "SARL ALLO MAISON"
+                    buyer_company: "SARL ALLO MAISON",
+                    test_recipient_email: testRecipientEmail // Pass test email override
                 })
             });
 

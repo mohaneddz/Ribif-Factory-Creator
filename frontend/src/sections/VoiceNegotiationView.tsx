@@ -7,6 +7,7 @@ import {
     Building2, Loader2, AlertCircle, ExternalLink,
     DollarSign, Percent, MessageSquare, Play
 } from "lucide-react";
+import { loadPipelineSettings } from "@/utils/pipelineSettings";
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
@@ -580,6 +581,10 @@ export const VoiceNegotiationView = ({
             setCreating(true);
             
             try {
+                // Get test recipient email from settings
+                const settings = loadPipelineSettings();
+                const testRecipientEmail = settings.testRecipientEmail?.trim() || "";
+                
                 // Step 1: Create negotiations from module 4 data
                 let createdCount = 0;
                 for (const machine of module4Data) {
@@ -593,6 +598,7 @@ export const VoiceNegotiationView = ({
                         quantity: machine.machine_input?.quantite_necessaire || 1,
                         suppliers: suppliers,
                         buyer_company: "RIBIF Algeria",
+                        test_recipient_email: testRecipientEmail, // Pass test email override
                     };
 
                     console.log("[Module5] Creating negotiations with payload:", payload);
@@ -624,7 +630,7 @@ export const VoiceNegotiationView = ({
                     const sendRes = await fetch(`${API_BASE}/api/module5/v2/negotiations/project/${projectId}/send-all-links`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({}),
+                        body: JSON.stringify({ test_recipient_email: testRecipientEmail }), // Pass test email override
                     });
                     
                     const sendData = await sendRes.json();
@@ -713,10 +719,14 @@ export const VoiceNegotiationView = ({
         setSuccessMessage(null);
 
         try {
+            // Get test recipient email from settings
+            const settings = loadPipelineSettings();
+            const testRecipientEmail = settings.testRecipientEmail?.trim() || "";
+            
             const res = await fetch(`${API_BASE}/api/module5/v2/negotiations/${negotiationId}/send-link`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({}),
+                body: JSON.stringify({ test_recipient_email: testRecipientEmail }),
             });
 
             if (!res.ok) {
@@ -742,10 +752,14 @@ export const VoiceNegotiationView = ({
         setSuccessMessage(null);
 
         try {
+            // Get test recipient email from settings
+            const settings = loadPipelineSettings();
+            const testRecipientEmail = settings.testRecipientEmail?.trim() || "";
+            
             const res = await fetch(`${API_BASE}/api/module5/v2/negotiations/project/${projectId}/send-all-links`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({}),
+                body: JSON.stringify({ test_recipient_email: testRecipientEmail }),
             });
 
             const data = await res.json();

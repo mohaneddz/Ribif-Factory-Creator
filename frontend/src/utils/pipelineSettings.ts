@@ -8,6 +8,7 @@ export type PipelineSettings = {
   enablePitchDeck: boolean;
   enableCatalog: boolean;
   catalogFormat: "pdf" | "html" | "both";
+  testRecipientEmail: string; // Override recipient email for testing - empty means use scraped emails
 };
 
 export const PIPELINE_SETTINGS_COOKIE = "ribif_pipeline_settings";
@@ -20,6 +21,7 @@ export const DEFAULT_PIPELINE_SETTINGS: PipelineSettings = {
   enablePitchDeck: true,
   enableCatalog: true,
   catalogFormat: "pdf",
+  testRecipientEmail: "", // Empty = use original supplier emails from scraping
 };
 
 export const sanitizeSettings = (settings: Partial<PipelineSettings>): PipelineSettings => {
@@ -37,6 +39,7 @@ export const sanitizeSettings = (settings: Partial<PipelineSettings>): PipelineS
     enablePitchDeck: settings.enablePitchDeck ?? DEFAULT_PIPELINE_SETTINGS.enablePitchDeck,
     enableCatalog: settings.enableCatalog ?? DEFAULT_PIPELINE_SETTINGS.enableCatalog,
     catalogFormat: safeFormat,
+    testRecipientEmail: (settings.testRecipientEmail ?? DEFAULT_PIPELINE_SETTINGS.testRecipientEmail).trim(),
   };
 };
 
