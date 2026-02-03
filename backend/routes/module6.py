@@ -4,10 +4,7 @@ from flask import Blueprint, jsonify, request
 
 from config import OUTPUT_DIRS, SKIP_MODULE_6, write_json
 from supabase_utils import get_supabase, insert_tco_run
-from utils.module_6.core import (
-    RIBIFModule6TCO, ProductTCO, RawMaterialTCO,
-    MODULE6_VERSION, compute_input_fingerprint
-)
+# Heavy imports moved to lazy loading for faster startup
 from utils.logger import log_skip, get_logger
 from utils.app_helpers import (
     get_request_project_id,

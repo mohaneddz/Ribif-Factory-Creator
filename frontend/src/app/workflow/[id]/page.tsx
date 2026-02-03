@@ -959,8 +959,8 @@ export default function FactoryCopilot() {
     const isSelectedDone = artifacts.includes(selectedModule) || status === 'finished' || selectedModule < currentModule;
     const selectedProgress = isSelectedProcessing ? subStep : isSelectedDone ? 100 : 0;
     const displayArtifacts = status === 'finished' ? MODULES.map((_, idx) => idx) : artifacts;
-    // Only show these 6 deliverables: pitch deck, business plan, catalogue, 2D layout, 3D model, video
-    const deliverableTypes = new Set(["pitchdeck", "businessplan", "catalogue", "layout2d", "model3d", "video"]);
+    // Only show these 5 deliverables: business plan (includes pitch deck), catalogue, 2D layout, 3D model, video
+    const deliverableTypes = new Set(["businessplan", "catalogue", "layout2d", "model3d", "video"]);
     const downloadableArtifacts = displayArtifacts.filter(idx => deliverableTypes.has(MODULES[idx]?.type));
 
     return (
@@ -1090,8 +1090,7 @@ export default function FactoryCopilot() {
                                                 {selectedModuleItem.type === 'email' && <VoiceNegotiationView projectId={routeProjectId || ""} module4Data={module4Data} loading={module4Loading} />}
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
-                                                {selectedModuleItem.type === 'pitchdeck' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
-                                                {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url || catalogData?.pdf_download_url} htmlUrl={catalogData?.data?.html_download_url || catalogData?.html_download_url} loading={catalogLoading} />}
+                                                {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url || catalogData?.pdf_download_url || catalogData?.data?.data?.pdf_download_url} htmlUrl={catalogData?.data?.html_download_url || catalogData?.html_download_url || catalogData?.data?.data?.html_download_url} loading={catalogLoading} />}
                                                 {selectedModuleItem.type === 'twin' && <DigitalTwinView pipelineModelUrl={pipelineModelUrl} />}
                                             </>
                                         )}

@@ -17,10 +17,18 @@ from utils.app_helpers import (
 )
 from utils.logger import log_skip, get_logger
 
-try:
-    from vertex_utils import generate_video
-except Exception:
-    from utils.module_2.vertex_utils import generate_video
+# Lazy import for faster startup
+_vertex_generate_video = None
+
+def _get_generate_video():
+    global _vertex_generate_video
+    if _vertex_generate_video is None:
+        try:
+            from vertex_utils import generate_video
+        except Exception:
+            from utils.module_2.vertex_utils import generate_video
+        _vertex_generate_video = generate_video
+    return _vertex_generate_video
 
 bp_module3 = Blueprint("module3", __name__)
 
@@ -166,6 +174,7 @@ def generate_video_from_images():
 
         video_uris = []
         log = get_logger(__name__)
+        generate_video = _get_generate_video()  # Lazy load
         for img_bytes, prompt in images_data:
             try:
                 video_uri = generate_video(

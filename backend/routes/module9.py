@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, request
 from pathlib import Path
 from config import BASE_URL, OUTPUT_DIRS, SKIP_MODULE_9
 from supabase_utils import get_supabase, insert_catalog
-from utils.module_9.core import RIBIFModule9Catalog, CatalogInput
+# Heavy imports moved to lazy loading for faster startup
 from utils.app_helpers import get_request_user_id, load_template_payload, upload_and_register_file, upload_bytes_and_register_file
 from utils.logger import log_skip, get_logger
 

@@ -8,9 +8,7 @@ from werkzeug.utils import secure_filename
 
 from config import BASE_URL, OUTPUT_DIRS, UPLOAD_DIR, CREATE_MACHINE_IMAGES, SKIP_MODULE_1, write_json
 from supabase_utils import get_supabase, insert_module1_extraction
-from utils.module_1.core import RIBIFExtractor
-from utils.module_1.enricher import enricher
-from utils.module_1.no_nulls import fill_all_nulls, verify_no_nulls
+# Heavy imports moved to lazy loading to speed up server startup
 from utils.logger import log_skip, get_logger
 from utils.app_helpers import (
     get_pipeline_settings,
@@ -27,7 +25,6 @@ from utils.app_helpers import (
 )
 from utils.image_selector import find_best_image, get_random_image
 from utils.job_manager import job_manager
-from vertex_utils import generate_image
 
 import time
 import uuid
@@ -37,10 +34,23 @@ bp_module1 = Blueprint("module1", __name__)
 
 # Lazy initialization to prevent slow startup blocking health checks
 _extractor = None
+_module1_imports_loaded = False
+
+def _load_module1_imports():
+    """Lazy load heavy module1 imports."""
+    global _module1_imports_loaded
+    if not _module1_imports_loaded:
+        global RIBIFExtractor, enricher, fill_all_nulls, verify_no_nulls, generate_image
+        from utils.module_1.core import RIBIFExtractor
+        from utils.module_1.enricher import enricher
+        from utils.module_1.no_nulls import fill_all_nulls, verify_no_nulls
+        from vertex_utils import generate_image
+        _module1_imports_loaded = True
 
 def get_extractor():
     """Lazy initialization of RIBIFExtractor to prevent slow startup."""
     global _extractor
+    _load_module1_imports()
     if _extractor is None:
         _extractor = RIBIFExtractor()
     return _extractor
@@ -51,6 +61,7 @@ MODULE1_ENRICHMENT_TIMEOUT = int(os.getenv("MODULE1_ENRICHMENT_TIMEOUT", "120"))
 
 
 def generate_machine_image(machine_name: str, machine_type: str, manufacturer: str = None) -> dict:
+    _load_module1_imports()  # Ensure heavy imports are loaded
     try:
         manufacturer_text = f" by {manufacturer}" if manufacturer else ""
         prompt = f"""Professional product photography of an industrial {machine_type} machine called \"{machine_name}\"{manufacturer_text}.
@@ -453,6 +464,7 @@ def process_module_1():
         # === FINAL SAFETY NET: Fill ALL remaining nulls ===
         module1_logger.info("Running final no-nulls safety pass...")
         try:
+            _load_module1_imports()  # Ensure heavy imports are loaded
             final_result = fill_all_nulls(final_result, use_llm=False)
             null_check = verify_no_nulls(final_result)
             if null_check["has_nulls"]:

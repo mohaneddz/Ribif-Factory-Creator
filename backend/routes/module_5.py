@@ -6,23 +6,9 @@ from pathlib import Path
 from flask import Blueprint, jsonify, request
 
 from config import OUTPUT_DIRS, write_json
-from utils.module_5.core import (
-    run_text_negotiation,
-    run_voice_negotiation,
-    summarize_best_offer,
-    evaluate_offer,
-    compute_counter_offer,
-    NegotiationConfig,
-)
-from utils.module_5.negotiation_manager import (
-    NegotiationThread,
-    NegotiationStatus,
-    create_thread_from_supplier,
-    load_thread,
-    save_thread,
-    list_threads,
-    add_email_to_thread,
-    update_thread_status,
+# Heavy imports moved to lazy loading for faster startup
+# from utils.module_5.core import ...
+# from utils.module_5.negotiation_manager import ...
     update_supplier_offer,
     update_counter_offer,
     increment_round,
