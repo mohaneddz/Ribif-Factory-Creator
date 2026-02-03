@@ -1,4 +1,4 @@
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Cpu, Package, Calendar } from "lucide-react";
 
 import { MOCK_TCO_DATA } from "./constants";
 
@@ -9,12 +9,12 @@ export const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
     const avgAnnualTco = tcoData.average_annual_tco || 0;
     const annualTco = tcoData.annual_tco || tcoData?.data?.annual_tco || [];
     const machineTco = tcoData.machine_tco || [];
-    const productTco = tcoData.product_tco || [];
     const rawMaterialsTco = tcoData.raw_materials_tco || [];
-    const totalMachinesTco = tcoData.total_machines_tco || 0;
-    const totalProductsTco = tcoData.total_products_tco || 0;
-    const totalMaterialsTco = tcoData.total_raw_materials_tco || 0;
     const calcDate = tcoData.calculation_date || new Date().toISOString().split('T')[0];
+
+    // Calculate totals from individual items if not provided
+    const totalMachinesTco = tcoData.total_machines_tco || machineTco.reduce((sum: number, m: any) => sum + (m.total_tco || 0), 0);
+    const totalMaterialsTco = tcoData.total_raw_materials_tco || rawMaterialsTco.reduce((sum: number, m: any) => sum + (m.total_tco || 0), 0);
 
     // Helper to render complex values (objects vs strings)
     const renderValue = (val: any) => {
@@ -36,6 +36,17 @@ export const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
         return target;
     };
 
+    // Format currency based on value size
+    const formatCurrency = (value: number) => {
+        if (value >= 1000000000) {
+            return `${(value / 1000000000).toFixed(2)} Mrd DZD`;
+        } else if (value >= 1000000) {
+            return `${(value / 1000000).toFixed(0)} M DZD`;
+        } else {
+            return `${value.toLocaleString()} DZD`;
+        }
+    };
+
     if (loading) {
         return (
             <div className="h-full flex items-center justify-center">
@@ -49,156 +60,197 @@ export const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
     }
 
     return (
-        <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-[#0b0c10] transition-colors">
-            {/* Top Cards: Total TCO & Annual Avg */}
-            <div className="grid grid-cols-2 gap-6">
-                <div className="bg-slate-900 dark:bg-[#13141c] rounded-3xl p-8 text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full blur-[60px] opacity-20" />
-                    <div className="relative z-10">
-                        <div className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-2">TCO Total (5 ans)</div>
-                        <div className="text-4xl font-black mb-2">
-                            {(totalTco / 1000000000).toFixed(2)} Milliards
-                            <span className="text-lg font-bold text-indigo-400 ml-2">DZD</span>
-                        </div>
+        <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-[#0b0c10] transition-colors overflow-y-auto">
+            {/* Top Card: Total TCO */}
+            <div className="bg-slate-900 dark:bg-[#13141c] rounded-3xl p-8 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full blur-[60px] opacity-20" />
+                <div className="relative z-10">
+                    <div className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-2">TCO Total (5 ans)</div>
+                    <div className="text-4xl font-black mb-2">
+                        {(totalTco / 1000000000).toFixed(2)} Milliards
+                        <span className="text-lg font-bold text-indigo-400 ml-2">DZD</span>
+                    </div>
+                    <div className="flex items-center gap-4 mt-4">
                         <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-xs font-medium">
                             <Sparkles size={12} className="text-indigo-300" />
                             <span>Calculé le {calcDate}</span>
                         </div>
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/5 rounded-3xl p-8 relative overflow-hidden transition-colors">
-                    <div className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-xs mb-2">Moyenne Annuelle</div>
-                    <div className="text-4xl font-black text-slate-800 dark:text-white mb-2">
-                        {(avgAnnualTco / 1000000000).toFixed(2)} Mrd
-                        <span className="text-lg font-bold text-slate-400 dark:text-slate-500 ml-2">DZD/an</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full mt-4 overflow-hidden">
-                        <div className="h-full bg-emerald-500 w-[60%]" />
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 rounded-full text-xs font-medium text-emerald-300">
+                            <span>Moyenne annuelle: {(avgAnnualTco / 1000000000).toFixed(2)} Mrd DZD/an</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div className="flex-1 grid grid-cols-3 gap-6 min-h-0">
-                {/* Annual Evolution Chart (Simplified) */}
-                <div className="col-span-2 bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/5 rounded-3xl p-6 flex flex-col transition-colors">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="font-bold text-slate-800 dark:text-white">Évolution Annuelle des Coûts</h3>
-                        <div className="flex gap-2">
-                            <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 px-2 py-1 rounded-md">
-                                <div className="w-2 h-2 rounded-full bg-indigo-500" /> Machines
-                            </span>
-                            <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 px-2 py-1 rounded-md">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500" /> Produits
-                            </span>
-                            <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 px-2 py-1 rounded-md">
-                                <div className="w-2 h-2 rounded-full bg-amber-500" /> Matières
-                            </span>
+            {/* 5 Year TCO Calculation */}
+            <div className="bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/5 rounded-3xl p-6 transition-colors">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center">
+                        <Calendar size={20} className="text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <h3 className="font-bold text-lg text-slate-800 dark:text-white">Calcul TCO sur 5 Ans</h3>
+                </div>
+                
+                {annualTco.length > 0 ? (
+                    <div className="grid grid-cols-5 gap-4">
+                        {annualTco.map((year: any, i: number) => (
+                            <div key={i} className="bg-slate-50 dark:bg-white/5 rounded-2xl p-4 text-center border border-slate-100 dark:border-white/5">
+                                <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2">
+                                    Année {year.year ?? i + 1}
+                                </div>
+                                <div className="text-2xl font-black text-slate-800 dark:text-white mb-1">
+                                    {((year.total_tco || 0) / 1000000000).toFixed(2)}
+                                </div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Mrd DZD</div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center text-slate-400 dark:text-slate-500 py-8">Pas de données annuelles</div>
+                )}
+            </div>
+
+            {/* Machines TCO Section */}
+            <div className="bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/5 rounded-3xl p-6 transition-colors">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center">
+                            <Cpu size={20} className="text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-lg text-slate-800 dark:text-white">TCO Machines</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{machineTco.length} machine(s) identifiée(s)</p>
                         </div>
                     </div>
-                    <div className="flex-1 min-h-[240px] flex items-end justify-between px-4 gap-4 pb-2">
-                        {annualTco.length > 0 ? (() => {
-                            const maxVal = Math.max(1, ...annualTco.map((y: any) => y.total_tco || 0));
-                            const barMaxHeight = 200;
-                            return annualTco.map((year: any, i: number) => {
-                                const totalVal = year.total_tco || 0;
-                                const barHeight = Math.max((totalVal / maxVal) * barMaxHeight, 16);
-                                const machinesVal = year.machines_tco || 0;
-                                const productsVal = year.products_tco || 0;
-                                const materialsVal = year.raw_materials_tco || 0;
-                                const totalParts = machinesVal + productsVal + materialsVal || 1;
-                                const machinesPct = (machinesVal / totalParts) * 100;
-                                const productsPct = (productsVal / totalParts) * 100;
-                                const materialsPct = (materialsVal / totalParts) * 100;
-                                return (
-                                    <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                                        <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            {(totalVal / 1000000000).toFixed(1)} Mrd
-                                        </div>
-                                        <div className="w-full bg-slate-50 dark:bg-white/5 rounded-t-xl relative overflow-hidden" style={{ height: `${barHeight}px` }}>
-                                            <div className="absolute bottom-0 left-0 right-0" style={{ height: `${machinesPct}%`, backgroundColor: '#6366f1' }} />
-                                            <div className="absolute left-0 right-0" style={{ bottom: `${machinesPct}%`, height: `${productsPct}%`, backgroundColor: '#10b981' }} />
-                                            <div className="absolute left-0 right-0" style={{ bottom: `${machinesPct + productsPct}%`, height: `${materialsPct}%`, backgroundColor: '#f59e0b' }} />
-                                        </div>
-                                        <div className="text-xs font-bold text-slate-600 dark:text-slate-400">Année {year.year ?? i + 1}</div>
-                                    </div>
-                                );
-                            });
-                        })() : (
-                            <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-500">Pas de données</div>
-                        )}
+                    <div className="bg-purple-100 dark:bg-purple-500/20 px-4 py-2 rounded-xl">
+                        <div className="text-xs text-purple-600 dark:text-purple-300 font-medium">Total Machines</div>
+                        <div className="text-xl font-black text-purple-700 dark:text-purple-300">{formatCurrency(totalMachinesTco)}</div>
                     </div>
                 </div>
 
-                {/* Cost Distribution */}
-                <div className="bg-slate-50 dark:bg-[#13141c] border border-slate-200 dark:border-white/5 rounded-3xl p-6 overflow-y-auto transition-colors">
-                    <h3 className="font-bold text-slate-800 dark:text-white mb-4">Postes de Coûts</h3>
-
-                    <div className="space-y-4">
-                        <div className="bg-white dark:bg-white/5 p-4 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-none">
-                            <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Répartition Totale</div>
-                            <div className="space-y-2 text-xs">
-                                <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Machines</span><span className="font-bold text-slate-700 dark:text-slate-200">{(totalMachinesTco / 1000000000).toFixed(2)} Mrd</span></div>
-                                <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Produits</span><span className="font-bold text-slate-700 dark:text-slate-200">{(totalProductsTco / 1000000000).toFixed(2)} Mrd</span></div>
-                                <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Matières</span><span className="font-bold text-slate-700 dark:text-slate-200">{(totalMaterialsTco / 1000000000).toFixed(2)} Mrd</span></div>
-                            </div>
-                        </div>
-
-                        {rawMaterialsTco.length > 0 && (
-                            <div className="bg-white dark:bg-white/5 p-4 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-none">
-                                <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Matériaux (Top 3)</div>
-                                <div className="space-y-3">
-                                    {rawMaterialsTco.slice(0, 3).map((mat: any, i: number) => (
-                                        <div key={i} className="flex justify-between items-center">
-                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate max-w-[120px]">{renderValue(mat.nom_materiau)}</div>
-                                            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{((mat.total_tco || 0) / 1000000).toFixed(0)}M</div>
+                {machineTco.length > 0 ? (
+                    <div className="space-y-3">
+                        {machineTco.map((mac: any, i: number) => {
+                            // Calculate actual costs from percentages and total_tco
+                            const totalCost = mac.total_tco || 0;
+                            const hasBreakdown = mac.cost_breakdown && 
+                                (mac.cost_breakdown.initial_pct !== undefined || 
+                                 mac.cost_breakdown.operations_pct !== undefined || 
+                                 mac.cost_breakdown.maintenance_pct !== undefined ||
+                                 mac.cost_breakdown.initial_cost !== undefined ||
+                                 mac.cost_breakdown.operations_cost !== undefined ||
+                                 mac.cost_breakdown.maintenance_cost !== undefined);
+                            
+                            // Get actual costs - either from direct values or calculate from percentages
+                            const initialCost = mac.cost_breakdown?.initial_cost ?? 
+                                (mac.cost_breakdown?.initial_pct ? totalCost * mac.cost_breakdown.initial_pct / 100 : null);
+                            const operationsCost = mac.cost_breakdown?.operations_cost ?? 
+                                (mac.cost_breakdown?.operations_pct ? totalCost * mac.cost_breakdown.operations_pct / 100 : null);
+                            const maintenanceCost = mac.cost_breakdown?.maintenance_cost ?? 
+                                (mac.cost_breakdown?.maintenance_pct ? totalCost * mac.cost_breakdown.maintenance_pct / 100 : null);
+                            
+                            return (
+                                <div key={i} className="bg-slate-50 dark:bg-white/5 rounded-2xl p-4 border border-slate-100 dark:border-white/5">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 font-bold text-sm">
+                                                {i + 1}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-slate-800 dark:text-white">{renderValue(mac.machine_name)}</div>
+                                                {mac.quantity && (
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400">Quantité: {mac.quantity}</div>
+                                                )}
+                                            </div>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {productTco.length > 0 && (
-                            <div className="bg-white dark:bg-white/5 p-4 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-none">
-                                <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Produits (Top 3)</div>
-                                <div className="space-y-3">
-                                    {productTco.slice(0, 3).map((prod: any, i: number) => (
-                                        <div key={i} className="flex justify-between items-center">
-                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate max-w-[120px]">{renderValue(prod.nom_produit)}</div>
-                                            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{((prod.total_tco || 0) / 1000000).toFixed(0)}M</div>
+                                        <div className="text-right">
+                                            <div className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(mac.total_tco || 0)}</div>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {machineTco.length > 0 && (
-                            <div className="bg-white dark:bg-white/5 p-4 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-none">
-                                <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Machines ({machineTco.length})</div>
-                                <div className="space-y-3">
-                                    {machineTco.map((mac: any, i: number) => (
-                                        <div key={i} className="space-y-2">
-                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{renderValue(mac.machine_name)}</div>
-                                            {mac.cost_breakdown && (
-                                                <>
-                                                    <div className="flex h-2 w-full rounded-full overflow-hidden gap-0.5">
-                                                        <div className="bg-indigo-500" style={{ width: `${mac.cost_breakdown.initial_pct || 0}%` }} title="Initial" />
-                                                        <div className="bg-emerald-500" style={{ width: `${mac.cost_breakdown.operations_pct || 0}%` }} title="Ops" />
-                                                        <div className="bg-amber-500" style={{ width: `${mac.cost_breakdown.maintenance_pct || 0}%` }} title="Maint" />
-                                                    </div>
-                                                    <div className="flex justify-between text-[9px] text-slate-400 dark:text-slate-500 font-medium">
-                                                        <span>Init: {mac.cost_breakdown.initial_pct?.toFixed(0) || 0}%</span>
-                                                        <span>Ops: {mac.cost_breakdown.operations_pct?.toFixed(0) || 0}%</span>
-                                                    </div>
-                                                </>
+                                    </div>
+                                    {hasBreakdown && (
+                                        <div className="grid grid-cols-3 gap-2 mt-3">
+                                            {initialCost !== null && (
+                                                <div className="bg-indigo-50 dark:bg-indigo-500/10 rounded-lg p-2 text-center">
+                                                    <div className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium uppercase">Initial</div>
+                                                    <div className="text-sm font-bold text-indigo-700 dark:text-indigo-300">{formatCurrency(initialCost)}</div>
+                                                </div>
+                                            )}
+                                            {operationsCost !== null && (
+                                                <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-lg p-2 text-center">
+                                                    <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium uppercase">Opérations</div>
+                                                    <div className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{formatCurrency(operationsCost)}</div>
+                                                </div>
+                                            )}
+                                            {maintenanceCost !== null && (
+                                                <div className="bg-amber-50 dark:bg-amber-500/10 rounded-lg p-2 text-center">
+                                                    <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium uppercase">Maintenance</div>
+                                                    <div className="text-sm font-bold text-amber-700 dark:text-amber-300">{formatCurrency(maintenanceCost)}</div>
+                                                </div>
                                             )}
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="text-center text-slate-400 dark:text-slate-500 py-8">Aucune machine identifiée</div>
+                )}
+            </div>
+
+            {/* Materials TCO Section */}
+            <div className="bg-white dark:bg-[#13141c] border border-slate-200 dark:border-white/5 rounded-3xl p-6 transition-colors">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center">
+                            <Package size={20} className="text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-lg text-slate-800 dark:text-white">TCO Matières Premières</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{rawMaterialsTco.length} matériau(x) identifié(s)</p>
+                        </div>
+                    </div>
+                    <div className="bg-amber-100 dark:bg-amber-500/20 px-4 py-2 rounded-xl">
+                        <div className="text-xs text-amber-600 dark:text-amber-300 font-medium">Total Matières</div>
+                        <div className="text-xl font-black text-amber-700 dark:text-amber-300">{formatCurrency(totalMaterialsTco)}</div>
                     </div>
                 </div>
+
+                {rawMaterialsTco.length > 0 ? (
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-slate-200 dark:border-white/10">
+                                    <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Matériau</th>
+                                    <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Prix Unitaire</th>
+                                    <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">TCO Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {rawMaterialsTco.map((mat: any, i: number) => (
+                                    <tr key={i} className="border-b border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                                        <td className="py-3 px-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 font-bold text-sm">
+                                                    {i + 1}
+                                                </div>
+                                                <span className="font-medium text-slate-800 dark:text-white">{renderValue(mat.nom_materiau)}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-3 px-4 text-right text-slate-600 dark:text-slate-300 font-medium">
+                                            {mat.unit_price ? `${(mat.unit_price).toLocaleString()} DZD` : 'N/A'}
+                                        </td>
+                                        <td className="py-3 px-4 text-right">
+                                            <span className="font-bold text-slate-800 dark:text-white">{formatCurrency(mat.total_tco || 0)}</span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="text-center text-slate-400 dark:text-slate-500 py-8">Aucune matière première identifiée</div>
+                )}
             </div>
         </div>
     );

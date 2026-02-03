@@ -3,8 +3,8 @@ from flask import Blueprint, jsonify, request
 from pathlib import Path
 from config import BASE_URL, OUTPUT_DIRS, SKIP_MODULE_9
 from supabase_utils import get_supabase, insert_catalog
-from utils.module_9.core import RIBIFModule9Catalog, CatalogInput
-from utils.app_helpers import get_request_user_id, load_template_payload, upload_and_register_file
+# Heavy imports moved to lazy loading for faster startup
+from utils.app_helpers import get_request_user_id, load_template_payload, upload_and_register_file, upload_bytes_and_register_file
 from utils.logger import log_skip, get_logger
 
 logger = get_logger(__name__)
@@ -36,60 +36,61 @@ def generate_catalog_module9():
 
         catalog_input = CatalogInput(**payload)
         generator = RIBIFModule9Catalog(image_base_path=catalog_input.image_base_path)
-        result = generator.generate_catalog(catalog_input, base_url=BASE_URL)
+        
+        # Use in-memory generation for serverless environments
+        result = generator.generate_catalog_in_memory(catalog_input)
 
-        data_payload = result.model_dump()
         pdf_file_id = None
-        html_file_id = None
+        pdf_url = None
+
+        client = get_supabase()
+        owner_id = get_request_user_id()
+        if client and project_id:
+            try:
+                # Upload PDF content directly to Supabase (no local file)
+                pdf_content = result.get("pdf_content")
+                pdf_filename = result.get("pdf_filename")
+                if pdf_content and pdf_filename:
+                    pdf_file_id, pdf_url = upload_bytes_and_register_file(
+                        client=client,
+                        project_id=project_id,
+                        owner_id=owner_id,
+                        data=pdf_content,
+                        filename=pdf_filename,
+                        category="catalog-pdf",
+                        content_type="application/pdf",
+                        label=pdf_filename,
+                    )
+                
+                # Remove bytes from result for JSON serialization
+                data_payload = {k: v for k, v in result.items() if k != "pdf_content"}
+                data_payload["pdf_download_url"] = pdf_url
+                
+                insert_catalog(
+                    client=client,
+                    project_id=project_id,
+                    module1_id=module1_id,
+                    pdf_file_id=pdf_file_id,
+                    html_file_id=None,
+                    data=data_payload,
+                )
+                logger.info("Catalog data saved to project %s", project_id)
+            except Exception as e:
+                logger.error("Failed to save catalog to DB: %s", e)
+                # Continue with response even if DB save fails
+                data_payload = {k: v for k, v in result.items() if k != "pdf_content"}
+        else:
+            data_payload = {k: v for k, v in result.items() if k != "pdf_content"}
 
         response_payload = {
             "message": "Catalog generated successfully",
             "data": data_payload,
             "project_id": project_id,
             "pdf_file_id": pdf_file_id,
-            "html_file_id": html_file_id,
+            "html_file_id": None,
         }
-
-        client = get_supabase()
-        owner_id = get_request_user_id()
-        if client and project_id:
-            try:
-                pdf_path = Path(result.pdf_filepath) if result.pdf_filepath else None
-                html_path = Path(result.html_filepath) if result.html_filepath else None
-                if pdf_path and pdf_path.exists():
-                    pdf_file_id, pdf_url = upload_and_register_file(
-                        client=client,
-                        project_id=project_id,
-                        owner_id=owner_id,
-                        local_path=str(pdf_path),
-                        category="catalog-pdf",
-                        label=result.pdf_filename,
-                    )
-                    response_payload["pdf_file_id"] = pdf_file_id
-                    response_payload["data"]["pdf_download_url"] = pdf_url or response_payload["data"].get("pdf_download_url")
-                if html_path and html_path.exists():
-                    html_file_id, html_url = upload_and_register_file(
-                        client=client,
-                        project_id=project_id,
-                        owner_id=owner_id,
-                        local_path=str(html_path),
-                        category="catalog-html",
-                        label=result.html_filename,
-                    )
-                    response_payload["html_file_id"] = html_file_id
-                    response_payload["data"]["html_download_url"] = html_url or response_payload["data"].get("html_download_url")
-                insert_catalog(
-                    client=client,
-                    project_id=project_id,
-                    module1_id=module1_id,
-                    pdf_file_id=response_payload.get("pdf_file_id"),
-                    html_file_id=response_payload.get("html_file_id"),
-                    data=data_payload,
-                )
-                logger.info("Catalog data saved to project %s", project_id)
-            except Exception as e:
-                logger.error("Failed to save catalog to DB: %s", e)
 
         return jsonify(response_payload)
     except Exception as e:
+        logger.error("Catalog generation failed: %s", e, exc_info=True)
         return jsonify({"error": str(e)}), 500

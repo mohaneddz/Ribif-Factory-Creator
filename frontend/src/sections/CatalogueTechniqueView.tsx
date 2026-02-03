@@ -156,7 +156,24 @@ export const CatalogueTechniqueView = ({ pdfUrl, htmlUrl, loading = false }: { p
                 setLoadError(null);
                 setIsLoadingPdf(true);
                 const pdfjsLib = (window as any).pdfjsLib;
-                const loadingTask = pdfjsLib.getDocument(resolvedPdfUrl);
+                
+                // For cross-origin URLs (Supabase), fetch the PDF as blob first
+                let loadingTask;
+                if (resolvedPdfUrl.includes('supabase') || resolvedPdfUrl.includes('storage')) {
+                    try {
+                        const response = await fetch(resolvedPdfUrl);
+                        if (!response.ok) throw new Error(`Failed to fetch PDF: ${response.status}`);
+                        const blob = await response.blob();
+                        const arrayBuffer = await blob.arrayBuffer();
+                        loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                    } catch (fetchErr) {
+                        console.warn('Fetch approach failed, trying direct load:', fetchErr);
+                        loadingTask = pdfjsLib.getDocument(resolvedPdfUrl);
+                    }
+                } else {
+                    loadingTask = pdfjsLib.getDocument(resolvedPdfUrl);
+                }
+                
                 const doc = await loadingTask.promise;
                 setPdfDoc(doc);
                 setNumPages(doc.numPages);

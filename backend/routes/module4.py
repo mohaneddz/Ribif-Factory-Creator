@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from config import OUTPUT_DIRS, SKIP_MODULE_4, BASE_URL
 from supabase_utils import get_supabase, insert_module4_sourcing
-from utils.module_4.core_v2 import process_module_4_bounded  # NEW: Use bounded version
+# Heavy import moved to lazy loading for faster startup
 from utils.logger import log_skip, get_logger
 from utils.app_helpers import (
     get_request_project_id,
@@ -152,6 +152,8 @@ def enrich_machines_module4():
 
         # NEW: Use bounded enrichment with 4-phase pipeline
         logger.info("Starting process_module_4_bounded...")
+        # Lazy import for faster startup
+        from utils.module_4.core_v2 import process_module_4_bounded
         # Process directly with bounded approach (no intermediate files needed)
         result = process_module_4_bounded(
             machines=machines,

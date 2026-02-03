@@ -13,6 +13,7 @@ import {
   X,
   RefreshCw,
   ExternalLink,
+  Mail,
 } from "lucide-react";
 
 import {
@@ -27,6 +28,7 @@ import {
 import { updateProject } from "@/lib/projectService";
 import { UploadProgress } from "@/components/upload/UploadProgress";
 import { VALIDATION_CONFIG } from "@/config/validation";
+import { loadPipelineSettings, savePipelineSettings } from "@/utils/pipelineSettings";
 
 type Step =
   | "idle"
@@ -52,6 +54,7 @@ export default function CreateProjectPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [projectName, setProjectName] = useState("");
+  const [testRecipientEmail, setTestRecipientEmail] = useState(() => loadPipelineSettings().testRecipientEmail);
   const [dragActive, setDragActive] = useState(false);
   const [workflow, setWorkflow] = useState<WorkflowState>({
     step: "idle",
@@ -62,6 +65,7 @@ export default function CreateProjectPage() {
   const resetWorkflow = () => {
     setFile(null);
     setProjectName("");
+    // Keep testRecipientEmail as it's a user preference
     setWorkflow({ step: "idle", progress: 0, message: "" });
   };
 
@@ -116,6 +120,10 @@ export default function CreateProjectPage() {
     if (!file || !projectName.trim()) return;
 
     let createdProjectId: string | null = null;
+
+    // Save testRecipientEmail to pipeline settings for use in negotiations
+    const currentSettings = loadPipelineSettings();
+    savePipelineSettings({ ...currentSettings, testRecipientEmail: testRecipientEmail.trim() });
 
     try {
       // Step 1: Compute file hash
@@ -344,7 +352,7 @@ export default function CreateProjectPage() {
 
               {/* Project Name Input */}
               {workflow.step === "idle" && (
-                <div className="mb-8">
+                <div className="mb-6">
                   <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-3 ml-1">
                     Nom du projet
                   </label>
@@ -355,6 +363,28 @@ export default function CreateProjectPage() {
                     placeholder="Mon projet industriel"
                     className="w-full px-5 py-4 bg-slate-50 dark:bg-[#0b0c10] border border-slate-200 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium"
                   />
+                </div>
+              )}
+
+              {/* Test Recipient Email Override */}
+              {workflow.step === "idle" && (
+                <div className="mb-8">
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-2 ml-1 flex items-center gap-2">
+                    <Mail size={14} className="text-indigo-500" />
+                    Email de test (optionnel)
+                  </label>
+                  <input
+                    type="email"
+                    value={testRecipientEmail}
+                    onChange={(e) => setTestRecipientEmail(e.target.value)}
+                    placeholder="test@example.com"
+                    className="w-full px-5 py-4 bg-slate-50 dark:bg-[#0b0c10] border border-slate-200 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium"
+                  />
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 ml-1">
+                    {testRecipientEmail.trim() 
+                      ? "Tous les emails de négociation seront envoyés à cette adresse au lieu des fournisseurs."
+                      : "Laissez vide pour utiliser les emails des fournisseurs trouvés automatiquement."}
+                  </p>
                 </div>
               )}
 

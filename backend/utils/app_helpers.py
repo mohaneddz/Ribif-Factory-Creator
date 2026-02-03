@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 from flask import request
 
@@ -13,6 +13,7 @@ from supabase_utils import (
     get_public_url,
     insert_project,
     insert_project_file,
+    upload_bytes,
     upload_file,
     upsert_project_settings,
 )
@@ -126,6 +127,53 @@ def upload_and_register_file(
             logger.warning(f"Failed to generate public URL: {e}")
     logger = get_logger("app_helpers")
     logger.info("Uploaded %s to Supabase: %s (file_id=%s) category=%s", label or os.path.basename(local_path), signed_url, file_id, category)
+    return file_id, signed_url
+
+
+def upload_bytes_and_register_file(
+    client,
+    project_id: str,
+    owner_id: Optional[str],
+    data: bytes,
+    filename: str,
+    category: str,
+    content_type: str,
+    label: Optional[str] = None,
+    bucket: Optional[str] = None,
+    object_path: Optional[str] = None,
+) -> Tuple[Optional[str], Optional[str]]:
+    """Upload bytes directly to Supabase (no local file needed)."""
+    if not client:
+        return None, None
+    bucket_id = bucket or SUPABASE_BUCKET_FILES
+    object_path = object_path or build_object_path(project_id, category, filename)
+    upload_bytes(client, bucket_id, object_path, data, content_type)
+    file_id = insert_project_file(
+        client=client,
+        project_id=project_id,
+        owner_id=owner_id,
+        bucket=bucket_id,
+        object_path=object_path,
+        mime_type=content_type,
+        size_bytes=len(data),
+        category=category,
+        label=label,
+        metadata={},
+    )
+    signed_url = None
+    try:
+        signed_url = create_signed_url(client, bucket_id, object_path)
+    except Exception as e:
+        logger = get_logger("app_helpers")
+        logger.warning(f"Failed to create signed URL: {e}")
+    if not signed_url:
+        try:
+            signed_url = get_public_url(client, bucket_id, object_path)
+        except Exception as e:
+            logger = get_logger("app_helpers")
+            logger.warning(f"Failed to generate public URL: {e}")
+    logger = get_logger("app_helpers")
+    logger.info("Uploaded %s to Supabase: %s (file_id=%s) category=%s", label or filename, signed_url, file_id, category)
     return file_id, signed_url
 
 

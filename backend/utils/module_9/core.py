@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import os
 import re
 import shutil
@@ -19,6 +20,8 @@ from typing import Dict, Any, Optional, List
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 try:
     from reportlab.lib import colors
@@ -599,10 +602,8 @@ class RIBIFModule9Catalog:
 
     # ==================== HTML GENERATION ====================
 
-    def generate_web_catalog(self, module1_data: Dict, module4_data: Dict = None,
-                             output_path: str = "data/catalogs/industrial_catalog.html") -> str:
-        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-
+    def generate_web_catalog_content(self, module1_data: Dict, module4_data: Dict = None) -> str:
+        """Generate HTML catalog content and return as string (no file writing)."""
         project_info = module1_data.get('stage_1_informations_generales', {}).get('informations_generales', {})
         catalog_images = module1_data.get('catalog_images', {})
         machines = module1_data.get('stage_4_machines_equipements', {}).get('machines_production', [])
@@ -884,11 +885,561 @@ class RIBIFModule9Catalog:
 </body>
 </html>'''
 
+        return html
+
+    def generate_web_catalog(self, module1_data: Dict, module4_data: Dict = None,
+                             output_path: str = "data/catalogs/industrial_catalog.html") -> str:
+        """Generate HTML catalog and write to file. For backward compatibility."""
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        html = self.generate_web_catalog_content(module1_data, module4_data)
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(html)
         return output_path
 
     # ==================== MAIN GENERATION ====================
+
+    def _generate_pdf_in_memory(self, module1_data: Dict, module4_data: Dict = None) -> bytes:
+        """
+        Generate PDF catalog exactly matching the LaTeX template structure.
+        Sections: Cover, 01-Process&Workflow, 02-ProcessArchitecture, 03-MachineAssets, 
+                  04-ProductCatalog, 05-Logistics, 06-DigitalTwin
+        """
+        from io import BytesIO
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import cm, mm
+        from reportlab.platypus import (
+            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+            PageBreak, KeepTogether, HRFlowable, ListFlowable, ListItem
+        )
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY, TA_RIGHT
+        from reportlab.platypus.flowables import Drawing
+        from reportlab.graphics.shapes import Rect, String, Line
+
+        # Brand colors (exact LaTeX template colors)
+        BRAND_PRIMARY = colors.HexColor("#4F46E5")   # Indigo 600
+        BRAND_DARK = colors.HexColor("#0F172A")      # Slate 900
+        BRAND_TEXT = colors.HexColor("#334155")      # Slate 700
+        BRAND_LIGHT = colors.HexColor("#F8FAFC")     # Slate 50
+        BRAND_WHITE = colors.HexColor("#FFFFFF")
+        BRAND_SUCCESS = colors.HexColor("#10B981")   # Emerald 500
+        BRAND_WARNING = colors.HexColor("#F59E0B")   # Amber 500
+        BRAND_DANGER = colors.HexColor("#EF4444")    # Red 500
+
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer, pagesize=A4,
+            leftMargin=2*cm, rightMargin=2*cm,
+            topMargin=2.5*cm, bottomMargin=2.5*cm
+        )
+        page_width = A4[0] - 4*cm  # Available width
+
+        # Create all styles
+        styles = getSampleStyleSheet()
+        
+        # Cover page styles
+        styles.add(ParagraphStyle('CoverModule', fontSize=14, textColor=BRAND_WHITE, alignment=TA_LEFT, fontName='Helvetica-Bold', spaceAfter=10))
+        styles.add(ParagraphStyle('CoverTitle', fontSize=42, textColor=BRAND_WHITE, alignment=TA_LEFT, fontName='Helvetica-Bold', leading=50, spaceAfter=5))
+        styles.add(ParagraphStyle('CoverMeta', fontSize=11, textColor=BRAND_TEXT, alignment=TA_LEFT, fontName='Helvetica-Bold'))
+        styles.add(ParagraphStyle('CoverMetaValue', fontSize=11, textColor=BRAND_TEXT, alignment=TA_LEFT))
+        
+        # Section styles
+        styles.add(ParagraphStyle('SectionNum', fontSize=28, textColor=BRAND_WHITE, alignment=TA_CENTER, fontName='Helvetica-Bold'))
+        styles.add(ParagraphStyle('SectionTitle', fontSize=16, textColor=BRAND_WHITE, alignment=TA_LEFT, fontName='Helvetica-Bold'))
+        styles.add(ParagraphStyle('SubHeader', fontSize=13, textColor=BRAND_DARK, alignment=TA_LEFT, fontName='Helvetica-Bold', spaceBefore=15, spaceAfter=8))
+        styles.add(ParagraphStyle('BodyText', fontSize=10, textColor=BRAND_TEXT, alignment=TA_JUSTIFY, leading=14, spaceAfter=8))
+        styles.add(ParagraphStyle('SmallText', fontSize=9, textColor=BRAND_TEXT, spaceAfter=4))
+        styles.add(ParagraphStyle('BulletText', fontSize=10, textColor=BRAND_TEXT, leftIndent=15, spaceAfter=4))
+        styles.add(ParagraphStyle('CardHeader', fontSize=12, textColor=BRAND_WHITE, fontName='Helvetica-Bold'))
+        styles.add(ParagraphStyle('CardBody', fontSize=9, textColor=BRAND_TEXT))
+        styles.add(ParagraphStyle('TableHeader', fontSize=10, textColor=BRAND_WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER))
+        styles.add(ParagraphStyle('FooterText', fontSize=9, textColor=BRAND_TEXT, alignment=TA_CENTER))
+        styles.add(ParagraphStyle('PillarTitle', fontSize=10, textColor=BRAND_WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER))
+        styles.add(ParagraphStyle('PillarBody', fontSize=8, textColor=BRAND_TEXT, alignment=TA_CENTER, leading=11))
+
+        elements = []
+
+        # Extract all data
+        project_info = module1_data.get('stage_1_informations_generales', {}).get('informations_generales', {})
+        machines = module1_data.get('stage_4_machines_equipements', {}).get('machines_production', [])
+        products = module1_data.get('stage_3_produits_fabriques', {}).get('produits_fabriques', [])
+        processes = module1_data.get('stage_5_processus_production', {}).get('processus_production', [])
+        materials = module1_data.get('stage_2_matieres_premieres', {}).get('matieres_premieres', [])
+
+        project_name = project_info.get('nom_projet', 'Industrial Project')
+        company_name = project_info.get('nom_entreprise', 'ALLO MAISON IND.')
+        sector = project_info.get('secteur_activite', 'Industrial Manufacturing')
+        description = project_info.get('description', '')
+        objectives = project_info.get('objectifs', []) or project_info.get('objectifs_specifiques', [])
+        date_str = datetime.now().strftime("%b %Y").upper()
+
+        # ==================== COVER PAGE ====================
+        # Full-page dark background with diagonal accent
+        cover_height = A4[1] - 2.5*cm
+        cover_data = [
+            # Module identifier
+            [Paragraph("TECHNICAL DOCUMENTATION SERIES", styles['CoverModule'])],
+            [Spacer(1, 0.5*cm)],
+            [Paragraph("5.0", ParagraphStyle('ModuleNum', fontSize=72, textColor=BRAND_WHITE, fontName='Helvetica-Bold'))],
+            [Spacer(1, 1*cm)],
+            # Main titles
+            [Paragraph("DIGITAL TWIN", styles['CoverTitle'])],
+            [Paragraph("& PROCESS", styles['CoverTitle'])],
+            [Paragraph("CATALOGUE", styles['CoverTitle'])],
+            [Spacer(1, 3*cm)],
+        ]
+        
+        cover_table = Table(cover_data, colWidths=[page_width])
+        cover_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), BRAND_DARK),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 30),
+            ('TOPPADDING', (0, 0), (0, 0), 50),
+        ]))
+        elements.append(cover_table)
+        
+        # Bottom metadata bar
+        meta_data = [
+            [Paragraph("<b>PROJECT:</b>", styles['CoverMeta']), 
+             Paragraph("<b>DATE:</b>", styles['CoverMeta']),
+             Paragraph("<b>SECTOR:</b>", styles['CoverMeta'])],
+            [Paragraph(project_name[:30], styles['CoverMetaValue']), 
+             Paragraph(date_str, styles['CoverMetaValue']),
+             Paragraph(sector[:25], styles['CoverMetaValue'])],
+        ]
+        meta_table = Table(meta_data, colWidths=[page_width/3]*3)
+        meta_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), BRAND_WHITE),
+            ('TOPPADDING', (0, 0), (-1, -1), 15),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+            ('LEFTPADDING', (0, 0), (-1, -1), 20),
+        ]))
+        elements.append(meta_table)
+        elements.append(PageBreak())
+
+        # ==================== 01. PROCESS & WORKFLOW ====================
+        elements.append(self._create_section_header("01", "PROCESS & WORKFLOW", BRAND_PRIMARY, BRAND_DARK, page_width))
+        elements.append(Spacer(1, 1*cm))
+
+        # Two-column layout: text left, placeholder right
+        elements.append(Paragraph("<b>OPERATIONAL OVERVIEW</b>", styles['SubHeader']))
+        overview = description or f"This catalog presents the comprehensive technical documentation for {project_name}, an industrial manufacturing project operated by {company_name}. The facility integrates modern automation systems with traditional manufacturing processes to deliver high-quality products efficiently."
+        elements.append(Paragraph(overview[:500], styles['BodyText']))
+
+        # Key Objectives
+        if objectives:
+            elements.append(Spacer(1, 0.3*cm))
+            elements.append(Paragraph("<b>KEY OBJECTIVES:</b>", styles['SubHeader']))
+            for obj in objectives[:5]:
+                if isinstance(obj, str):
+                    elements.append(Paragraph(f"• {obj}", styles['BulletText']))
+
+        # Image placeholder
+        elements.append(Spacer(1, 0.5*cm))
+        placeholder_table = Table([[Paragraph("[FACTORY LAYOUT RENDER]", 
+            ParagraphStyle('Placeholder', fontSize=10, textColor=colors.HexColor("#999999"), alignment=TA_CENTER))]], 
+            colWidths=[page_width*0.6])
+        placeholder_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), BRAND_LIGHT),
+            ('BOX', (0, 0), (-1, -1), 1.5, colors.HexColor("#CCCCCC")),
+            ('TOPPADDING', (0, 0), (-1, -1), 40),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 40),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ]))
+        elements.append(placeholder_table)
+        elements.append(Paragraph("<i>Fig 1.1: General Layout</i>", ParagraphStyle('Caption', fontSize=9, textColor=BRAND_TEXT, alignment=TA_CENTER, spaceBefore=5)))
+
+        # Core Pillars Box (matching tcolorbox in LaTeX)
+        elements.append(Spacer(1, 0.8*cm))
+        pillar_header = [[Paragraph("<b>CORE PILLARS</b>", ParagraphStyle('PillarHeader', fontSize=12, textColor=BRAND_WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER))]]
+        pillar_content = [
+            [Paragraph("<b>1. AUTOMATION</b>", styles['PillarTitle']),
+             Paragraph("<b>2. CONNECTIVITY</b>", styles['PillarTitle']),
+             Paragraph("<b>3. SUSTAINABILITY</b>", styles['PillarTitle'])],
+            [Paragraph("Streamlined production workflows with minimal manual intervention and maximum efficiency.", styles['PillarBody']),
+             Paragraph("Integrated systems enabling real-time data exchange, monitoring, and predictive analytics.", styles['PillarBody']),
+             Paragraph("Eco-friendly processes that reduce waste, optimize energy usage, and minimize environmental impact.", styles['PillarBody'])]
+        ]
+        pillar_header_table = Table(pillar_header, colWidths=[page_width])
+        pillar_header_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), BRAND_DARK),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        pillar_body_table = Table(pillar_content, colWidths=[page_width/3]*3)
+        pillar_body_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), BRAND_PRIMARY),
+            ('BACKGROUND', (0, 1), (-1, -1), BRAND_LIGHT),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('BOX', (0, 0), (-1, -1), 1, BRAND_DARK),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+        ]))
+        elements.append(pillar_header_table)
+        elements.append(pillar_body_table)
+        elements.append(PageBreak())
+
+        # ==================== 02. PROCESS ARCHITECTURE ====================
+        elements.append(self._create_section_header("02", "PROCESS ARCHITECTURE", BRAND_PRIMARY, BRAND_DARK, page_width))
+        elements.append(Spacer(1, 1*cm))
+
+        elements.append(Paragraph("<b>WORKFLOW DESCRIPTION</b>", styles['SubHeader']))
+        elements.append(Paragraph(
+            "The manufacturing process follows a structured workflow designed for optimal efficiency and quality control. "
+            "Each step is monitored in real-time through the Digital Twin interface.",
+            styles['BodyText']
+        ))
+
+        # Process flowchart as table
+        elements.append(Spacer(1, 0.5*cm))
+        if processes:
+            # Create process steps
+            step_rows = []
+            row = []
+            for idx, proc in enumerate(processes[:6], 1):
+                proc_name = proc.get('nom', proc.get('name', f'Process {idx}'))[:20]
+                step_style = TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), BRAND_WHITE if idx < 6 else BRAND_DARK),
+                    ('TEXTCOLOR', (0, 0), (-1, -1), BRAND_DARK if idx < 6 else BRAND_WHITE),
+                    ('BOX', (0, 0), (-1, -1), 1, BRAND_DARK),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('TOPPADDING', (0, 0), (-1, -1), 15),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+                ])
+                step_cell = Table([[Paragraph(f"<b>STEP {idx:02d}</b>", styles['SmallText'])], 
+                                   [Paragraph(proc_name, styles['SmallText'])]], 
+                                  colWidths=[page_width/3.5])
+                step_cell.setStyle(step_style)
+                row.append(step_cell)
+                if len(row) == 3:
+                    step_rows.append(row)
+                    row = []
+            if row:
+                while len(row) < 3:
+                    row.append('')
+                step_rows.append(row)
+            
+            flow_table = Table(step_rows, colWidths=[page_width/3.2]*3)
+            flow_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ]))
+            elements.append(flow_table)
+        else:
+            # Default process steps
+            default_steps = [
+                ("STEP 01", "INPUT"),
+                ("STEP 02", "PROCESS A"),
+                ("STEP 03", "PROCESS B"),
+                ("STEP 04", "TRANSFORMATION"),
+                ("STEP 05", "FINISHING"),
+                ("STEP 06", "OUTPUT"),
+            ]
+            step_rows = []
+            row = []
+            for idx, (step, name) in enumerate(default_steps, 1):
+                is_last = idx == 6
+                step_cell = Table([[Paragraph(f"<b>{step}</b>", styles['SmallText'])], 
+                                   [Paragraph(name, styles['SmallText'])]], 
+                                  colWidths=[page_width/3.5])
+                step_cell.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), BRAND_DARK if is_last else BRAND_WHITE),
+                    ('TEXTCOLOR', (0, 0), (-1, -1), BRAND_WHITE if is_last else BRAND_DARK),
+                    ('BOX', (0, 0), (-1, -1), 1, BRAND_DARK),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('TOPPADDING', (0, 0), (-1, -1), 15),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+                ]))
+                row.append(step_cell)
+                if len(row) == 3:
+                    step_rows.append(row)
+                    row = []
+            flow_table = Table(step_rows, colWidths=[page_width/3.2]*3)
+            flow_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ]))
+            elements.append(flow_table)
+
+        elements.append(PageBreak())
+
+        # ==================== 03. MACHINE ASSETS ====================
+        elements.append(self._create_section_header("03", "MACHINE ASSETS", BRAND_PRIMARY, BRAND_DARK, page_width))
+        elements.append(Spacer(1, 1*cm))
+
+        elements.append(Paragraph(
+            "The following equipment inventory details the primary manufacturing assets deployed in this facility.",
+            styles['BodyText']
+        ))
+        elements.append(Spacer(1, 0.5*cm))
+
+        # Machine asset cards (matching LaTeX assetcard)
+        if machines:
+            for idx, machine in enumerate(machines[:8], 1):
+                machine_name = machine.get('nom_machine', machine.get('name', f'MACHINE REF-{idx:02d}'))
+                machine_type = machine.get('type', machine.get('categorie', 'CATEGORY'))
+                specs = machine.get('specifications', {})
+                manufacturer = specs.get('fabricant', specs.get('manufacturer', 'Brand Name'))
+                capacity = specs.get('capacite', specs.get('capacity', 'Standard'))
+                power = specs.get('puissance', specs.get('power', 'Standard'))
+                
+                # Asset card header
+                card_header = [[
+                    Paragraph(f"<b>{machine_name[:35]}</b>", styles['CardHeader']),
+                    Paragraph(machine_type[:20], ParagraphStyle('CardType', fontSize=10, textColor=BRAND_WHITE, alignment=TA_RIGHT))
+                ]]
+                header_table = Table(card_header, colWidths=[page_width*0.65, page_width*0.35])
+                header_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), BRAND_PRIMARY),
+                    ('TOPPADDING', (0, 0), (-1, -1), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 15),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 15),
+                ]))
+                
+                # Asset card body (side-by-side: placeholder | specs)
+                card_body = [[
+                    Paragraph("[ASSET PHOTO]", ParagraphStyle('AssetPlaceholder', fontSize=9, textColor=colors.HexColor("#999999"), alignment=TA_CENTER)),
+                    Table([
+                        [Paragraph("<b>Manufacturer</b>", styles['CardBody']), Paragraph(str(manufacturer)[:25], styles['CardBody'])],
+                        [Paragraph("<b>Capacity</b>", styles['CardBody']), Paragraph(str(capacity)[:25], styles['CardBody'])],
+                        [Paragraph("<b>Power</b>", styles['CardBody']), Paragraph(str(power)[:25], styles['CardBody'])],
+                        [Paragraph("<b>Status</b>", styles['CardBody']), Paragraph("<b>Operational</b>", styles['CardBody'])],
+                    ], colWidths=[page_width*0.25, page_width*0.3])
+                ]]
+                body_table = Table(card_body, colWidths=[page_width*0.35, page_width*0.65])
+                body_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (0, -1), BRAND_LIGHT),
+                    ('BACKGROUND', (1, 0), (-1, -1), BRAND_WHITE),
+                    ('BOX', (0, 0), (-1, -1), 0.5, BRAND_DARK),
+                    ('TOPPADDING', (0, 0), (-1, -1), 20),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 20),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 10),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ]))
+                
+                elements.append(KeepTogether([header_table, body_table, Spacer(1, 0.5*cm)]))
+                
+                # Page break after every 3 machines
+                if idx % 3 == 0 and idx < len(machines[:8]):
+                    elements.append(PageBreak())
+                    elements.append(self._create_section_header("03", "MACHINE ASSETS (CONTINUED)", BRAND_PRIMARY, BRAND_DARK, page_width))
+                    elements.append(Spacer(1, 0.5*cm))
+        else:
+            elements.append(Paragraph("Machine inventory to be populated based on equipment specifications.", styles['BodyText']))
+
+        elements.append(PageBreak())
+
+        # ==================== 04. PRODUCT CATALOG ====================
+        elements.append(self._create_section_header("04", "PRODUCT CATALOG", BRAND_PRIMARY, BRAND_DARK, page_width))
+        elements.append(Spacer(1, 1*cm))
+
+        elements.append(Paragraph(
+            "The product catalog details the manufactured items, their specifications, and material composition.",
+            styles['BodyText']
+        ))
+        elements.append(Spacer(1, 0.5*cm))
+
+        # Product table (matching LaTeX tblr)
+        if products:
+            prod_header = ['REF ID', 'PRODUCT NAME', 'MATERIAL COMPOSITION', 'CATEGORY']
+            prod_rows = [prod_header]
+            for idx, prod in enumerate(products[:10], 1):
+                prod_name = prod.get('nom_produit', f'Product {idx}')[:35]
+                prod_cat = prod.get('categorie', 'Type A')[:15]
+                prod_mat = prod.get('materiaux', prod.get('composition', 'Standard Material'))
+                if isinstance(prod_mat, list):
+                    prod_mat = ', '.join(str(m)[:15] for m in prod_mat[:2])
+                else:
+                    prod_mat = str(prod_mat)[:30]
+                prod_rows.append([f"<b>P-{idx:03d}</b>", f"<b>{prod_name}</b>", prod_mat, prod_cat])
+        else:
+            prod_header = ['REF ID', 'PRODUCT NAME', 'MATERIAL COMPOSITION', 'CATEGORY']
+            prod_rows = [prod_header,
+                ['<b>A-001</b>', '<b>Product Name Alpha</b>', 'Lorem Ipsum Material', 'Type A'],
+                ['<b>B-002</b>', '<b>Product Name Beta</b>', 'Dolor Sit Amet', 'Type B'],
+                ['<b>C-003</b>', '<b>Product Name Gamma</b>', 'Consectetur Adipiscing', 'Type C'],
+                ['<b>D-004</b>', '<b>Product Name Delta</b>', 'Elit Sed Do', 'Type D'],
+            ]
+        
+        # Convert to Paragraphs
+        prod_table_data = []
+        for i, row in enumerate(prod_rows):
+            if i == 0:
+                prod_table_data.append([Paragraph(cell, styles['TableHeader']) for cell in row])
+            else:
+                prod_table_data.append([Paragraph(cell, styles['SmallText']) for cell in row])
+        
+        prod_table = Table(prod_table_data, colWidths=[page_width*0.12, page_width*0.35, page_width*0.33, page_width*0.20])
+        prod_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), BRAND_DARK),
+            ('TEXTCOLOR', (0, 0), (-1, 0), BRAND_WHITE),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('BOX', (0, 0), (-1, -1), 2, BRAND_DARK),
+            ('LINEBELOW', (0, 0), (-1, -2), 1, colors.HexColor("#E2E8F0")),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [BRAND_WHITE, BRAND_LIGHT]),
+        ]))
+        elements.append(prod_table)
+        elements.append(PageBreak())
+
+        # ==================== 05. LOGISTICS & SUPPLY CHAIN ====================
+        elements.append(self._create_section_header("05", "LOGISTICS & SUPPLY CHAIN", BRAND_PRIMARY, BRAND_DARK, page_width))
+        elements.append(Spacer(1, 1*cm))
+
+        # Two-column layout
+        logistics_data = [
+            [Paragraph("<b>INBOUND FLOW</b>", styles['SubHeader']),
+             Paragraph("<b>OUTBOUND FLOW</b>", styles['SubHeader'])],
+            [Paragraph("Raw materials and components are sourced from qualified suppliers and delivered to the facility following strict quality protocols.", styles['BodyText']),
+             Paragraph("Finished products are packaged, labeled, and distributed through established logistics channels to reach end customers efficiently.", styles['BodyText'])],
+            [Paragraph("• Metric A: Supplier Count<br/>• Metric B: Quality Rate 98%", styles['BulletText']),
+             Paragraph("• Metric C: Daily Shipments<br/>• Metric D: Lead Time 48h", styles['BulletText'])],
+        ]
+        logistics_table = Table(logistics_data, colWidths=[page_width*0.48, page_width*0.48])
+        logistics_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        elements.append(logistics_table)
+
+        # Logistics map placeholder
+        elements.append(Spacer(1, 0.5*cm))
+        map_placeholder = Table([[Paragraph("[LOGISTICS MAP]", 
+            ParagraphStyle('MapPlaceholder', fontSize=10, textColor=colors.HexColor("#999999"), alignment=TA_CENTER))]], 
+            colWidths=[page_width])
+        map_placeholder.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), BRAND_LIGHT),
+            ('BOX', (0, 0), (-1, -1), 1.5, colors.HexColor("#CCCCCC")),
+            ('TOPPADDING', (0, 0), (-1, -1), 30),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 30),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ]))
+        elements.append(map_placeholder)
+        elements.append(PageBreak())
+
+        # ==================== 06. DIGITAL TWIN INTERFACE ====================
+        elements.append(self._create_section_header("06", "DIGITAL TWIN INTERFACE", BRAND_PRIMARY, BRAND_DARK, page_width))
+        elements.append(Spacer(1, 1*cm))
+
+        elements.append(Paragraph("<b>INTERFACE GUIDE: TWIN MANAGER v5.0</b>", styles['SubHeader']))
+        elements.append(Paragraph(
+            "The Digital Twin interface provides a real-time, browser-based supervision of the factory floor. "
+            "It is built using <b>React.js</b> and <b>Three.js</b> to render a 3D interactive scene alongside critical live data.",
+            styles['BodyText']
+        ))
+
+        # Section 1: 3D Visualization
+        elements.append(Spacer(1, 0.5*cm))
+        elements.append(Paragraph("🖥 <b>1. 3D VISUALIZATION (CANVAS)</b>", styles['SubHeader']))
+        elements.append(Paragraph("The Dashboard features a <font face='Courier'>ComplexFactoryScene</font> that renders the physical layout:", styles['BodyText']))
+        elements.append(Paragraph("• <b>Assets:</b> Displays CNC Machines, Robot Arms, and Conveyor Belts.", styles['BulletText']))
+        elements.append(Paragraph(f"• <b>Status Indicators:</b> Machines change color dynamically: <font color='#10B981'><b>Green (Running)</b></font>, <font color='#F59E0B'><b>Amber (Idle)</b></font>, or <font color='#EF4444'><b>Red (Warning)</b></font>.", styles['BulletText']))
+        elements.append(Paragraph("• <b>Animation:</b> Robot arms and AGVs move in sync with the production cycle time.", styles['BulletText']))
+
+        # Section 2: Predictive Maintenance
+        elements.append(Spacer(1, 0.5*cm))
+        elements.append(Paragraph("📊 <b>2. PREDICTIVE MAINTENANCE (SCATTER CHART)</b>", styles['SubHeader']))
+        elements.append(Paragraph("The Maintenance module utilizes a <b>Risk Matrix Scatter Chart</b> to correlate three key variables:", styles['BodyText']))
+        elements.append(Paragraph("• <b>X-Axis:</b> Temperature (°C)", styles['BulletText']))
+        elements.append(Paragraph("• <b>Y-Axis:</b> Machine Health (%)", styles['BulletText']))
+        elements.append(Paragraph("• <b>Z-Axis (Point Size):</b> Vibration levels", styles['BulletText']))
+        elements.append(Paragraph("<b>Logic:</b> The system triggers a <font face='Courier'>status=\"warning\"</font> if Temperature > 90°C.", styles['BodyText']))
+
+        # Section 3: TCO Optimization
+        elements.append(Spacer(1, 0.5*cm))
+        elements.append(Paragraph("🧮 <b>3. TCO OPTIMIZATION (BAR CHART)</b>", styles['SubHeader']))
+        elements.append(Paragraph("The <b>Total Cost of Ownership (TCO)</b> calculator projects financial data over 10 years based on live telemetry.", styles['BodyText']))
+        elements.append(Paragraph("• <b>Calculation:</b> <font face='Courier'>Total = CAPEX + (Power × Hours × Cost) + Maintenance</font>", styles['BulletText']))
+        elements.append(Paragraph("• <b>Stacked Bar Chart:</b> Visualizes OPEX accumulation on top of CAPEX investment.", styles['BulletText']))
+        elements.append(Paragraph("• <b>User Inputs:</b> Financial directors can adjust Energy Cost (€/kWh) and Years to simulate ROI scenarios.", styles['BulletText']))
+
+        # Section 4: Safety & ATEX
+        elements.append(Spacer(1, 0.5*cm))
+        elements.append(Paragraph("🛡 <b>4. SAFETY & ATEX MONITORING</b>", styles['SubHeader']))
+        elements.append(Paragraph("For hazardous zones (e.g., Painting Robot), the system monitors air quality.", styles['BodyText']))
+        elements.append(Paragraph("• <b>Data Viz:</b> An Area Chart tracks PPM (Parts Per Million) of VOCs/Solvents in real-time.", styles['BulletText']))
+        elements.append(Paragraph("• <b>Automation:</b> If concentration spikes, ventilation status switches to \"100%\" instantly.", styles['BulletText']))
+
+        # Footer
+        elements.append(Spacer(1, 2*cm))
+        elements.append(HRFlowable(width="100%", thickness=1, color=BRAND_DARK))
+        elements.append(Spacer(1, 0.3*cm))
+        elements.append(Paragraph(
+            f"<b>{company_name.upper()}</b> - INTERNAL TECHNICAL REFERENCE - END OF DOCUMENT",
+            styles['FooterText']
+        ))
+
+        # Build PDF
+        doc.build(elements)
+        return buffer.getvalue()
+
+    def _create_section_header(self, num: str, title: str, primary_color, dark_color, page_width) -> Table:
+        """Create section header matching LaTeX \\indheader macro."""
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from reportlab.platypus import Paragraph, Table, TableStyle
+        from reportlab.lib import colors
+        
+        header_data = [[
+            Paragraph(f"<b>{num}</b>", ParagraphStyle('SNum', fontSize=28, textColor=colors.white, alignment=TA_CENTER, fontName='Helvetica-Bold')),
+            Paragraph(f"<b>{title.upper()}</b>", ParagraphStyle('STitle', fontSize=16, textColor=colors.white, alignment=TA_LEFT, fontName='Helvetica-Bold', leftIndent=15))
+        ]]
+        header_table = Table(header_data, colWidths=[2*cm, page_width - 2*cm])
+        header_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, 0), primary_color),
+            ('BACKGROUND', (1, 0), (1, 0), dark_color),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
+            ('ALIGN', (0, 0), (0, 0), 'CENTER'),
+            ('ALIGN', (1, 0), (1, 0), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 18),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 18),
+            ('LEFTPADDING', (1, 0), (1, 0), 20),
+        ]))
+        return header_table
+
+    def generate_catalog_in_memory(self, input_data: CatalogInput) -> Dict[str, Any]:
+        """
+        Generate catalog PDF in memory (serverless-friendly).
+        Uses ReportLab to create professional PDF matching LaTeX template design.
+        """
+        module1_data = input_data.module1_data
+        module4_data = input_data.module4_data
+
+        if input_data.images_config:
+            self._merge_images_config(module1_data, input_data.images_config)
+
+        project_info = module1_data.get("stage_1_informations_generales", {}).get("informations_generales", {})
+        project_name = project_info.get("nom_projet", "Industrial Project")
+        company_name = project_info.get("nom_entreprise", "Company")
+
+        base_name = input_data.base_filename or project_name or "catalog"
+        base_name = re.sub(r"[^A-Za-z0-9_-]+", "_", base_name).strip("_") or "catalog"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        pdf_filename = f"{base_name}_{timestamp}.pdf"
+        pdf_bytes = self._generate_pdf_in_memory(module1_data, module4_data)
+
+        return {
+            "created_at": datetime.utcnow().isoformat(),
+            "project_name": project_name,
+            "company_name": company_name,
+            "output_format": "pdf",
+            "pdf_filename": pdf_filename,
+            "pdf_content": pdf_bytes,
+            "pdf_size_bytes": len(pdf_bytes),
+        }
 
     def generate_catalog(self, input_data: CatalogInput, base_url: str = "http://localhost:5000") -> CatalogOutput:
         module1_data = input_data.module1_data
@@ -915,8 +1466,15 @@ class RIBIFModule9Catalog:
         fmt = input_data.output_format.lower()
         if fmt in ("both", "pdf"):
             pdf_path = os.path.join(output_dir, f"{base}.pdf")
-            pdf_path = self.generate_pdf_catalog(module1_data, module4_data, pdf_path)
-        if fmt in ("both", "html"):
+            try:
+                pdf_path = self.generate_pdf_catalog(module1_data, module4_data, pdf_path)
+            except Exception as e:
+                logger.warning(f"PDF generation failed (pdflatex may not be installed): {e}")
+                pdf_path = None
+                # If PDF was requested and failed, fall back to HTML
+                if fmt == "pdf":
+                    fmt = "html"
+        if fmt in ("both", "html") or pdf_path is None:
             html_path = os.path.join(output_dir, f"{base}.html")
             html_path = self.generate_web_catalog(module1_data, module4_data, html_path)
 

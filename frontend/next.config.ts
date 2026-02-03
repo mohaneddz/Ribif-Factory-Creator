@@ -16,13 +16,6 @@ const nextConfig: NextConfig = {
     },
     // Allow larger request bodies for API routes and middleware (module9/catalog needs >10MB)
     serverExternalPackages: [],
-    // Increase body size limit for all routes
-    api: {
-        bodyParser: {
-            sizeLimit: '50mb',
-        },
-        responseLimit: false,
-    },
     async rewrites() {
         return [
             {

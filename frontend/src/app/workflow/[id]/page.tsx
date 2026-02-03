@@ -804,7 +804,17 @@ export default function FactoryCopilot() {
         setSelectedModule(idx);
         setSubStep(0);
         setStatus('processing');
-        runHasData.current = true; // Trigger the processing loop again
+        runHasData.current = true;
+
+        // Build cleaned project data and trigger workflow
+        const cleanedData = {
+            ...projectData,
+            ...updates,
+        } as ProjectRecord;
+
+        // Trigger workflow with cleaned data
+        setPendingResumeData(cleanedData);
+        setShouldAutoResume(true);
     };
 
     const regenerateAll = async () => {
@@ -876,16 +886,49 @@ export default function FactoryCopilot() {
         }
     };
 
-    const handleArtifactDownload = (idx: number) => {
-        const url = getArtifactDownloadUrl(MODULES[idx]?.type);
-        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    const handleArtifactDownload = async (idx: number) => {
+        const moduleType = MODULES[idx]?.type;
+        const url = getArtifactDownloadUrl(moduleType);
+        if (!url) return;
+        
+        try {
+            // For Supabase URLs or direct URLs, fetch and trigger download
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Download failed');
+            
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            
+            // Set appropriate filename based on module type
+            const filenames: Record<string, string> = {
+                pitchdeck: 'Pitch_Deck.pdf',
+                businessplan: 'Business_Plan.xlsx',
+                catalogue: 'Catalogue_Technique.pdf',
+                layout2d: 'Layout_2D.dxf',
+                model3d: 'Model_3D.glb',
+                video: 'Presentation_Video.mp4',
+            };
+            link.download = filenames[moduleType || ''] || MODULES[idx]?.file || 'download';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(downloadUrl);
+        } catch (err) {
+            console.error('Download error:', err);
+            // Fallback to opening in new tab
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
     };
 
-    const handleDownloadAll = () => {
-        downloadableArtifacts.forEach(idx => {
-            const url = getArtifactDownloadUrl(MODULES[idx]?.type);
-            if (url) window.open(url, '_blank', 'noopener,noreferrer');
-        });
+    const handleDownloadAll = async () => {
+        for (const idx of downloadableArtifacts) {
+            await handleArtifactDownload(idx);
+            // Small delay between downloads to prevent browser blocking
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
     };
 
     // 2D Layout Image URL - prefer Supabase signed URLs, fallback to backend proxy
@@ -916,7 +959,8 @@ export default function FactoryCopilot() {
     const isSelectedDone = artifacts.includes(selectedModule) || status === 'finished' || selectedModule < currentModule;
     const selectedProgress = isSelectedProcessing ? subStep : isSelectedDone ? 100 : 0;
     const displayArtifacts = status === 'finished' ? MODULES.map((_, idx) => idx) : artifacts;
-    const deliverableTypes = new Set(["specs", "sourcing", "tco", "businessplan", "pitchdeck", "catalogue", "layout2d", "model3d", "video", "twin"]);
+    // Only show these 5 deliverables: business plan (includes pitch deck), catalogue, 2D layout, 3D model, video
+    const deliverableTypes = new Set(["businessplan", "catalogue", "layout2d", "model3d", "video"]);
     const downloadableArtifacts = displayArtifacts.filter(idx => deliverableTypes.has(MODULES[idx]?.type));
 
     return (
@@ -1046,8 +1090,7 @@ export default function FactoryCopilot() {
                                                 {selectedModuleItem.type === 'email' && <VoiceNegotiationView projectId={routeProjectId || ""} module4Data={module4Data} loading={module4Loading} />}
                                                 {selectedModuleItem.type === 'tco' && <TcoView data={tcoData} loading={tcoLoading} />}
                                                 {selectedModuleItem.type === 'businessplan' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
-                                                {selectedModuleItem.type === 'pitchdeck' && <BusinessPlanView businessPlanData={businessPlanData} pitchDeckData={pitchDeckData} loading={businessPlanLoading} />}
-                                                {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url || catalogData?.pdf_download_url} htmlUrl={catalogData?.data?.html_download_url || catalogData?.html_download_url} />}
+                                                {selectedModuleItem.type === 'catalogue' && <CatalogueTechniqueView pdfUrl={catalogData?.data?.pdf_download_url || catalogData?.pdf_download_url || catalogData?.data?.data?.pdf_download_url} htmlUrl={catalogData?.data?.html_download_url || catalogData?.html_download_url || catalogData?.data?.data?.html_download_url} loading={catalogLoading} />}
                                                 {selectedModuleItem.type === 'twin' && <DigitalTwinView pipelineModelUrl={pipelineModelUrl} />}
                                             </>
                                         )}

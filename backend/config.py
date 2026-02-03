@@ -5,12 +5,47 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(dotenv_path=BASE_DIR / ".env")
-DATA_DIR = BASE_DIR / "data"
-UPLOAD_DIR = BASE_DIR / "uploads"
-CACHE_DIR = BASE_DIR / "cache"
+
+# Check if we're in a read-only filesystem environment (serverless/containerized)
+# Use /tmp for writable directories in such environments
+def _is_writable(path: Path) -> bool:
+    """Check if a directory path is writable."""
+    try:
+        test_path = path / ".write_test"
+        path.mkdir(parents=True, exist_ok=True)
+        test_path.touch()
+        test_path.unlink()
+        return True
+    except (OSError, PermissionError):
+        return False
+
+# Determine the writable base directory
+def _get_writable_base() -> Path:
+    """Get a writable base directory, falling back to /tmp if needed."""
+    # First try the BASE_DIR
+    if _is_writable(BASE_DIR / "data"):
+        return BASE_DIR
+    # Fall back to /tmp for serverless environments
+    tmp_base = Path("/tmp/ribif")
+    try:
+        tmp_base.mkdir(parents=True, exist_ok=True)
+        return tmp_base
+    except OSError:
+        # Last resort: use system temp directory
+        import tempfile
+        return Path(tempfile.gettempdir()) / "ribif"
+
+WRITABLE_BASE = _get_writable_base()
+
+# Use writable base for data directories that need write access
+DATA_DIR = WRITABLE_BASE / "data"
+UPLOAD_DIR = WRITABLE_BASE / "uploads"
+CACHE_DIR = WRITABLE_BASE / "cache"
 CACHE_IMAGES_DIR = CACHE_DIR / "images"
 EMAIL_CACHE_DIR = CACHE_DIR / "email"
 EMAIL_ATTACHMENTS_DIR = EMAIL_CACHE_DIR / "attachments"
+
+# Template directory stays in BASE_DIR (read-only is fine for templates)
 TEMPLATE_DIR = BASE_DIR / "template"
 
 
@@ -80,19 +115,33 @@ BASE_URL = os.getenv("BACKEND_BASE_URL", "http://localhost:5000")
 
 
 def ensure_dirs() -> None:
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    CACHE_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-    EMAIL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    EMAIL_ATTACHMENTS_DIR.mkdir(parents=True, exist_ok=True)
-    SEARCH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
-    for path in OUTPUT_DIRS.values():
-        path.mkdir(parents=True, exist_ok=True)
+    """Create necessary directories, handling read-only filesystem gracefully."""
+    dirs_to_create = [
+        UPLOAD_DIR,
+        CACHE_DIR,
+        CACHE_IMAGES_DIR,
+        EMAIL_CACHE_DIR,
+        EMAIL_ATTACHMENTS_DIR,
+        SEARCH_CACHE_DIR,
+        *OUTPUT_DIRS.values(),
+    ]
+    
+    for dir_path in dirs_to_create:
+        try:
+            dir_path.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            # Log warning but don't fail - directory might be created on-demand
+            print(f"Warning: Could not create directory {dir_path}: {e}")
+    
+    # Template directory is read-only in production, don't try to create it
+    # It should be part of the deployed code
 
 
 def write_json(path: Path, payload: dict) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass  # Directory might already exist or be in a read-only section
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     return path
 

@@ -1,12 +1,14 @@
 """
 Shared logging singleton for backend modules.
 Creates a per-run log file under backend/logs and logs to console.
+Falls back to /tmp or console-only in read-only filesystem environments.
 """
 from __future__ import annotations
 
 import logging
 import os
 import sys
+import tempfile
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -17,10 +19,37 @@ _LOGGER: Optional[logging.Logger] = None
 _RUN_ID: Optional[str] = None
 
 
-def _logs_dir() -> str:
+def _get_writable_logs_dir() -> Optional[str]:
+    """Get a writable logs directory, or None if file logging should be disabled."""
     utils_dir = os.path.dirname(__file__)
     backend_dir = os.path.abspath(os.path.join(utils_dir, ".."))
-    return os.path.join(backend_dir, "logs")
+    default_logs_dir = os.path.join(backend_dir, "logs")
+    
+    # Try default location first
+    try:
+        os.makedirs(default_logs_dir, exist_ok=True)
+        test_file = os.path.join(default_logs_dir, ".write_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        return default_logs_dir
+    except (OSError, PermissionError):
+        pass
+    
+    # Try /tmp/ribif/logs for serverless environments
+    try:
+        tmp_logs_dir = os.path.join(tempfile.gettempdir(), "ribif", "logs")
+        os.makedirs(tmp_logs_dir, exist_ok=True)
+        test_file = os.path.join(tmp_logs_dir, ".write_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        return tmp_logs_dir
+    except (OSError, PermissionError):
+        pass
+    
+    # File logging disabled - use console only
+    return None
 
 
 def _build_run_id() -> str:
@@ -38,26 +67,35 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
     logger.propagate = False
 
     if not logger.handlers:
-        os.makedirs(_logs_dir(), exist_ok=True)
-        log_path = os.path.join(_logs_dir(), f"run_{_RUN_ID}.log")
-
         formatter = logging.Formatter(
             fmt="%(asctime)s.%(msecs)03d | %(levelname)s | %(name)s | %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )
 
-        file_handler = logging.FileHandler(log_path, encoding="utf-8")
-        file_handler.setLevel(logging.INFO)
-        file_handler.setFormatter(formatter)
+        # Try to set up file handler if we have a writable directory
+        logs_dir = _get_writable_logs_dir()
+        log_path = None
+        if logs_dir:
+            try:
+                log_path = os.path.join(logs_dir, f"run_{_RUN_ID}.log")
+                file_handler = logging.FileHandler(log_path, encoding="utf-8")
+                file_handler.setLevel(logging.INFO)
+                file_handler.setFormatter(formatter)
+                logger.addHandler(file_handler)
+            except (OSError, PermissionError) as e:
+                log_path = None
+                print(f"Warning: Could not create log file: {e}", file=sys.stderr)
 
+        # Always add console handler
         stream_handler = logging.StreamHandler(sys.stdout)
         stream_handler.setLevel(logging.INFO)
         stream_handler.setFormatter(formatter)
-
-        logger.addHandler(file_handler)
         logger.addHandler(stream_handler)
 
-        logger.info("START run_id=%s log_path=%s", _RUN_ID, log_path)
+        if log_path:
+            logger.info("START run_id=%s log_path=%s", _RUN_ID, log_path)
+        else:
+            logger.info("START run_id=%s (console-only logging)", _RUN_ID)
 
     _LOGGER = logger
     return _LOGGER if name is None else _LOGGER.getChild(name)

@@ -67,5 +67,7 @@ XlsxWriter==3.2.9
 
 # Utilities
 certifi==2025.11.12
-rich==14.2.0
-tqdm==4.67.1
+moviepy==2.2.1
+
+phonenumbers
+pdflatex

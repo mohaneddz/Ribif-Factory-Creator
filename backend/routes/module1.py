@@ -8,8 +8,7 @@ from werkzeug.utils import secure_filename
 
 from config import BASE_URL, OUTPUT_DIRS, UPLOAD_DIR, CREATE_MACHINE_IMAGES, SKIP_MODULE_1, write_json
 from supabase_utils import get_supabase, insert_module1_extraction
-from utils.module_1.core import RIBIFExtractor
-from utils.module_1.enricher import enricher
+# Heavy imports moved to lazy loading to speed up server startup
 from utils.logger import log_skip, get_logger
 from utils.app_helpers import (
     get_pipeline_settings,
@@ -26,14 +25,35 @@ from utils.app_helpers import (
 )
 from utils.image_selector import find_best_image, get_random_image
 from utils.job_manager import job_manager
-from vertex_utils import generate_image
 
 import time
 import uuid
 from datetime import datetime
 
 bp_module1 = Blueprint("module1", __name__)
-extractor = RIBIFExtractor()
+
+# Lazy initialization to prevent slow startup blocking health checks
+_extractor = None
+_module1_imports_loaded = False
+
+def _load_module1_imports():
+    """Lazy load heavy module1 imports."""
+    global _module1_imports_loaded
+    if not _module1_imports_loaded:
+        global RIBIFExtractor, enricher, fill_all_nulls, verify_no_nulls, generate_image
+        from utils.module_1.core import RIBIFExtractor
+        from utils.module_1.enricher import enricher
+        from utils.module_1.no_nulls import fill_all_nulls, verify_no_nulls
+        from vertex_utils import generate_image
+        _module1_imports_loaded = True
+
+def get_extractor():
+    """Lazy initialization of RIBIFExtractor to prevent slow startup."""
+    global _extractor
+    _load_module1_imports()
+    if _extractor is None:
+        _extractor = RIBIFExtractor()
+    return _extractor
 
 # Module 1 timeout configuration
 MODULE1_TOTAL_TIMEOUT = int(os.getenv("MODULE1_TOTAL_TIMEOUT", "300"))  # 5 minutes default
@@ -41,6 +61,7 @@ MODULE1_ENRICHMENT_TIMEOUT = int(os.getenv("MODULE1_ENRICHMENT_TIMEOUT", "120"))
 
 
 def generate_machine_image(machine_name: str, machine_type: str, manufacturer: str = None) -> dict:
+    _load_module1_imports()  # Ensure heavy imports are loaded
     try:
         manufacturer_text = f" by {manufacturer}" if manufacturer else ""
         prompt = f"""Professional product photography of an industrial {machine_type} machine called \"{machine_name}\"{manufacturer_text}.
@@ -129,6 +150,16 @@ def process_module_1():
                 meta = payload.get("ribif_metadata")
                 if isinstance(meta, dict):
                     meta["project_id"] = meta.get("project_id") or project_id
+            
+            # Strip base64 image data from skipped response too
+            def strip_base64(obj):
+                if isinstance(obj, dict):
+                    return {k: (None if k == "image_url" and isinstance(v, str) and v.startswith("data:") else strip_base64(v)) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [strip_base64(item) for item in obj]
+                return obj
+            
+            payload = strip_base64(payload)
             response_payload = {"message": "Success", "data": payload, "status": "skipped"}
             return jsonify(response_payload)
 
@@ -237,7 +268,7 @@ def process_module_1():
                 module1_logger = get_logger("module1")
                 module1_logger.warning(f"Failed to upload source file copy: {e}")
 
-        extraction_result = extractor.process_document(str(filepath), str(OUTPUT_DIRS["module1"]))
+        extraction_result = get_extractor().process_document(str(filepath), str(OUTPUT_DIRS["module1"]))
 
         # --- COMPREHENSIVE ENRICHMENT (Module 1 Stages 1-6) ---
         module1_logger = get_logger("module1")
@@ -430,6 +461,19 @@ def process_module_1():
         })
         final_result["project_id"] = project_id
 
+        # === FINAL SAFETY NET: Fill ALL remaining nulls ===
+        module1_logger.info("Running final no-nulls safety pass...")
+        try:
+            _load_module1_imports()  # Ensure heavy imports are loaded
+            final_result = fill_all_nulls(final_result, use_llm=False)
+            null_check = verify_no_nulls(final_result)
+            if null_check["has_nulls"]:
+                module1_logger.warning(f"Still have {null_check['null_count']} null values after final fill")
+            else:
+                module1_logger.info("✓ All fields populated - no nulls remaining")
+        except Exception as e:
+            module1_logger.warning(f"Final no-nulls pass failed: {e}")
+
         output_file = OUTPUT_DIRS["module1"] / f"{Path(filename).stem}_complete_pipeline.json"
         write_json(output_file, final_result)
 
@@ -513,7 +557,32 @@ def process_module_1():
         final_result.setdefault("ribif_metadata", {})
         final_result["ribif_metadata"]["module1_id"] = module1_id
 
-        return jsonify(sanitize_for_json({"message": "Success", "data": final_result}))
+        # === OPTIMIZE RESPONSE SIZE FOR SERVERLESS PLATFORMS ===
+        # Create a lightweight response that excludes large base64 data
+        # The full data is available via module1_output_file_url
+        response_data = sanitize_for_json({"message": "Success", "data": final_result})
+        
+        # Strip base64 image data from response to reduce payload size
+        # Images are still available via image_download_url
+        def strip_base64_from_response(obj):
+            """Recursively strip base64 data URIs from response to reduce size."""
+            if isinstance(obj, dict):
+                result = {}
+                for k, v in obj.items():
+                    if k == "image_url" and isinstance(v, str) and v.startswith("data:"):
+                        # Replace base64 data URI with null, client should use image_download_url
+                        result[k] = None
+                    else:
+                        result[k] = strip_base64_from_response(v)
+                return result
+            elif isinstance(obj, list):
+                return [strip_base64_from_response(item) for item in obj]
+            else:
+                return obj
+        
+        response_data = strip_base64_from_response(response_data)
+        
+        return jsonify(response_data)
     except Exception as e:
         module1_logger.error(f"Critical module1 failure: {e}", exc_info=True)
         # Ensure we always return a valid response even on catastrophic failure

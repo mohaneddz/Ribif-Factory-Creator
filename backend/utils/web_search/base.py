@@ -37,7 +37,7 @@ def _normalize_headers(headers: Dict[str, Any]) -> Dict[str, str]:
 # Default settings
 DEFAULT_TIMEOUT_S = 15
 DEFAULT_RATE_LIMIT_GAP_S = 1.0
-DEFAULT_CACHE_TTL_HOURS = 24
+DEFAULT_CACHE_TTL_HOURS = 0  # Disabled - always fetch fresh results
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -180,11 +180,19 @@ class SearchCache:
 
     def __init__(self, cache_dir: Optional[Path] = None, ttl_hours: int = DEFAULT_CACHE_TTL_HOURS):
         if cache_dir is None:
-            # Default to backend/cache/search
-            backend_dir = Path(__file__).resolve().parent.parent.parent
-            cache_dir = backend_dir / "cache" / "search"
+            # Import from config (handles read-only filesystem fallback)
+            try:
+                from config import SEARCH_CACHE_DIR
+                cache_dir = SEARCH_CACHE_DIR
+            except ImportError:
+                backend_dir = Path(__file__).resolve().parent.parent.parent
+                cache_dir = backend_dir / "cache" / "search"
         self.cache_dir = Path(cache_dir)
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self._cache_enabled = True
+        try:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            self._cache_enabled = False  # Read-only filesystem
         self.ttl_seconds = ttl_hours * 3600
 
     def _cache_key(self, query: str, provider: str) -> str:
@@ -197,6 +205,8 @@ class SearchCache:
 
     def get(self, query: str, provider: str) -> Optional[Any]:
         """Get cached result if valid."""
+        if not self._cache_enabled:
+            return None
         cache_key = self._cache_key(query, provider)
         path = self._cache_path(cache_key)
         
@@ -215,6 +225,8 @@ class SearchCache:
 
     def set(self, query: str, provider: str, results: Any) -> None:
         """Cache search results."""
+        if not self._cache_enabled:
+            return
         cache_key = self._cache_key(query, provider)
         path = self._cache_path(cache_key)
         

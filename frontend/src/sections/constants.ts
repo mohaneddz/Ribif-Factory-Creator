@@ -1,4 +1,4 @@
-import { BookOpen, Box, BrainCircuit, Briefcase, Calculator, FileText, Globe, Layers, Mail, Presentation, Video } from "lucide-react";
+import { BookOpen, Box, BrainCircuit, Briefcase, Calculator, FileText, Globe, Layers, Mail, Video } from "lucide-react";
 
 export const fontStyle = `
   @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
@@ -24,7 +24,7 @@ export const MODULES = [
     { id: 2, title: "Sourcing Global", icon: Globe, file: "Liste_Sourcing.xlsx", type: "sourcing", statusText: "Recherche fournisseurs..." },
     { id: 3, title: "Email Center", icon: Mail, file: "Email_Negotiations.md", type: "email", statusText: "Préparation des emails..." },
     { id: 4, title: "Analyse TCO", icon: Calculator, file: "Rapport_TCO.json", type: "tco", statusText: "Calcul des coûts..." },
-    { id: 5, title: "Business Plan", icon: Briefcase, file: "Business_Plan.xlsx", type: "businessplan", statusText: "Génération du plan..." },
+    { id: 5, title: "Business Plan & Pitch Deck", icon: Briefcase, file: "Business_Plan.xlsx", type: "businessplan", statusText: "Génération du plan..." },
     { id: 6, title: "Catalogue Technique", icon: BookOpen, file: "Catalogue_Produits.pdf", type: "catalogue", statusText: "Génération du catalogue..." },
     { id: 7, title: "2D Layout Design", icon: Layers, file: "layout_square.dxf", type: "layout2d", statusText: "Génération du layout 2D..." },
     { id: 8, title: "3D Model Generation", icon: Box, file: "factory_model.glb", type: "model3d", statusText: "Modélisation 3D..." },
@@ -86,18 +86,13 @@ export const MODULE_LOADING_META: Record<
     glow: "bg-indigo-400",
   },
   businessplan: {
-    kicker: "Plan d'affaires",
-    description: "Structuration d’un business plan court avec chiffres clés.",
-    bullets: ["Résumé & pitch", "Hypothèses clés", "Chiffres principaux"],
+    kicker: "Plan d'affaires & Pitch Deck",
+    description: "Business plan avec chiffres clés et présentation PDF pour investisseurs.",
+    bullets: ["Résumé & pitch", "Hypothèses clés", "Slides automatiques", "Export PDF"],
     accent: "from-emerald-600 via-green-600 to-lime-600",
     glow: "bg-lime-400",
-  },  pitchdeck: {
-    kicker: "Pitch Deck",
-    description: "Présentation PDF pour investisseurs avec les éléments clés du projet.",
-    bullets: ["Slides automatiques", "Chiffres clés", "Export PDF"],
-    accent: "from-purple-600 via-fuchsia-600 to-pink-600",
-    glow: "bg-pink-400",
-  },  catalogue: {
+  },
+  catalogue: {
     kicker: "Catalogue technique",
     description: "Compilation des éléments techniques dans un PDF propre.",
     bullets: ["Compilation contenu", "Mise en page simple", "Export PDF"],
@@ -136,10 +131,10 @@ export const MOCK_TCO_DATA = {
         }
     ],
     "raw_materials_tco": [
-        { "nom_materiau": "Polyuréthane (PU)", "total_tco": 526500000.0, "unit_price": 405000.0 },
-        { "nom_materiau": "Polyurée (2K)", "total_tco": 394875000.0, "unit_price": 607500.0 },
-        { "nom_materiau": "Résines époxy", "total_tco": 102060000.0, "unit_price": 405000.0 },
-        { "nom_materiau": "UTG (verre flexible)", "total_tco": 530550000.0, "unit_price": 4050000.0 }
+        { "nom_materiau": "Polyuréthane (PU)", "total_tco": 526500000.0, "unit_price": 450 },
+        { "nom_materiau": "Polyurée (2K)", "total_tco": 394875000.0, "unit_price": 520 },
+        { "nom_materiau": "Résines époxy", "total_tco": 102060000.0, "unit_price": 400 },
+        { "nom_materiau": "UTG (verre flexible)", "total_tco": 530550000.0, "unit_price": 350 }
     ]
 };
 

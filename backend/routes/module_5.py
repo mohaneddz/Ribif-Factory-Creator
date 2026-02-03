@@ -6,23 +6,9 @@ from pathlib import Path
 from flask import Blueprint, jsonify, request
 
 from config import OUTPUT_DIRS, write_json
-from utils.module_5.core import (
-    run_text_negotiation,
-    run_voice_negotiation,
-    summarize_best_offer,
-    evaluate_offer,
-    compute_counter_offer,
-    NegotiationConfig,
-)
-from utils.module_5.negotiation_manager import (
-    NegotiationThread,
-    NegotiationStatus,
-    create_thread_from_supplier,
-    load_thread,
-    save_thread,
-    list_threads,
-    add_email_to_thread,
-    update_thread_status,
+# Heavy imports moved to lazy loading for faster startup
+# from utils.module_5.core import ...
+# from utils.module_5.negotiation_manager import ...
     update_supplier_offer,
     update_counter_offer,
     increment_round,
@@ -61,12 +47,28 @@ NEGOTIATION_SMTP_PASSWORD = os.getenv("NEGOTIATION_SMTP_PASSWORD", os.getenv("SM
 NEGOTIATION_IMAP_HOST = os.getenv("NEGOTIATION_IMAP_HOST", os.getenv("IMAP_HOST", "imap.gmail.com"))
 NEGOTIATION_IMAP_PORT = int(os.getenv("NEGOTIATION_IMAP_PORT", os.getenv("IMAP_PORT", "993")))
 
-# Test email override - if set, ALL supplier emails will be replaced with this address
-# Leave empty to use the original supplier emails from JSON
-TEST_RECIPIENT_EMAIL = os.getenv("TEST_RECIPIENT_EMAIL", "").strip()
+# Default test email override from env (can be overridden per-request via payload)
+# If set, ALL supplier emails will be replaced with this address
+# Leave empty to use the original supplier emails from JSON/scrapers
+DEFAULT_TEST_RECIPIENT_EMAIL = os.getenv("TEST_RECIPIENT_EMAIL", "").strip()
 
 # Log email config at startup for debugging
-logger.info(f"Email config loaded: SMTP_HOST={NEGOTIATION_SMTP_HOST}, SMTP_USERNAME={NEGOTIATION_SMTP_USERNAME}, TEST_RECIPIENT={TEST_RECIPIENT_EMAIL}")
+logger.info(f"Email config loaded: SMTP_HOST={NEGOTIATION_SMTP_HOST}, SMTP_USERNAME={NEGOTIATION_SMTP_USERNAME}, DEFAULT_TEST_RECIPIENT={DEFAULT_TEST_RECIPIENT_EMAIL}")
+
+
+def get_test_recipient_email(payload: dict = None) -> str:
+    """
+    Get the test recipient email to use for overriding supplier emails.
+    Priority:
+    1. Request payload test_recipient_email (if provided and non-empty)
+    2. Environment variable TEST_RECIPIENT_EMAIL (fallback)
+    3. Empty string (use original supplier emails)
+    """
+    if payload:
+        payload_email = payload.get("test_recipient_email", "").strip()
+        if payload_email:
+            return payload_email
+    return DEFAULT_TEST_RECIPIENT_EMAIL
 
 
 # ================================
@@ -331,14 +333,17 @@ def start_negotiation():
         created_threads = []
         send_results = []
         
+        # Get test recipient email from payload or env
+        test_recipient = get_test_recipient_email(payload)
+        
         # Log if using test email override
-        if TEST_RECIPIENT_EMAIL:
-            logger.info(f"TEST MODE: All emails will be sent to {TEST_RECIPIENT_EMAIL}")
+        if test_recipient:
+            logger.info(f"TEST MODE: All emails will be sent to {test_recipient}")
         
         for supplier in suppliers:
             # Get original email, then apply test override if configured
             original_email = supplier.get("email_address", "")
-            supplier_email = TEST_RECIPIENT_EMAIL if TEST_RECIPIENT_EMAIL else original_email
+            supplier_email = test_recipient if test_recipient else original_email
             
             if not supplier_email:
                 logger.warning(f"Skipping supplier {supplier.get('supplier_name')} - no email")
@@ -1094,8 +1099,9 @@ def save_voice_negotiation():
         email_result = None
         if send_confirmation_email and payload.get("final_status") == "ACCEPTED":
             try:
-                # Apply test email override if configured
-                recipient_email = TEST_RECIPIENT_EMAIL if TEST_RECIPIENT_EMAIL else thread.supplier_email
+                # Apply test email override if configured (from payload or env)
+                test_recipient = get_test_recipient_email(payload)
+                recipient_email = test_recipient if test_recipient else thread.supplier_email
                 
                 # Generate email content
                 subject = generate_voice_call_confirmation_subject(thread)
@@ -1260,8 +1266,9 @@ def send_negotiation_link(negotiation_id: str):
         if not supplier_email:
             return jsonify({"error": "Supplier email not set"}), 400
         
-        # Apply test override if configured
-        recipient_email = TEST_RECIPIENT_EMAIL if TEST_RECIPIENT_EMAIL else supplier_email
+        # Apply test override if configured (from payload or env)
+        test_recipient = get_test_recipient_email(payload)
+        recipient_email = test_recipient if test_recipient else supplier_email
         
         # Build negotiation link
         link_token = negotiation.get("link_token")
@@ -1464,7 +1471,9 @@ def save_negotiation_result_v2(negotiation_id: str):
             try:
                 supplier_email = negotiation.get("supplier_email")
                 if supplier_email:
-                    recipient_email = TEST_RECIPIENT_EMAIL if TEST_RECIPIENT_EMAIL else supplier_email
+                    # Apply test email override if configured (from payload or env)
+                    test_recipient = get_test_recipient_email(payload)
+                    recipient_email = test_recipient if test_recipient else supplier_email
                     
                     # Create a minimal thread-like object for the email generator
                     class MinimalThread:
@@ -1643,6 +1652,9 @@ def bulk_create_negotiations():
         buyer_company = payload.get("buyer_company", "RIBIF Algeria")
         buyer_contact_name = payload.get("buyer_contact_name", "")
         
+        # Get test recipient email from payload or env
+        test_recipient = get_test_recipient_email(payload)
+        
         created = []
         failed = []
         
@@ -1659,11 +1671,11 @@ def bulk_create_negotiations():
                 supplier_email = supplier.get("email_address") or supplier.get("email") or supplier.get("contact_email")
                 supplier_name = supplier.get("supplier_name") or supplier.get("name") or "Unknown"
                 
-                # If no supplier email and TEST_RECIPIENT_EMAIL is configured, use it as placeholder
+                # If no supplier email and test_recipient is configured, use it as placeholder
                 # This allows the negotiation flow to proceed in test/demo mode
-                if not supplier_email and TEST_RECIPIENT_EMAIL:
-                    supplier_email = TEST_RECIPIENT_EMAIL
-                    logger.info(f"Using TEST_RECIPIENT_EMAIL for supplier: {supplier_name}")
+                if not supplier_email and test_recipient:
+                    supplier_email = test_recipient
+                    logger.info(f"Using test recipient email for supplier: {supplier_name}")
                 
                 logger.info(f"Creating negotiation for supplier: {supplier_name}, email: {supplier_email}")
                 
@@ -1717,6 +1729,7 @@ def send_all_negotiation_links(project_id: str):
     """
     Send negotiation link emails to all pending suppliers for a project.
     Only sends to negotiations with status 'pending' and valid supplier email.
+    Accepts test_recipient_email in payload to override supplier emails.
     """
     try:
         logger.info(f"send_all_negotiation_links called for project {project_id}")
@@ -1733,16 +1746,19 @@ def send_all_negotiation_links(project_id: str):
             logger.error("Supabase not configured")
             return jsonify({"error": "Supabase not configured"}), 500
         
+        # Get test recipient email from payload or env
+        test_recipient = get_test_recipient_email(payload)
+        
         # Get all negotiations for project
         negotiations = supabase_utils.get_negotiations_by_project(client, project_id)
         logger.info(f"Found {len(negotiations)} total negotiations for project")
         
         # Filter to only pending ones
-        # If TEST_RECIPIENT_EMAIL is set, include negotiations without emails (test mode)
+        # If test_recipient is set, include negotiations without emails (test mode)
         # Otherwise, only include negotiations with supplier emails
-        if TEST_RECIPIENT_EMAIL:
+        if test_recipient:
             pending = [n for n in negotiations if n.get("status") == "pending"]
-            logger.info(f"TEST MODE: Found {len(pending)} pending negotiations (will use test email)")
+            logger.info(f"TEST MODE: Found {len(pending)} pending negotiations (will use test email: {test_recipient})")
         else:
             pending = [n for n in negotiations if n.get("status") == "pending" and n.get("supplier_email")]
             logger.info(f"Found {len(pending)} pending negotiations with supplier emails")
@@ -1761,8 +1777,8 @@ def send_all_negotiation_links(project_id: str):
         for negotiation in pending:
             try:
                 supplier_email = negotiation.get("supplier_email")
-                # Use TEST_RECIPIENT_EMAIL if configured (test mode), otherwise use supplier email
-                recipient_email = TEST_RECIPIENT_EMAIL if TEST_RECIPIENT_EMAIL else supplier_email
+                # Use test_recipient if configured (test mode), otherwise use supplier email
+                recipient_email = test_recipient if test_recipient else supplier_email
                 
                 # Skip if no recipient email available
                 if not recipient_email:

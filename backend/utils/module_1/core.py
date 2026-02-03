@@ -33,9 +33,10 @@ logger = get_logger(__name__)
 SYSTEM_INSTRUCTION = (
     "You are a business analyst and industrial engineer. "
     "Extract information from industrial project documents. "
-    "ONLY output values that are EXPLICITLY stated in the document. "
-    "If a value is not found, output 'N/A' for strings or 0 for numbers. "
-    "NEVER fabricate, guess, or estimate values. "
+    "Extract values that are EXPLICITLY stated in the document. "
+    "For values not explicitly found, make reasonable engineering estimates based on the project type and industry. "
+    "NEVER leave fields empty or null - always provide a value. "
+    "For numbers, estimate based on typical industry values if not stated. "
     "Always return valid JSON only. "
     "DO NOT include any pricing/cost/budget/financial estimates."
 )
@@ -45,7 +46,10 @@ STRICT_JSON_HEADER = (
     "1) Return ONLY a single valid JSON object.\n"
     "2) Use double quotes for all strings and keys.\n"
     "3) No markdown, no backticks, no commentary.\n"
-    "4) If a field is NOT explicitly in the document, output 'N/A' for strings or 0 for numbers. DO NOT GUESS.\n"
+    "4) CRITICAL: NEVER use 'N/A', null, or empty strings. Always provide realistic values:\n"
+    "   - For strings: provide descriptive text based on context\n"
+    "   - For numbers: estimate based on industry standards (e.g., quantity=1 if unknown)\n"
+    "   - For lists: provide at least one relevant item\n"
     "5) Do NOT include trailing commas.\n"
     "6) Do NOT include empty/template items (no fully-empty objects in lists).\n\n"
 )
@@ -319,38 +323,41 @@ def build_stage_prompt(stage_key: str, schema_example: Dict[str, Any], excerpt: 
         "- If the document is in English -> respond in English\n"
         "- Match the document language exactly\n\n"
         "ABSOLUTE RULES:\n"
-        "- If information is NOT in the document, output 'N/A'. DO NOT GUESS OR FABRICATE.\n"
+        "- Extract information from the document first\n"
+        "- If information is NOT in the document, provide realistic engineering estimates based on project type\n"
+        "- NEVER use 'N/A', null, or empty values - always fill with reasonable estimates\n"
+        "- For quantities, default to 1 if not specified\n"
+        "- For specifications, use typical industry values\n"
         "- Do NOT output empty/template objects in lists.\n"
-        "- Do NOT include any pricing/cost/budget.\n"
-        "- Use 0 for missing numbers.\n\n"
+        "- Do NOT include any pricing/cost/budget.\n\n"
         "REQUIRED JSON STRUCTURE (must match exactly):\n"
         f"{json.dumps(schema_example, ensure_ascii=False, indent=2)}\n\n"
         "DOCUMENT EXCERPT:\n"
         f"{excerpt}\n\n"
-        "Return ONLY the JSON object."
+        "Return ONLY the JSON object with ALL fields populated (no nulls/N/A)."
     )
 
     if stage_key == "stage_4_machines_equipements":
         return (
             "You are an industrial engineer.\n"
-            "Task: Extract ONLY the MANDATORY/ESSENTIAL production machines explicitly mentioned in the document.\n"
-            "CRITICAL: Only include machines that are:\n"
-            "1. EXPLICITLY required for core production processes\n"
-            "2. Directly mentioned with specific production purposes\n"
-            "3. NOT optional, auxiliary, or support equipment (unless explicitly essential)\n\n"
-            "EXCLUDE:\n"
-            "- Generic support equipment (AGVs, ASRS) unless explicitly stated as mandatory\n"
-            "- Machines only vaguely implied or suggested\n"
-            "- Auxiliary systems (unless explicitly required)\n\n"
-            "For quantite_necessaire: Use the exact number if stated in the document, otherwise use 0.\n"
-            "If specs (dimensions, power, etc.) are NOT in the document, output 'N/A'.\n"
-            "Do NOT guess or fabricate specifications.\n\n"
+            "Task: Extract the production machines mentioned in the document.\n"
+            "REQUIREMENTS:\n"
+            "1. Include all machines mentioned for production processes\n"
+            "2. For each machine, fill ALL specification fields:\n"
+            "   - capacite: Estimate based on machine type if not stated\n"
+            "   - puissance: Estimate typical power for this machine type\n"
+            "   - dimensions: Provide typical dimensions for the machine category\n"
+            "   - alimentation: Default to '380V triphasé' if not specified\n"
+            "3. For quantite_necessaire: Use exact number if stated, otherwise estimate based on production needs (minimum 1)\n"
+            "4. For fabricant_recommande: Use brand if stated, otherwise suggest typical manufacturers for this machine type\n"
+            "5. NEVER use 'N/A' or null - always provide realistic values\n\n"
             + base
         )
 
     return (
-        "Task: extract information from the document. Use ONLY data explicitly stated.\n"
-        "If a field is missing, output 'N/A'. Do NOT guess.\n\n"
+        "Task: extract information from the document.\n"
+        "Extract explicit data first. For missing fields, provide reasonable estimates based on the project context.\n"
+        "NEVER use 'N/A', null, or empty strings - always fill with realistic values.\n\n"
         + base
     )
 
@@ -397,8 +404,8 @@ class VertexJSON:
             repair = (
                 "Your previous output was NOT valid JSON.\n"
                 "Return ONLY one valid JSON object, no text.\n"
-                "If information is missing, output 'N/A' for strings and 0 for numbers.\n"
-                "Do NOT guess, estimate, or fabricate.\n\n"
+                "For missing information, provide realistic estimates - NEVER use 'N/A' or null.\n"
+                "All fields must have values.\n\n"
                 f"ORIGINAL REQUEST:\n{prompt}\n\n"
                 "BROKEN OUTPUT:\n"
                 f"{raw}\n"
@@ -538,7 +545,7 @@ class RIBIFExtractor:
         # Build final JSON (exact format)
         processing_time = round(time.time() - t0, 3)
 
-        meta_note = "Explicit-only extraction; N/A or 0 if missing. Enricher will fill N/A values with estimates."
+        meta_note = "Document extraction with intelligent estimation. All fields populated (no nulls)."
         if warnings:
             meta_note = (meta_note + " | WARNINGS: " + " ; ".join(warnings))[:4000]
 

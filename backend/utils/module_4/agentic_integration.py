@@ -60,7 +60,7 @@ def get_sourcing_config_from_env() -> SourcingConfig:
         target_suppliers_max=int(os.getenv("SOURCING_TARGET_MAX", DEFAULT_CONFIG.target_suppliers_max)),
         timeout_per_machine=float(os.getenv("SOURCING_TIMEOUT", DEFAULT_CONFIG.timeout_per_machine)),
         strictness_level=os.getenv("SOURCING_STRICTNESS", DEFAULT_CONFIG.strictness_level),
-        enable_cache=os.getenv("SOURCING_ENABLE_CACHE", "true").lower() == "true",
+        enable_cache=os.getenv("SOURCING_ENABLE_CACHE", "false").lower() == "true",
         domain_diversity_cap=int(os.getenv("SOURCING_DOMAIN_CAP", DEFAULT_CONFIG.domain_diversity_cap)),
         use_llm_ranking=os.getenv("SOURCING_USE_LLM_RANKING", "false").lower() == "true",
     )
@@ -349,8 +349,17 @@ def process_module4_agentic_sourcing(
 # CACHING INTEGRATION
 # =========================================================
 
-CACHE_DIR = Path("cache/module_4/agentic")
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
+# Import CACHE_DIR from config (handles read-only filesystem fallback)
+try:
+    from config import CACHE_DIR as BASE_CACHE_DIR
+    CACHE_DIR = BASE_CACHE_DIR / "module_4" / "agentic"
+except ImportError:
+    CACHE_DIR = Path("cache/module_4/agentic")
+
+try:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass  # Read-only filesystem, caching will be disabled
 
 
 def get_cached_result(machine_name: str, config: SourcingConfig) -> Optional[SourcingResult]:

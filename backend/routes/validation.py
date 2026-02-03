@@ -12,7 +12,7 @@ from flask import Blueprint, jsonify, request
 from werkzeug.utils import secure_filename
 
 from config import UPLOAD_DIR
-from vertex_utils import generate_message
+# Heavy import moved to lazy loading for faster server startup
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -96,6 +96,7 @@ def validate_pdf_with_llm(pdf_bytes: bytes) -> dict:
         Dictionary with validation result
     """
     import base64
+    from vertex_utils import generate_message  # Lazy import for faster startup
     
     try:
         # Encode PDF for Gemini
