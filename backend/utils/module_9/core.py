@@ -915,7 +915,6 @@ class RIBIFModule9Catalog:
         )
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY, TA_RIGHT
-        from reportlab.platypus.flowables import Drawing
         from reportlab.graphics.shapes import Rect, String, Line
 
         # Brand colors (exact LaTeX template colors)
@@ -939,25 +938,33 @@ class RIBIFModule9Catalog:
         # Create all styles
         styles = getSampleStyleSheet()
         
+        # Create a completely fresh style sheet to avoid conflicts
+        styles = getSampleStyleSheet()
+        
+        # Helper function to safely add styles
+        def add_style_safe(name, **kwargs):
+            if name not in styles:
+                styles.add(ParagraphStyle(name, **kwargs))
+        
         # Cover page styles
-        styles.add(ParagraphStyle('CoverModule', fontSize=14, textColor=BRAND_WHITE, alignment=TA_LEFT, fontName='Helvetica-Bold', spaceAfter=10))
-        styles.add(ParagraphStyle('CoverTitle', fontSize=42, textColor=BRAND_WHITE, alignment=TA_LEFT, fontName='Helvetica-Bold', leading=50, spaceAfter=5))
-        styles.add(ParagraphStyle('CoverMeta', fontSize=11, textColor=BRAND_TEXT, alignment=TA_LEFT, fontName='Helvetica-Bold'))
-        styles.add(ParagraphStyle('CoverMetaValue', fontSize=11, textColor=BRAND_TEXT, alignment=TA_LEFT))
+        add_style_safe('CoverModule', fontSize=14, textColor=BRAND_WHITE, alignment=TA_LEFT, fontName='Helvetica-Bold', spaceAfter=10)
+        add_style_safe('CoverTitle', fontSize=42, textColor=BRAND_WHITE, alignment=TA_LEFT, fontName='Helvetica-Bold', leading=50, spaceAfter=5)
+        add_style_safe('CoverMeta', fontSize=11, textColor=BRAND_TEXT, alignment=TA_LEFT, fontName='Helvetica-Bold')
+        add_style_safe('CoverMetaValue', fontSize=11, textColor=BRAND_TEXT, alignment=TA_LEFT)
         
         # Section styles
-        styles.add(ParagraphStyle('SectionNum', fontSize=28, textColor=BRAND_WHITE, alignment=TA_CENTER, fontName='Helvetica-Bold'))
-        styles.add(ParagraphStyle('SectionTitle', fontSize=16, textColor=BRAND_WHITE, alignment=TA_LEFT, fontName='Helvetica-Bold'))
-        styles.add(ParagraphStyle('SubHeader', fontSize=13, textColor=BRAND_DARK, alignment=TA_LEFT, fontName='Helvetica-Bold', spaceBefore=15, spaceAfter=8))
-        styles.add(ParagraphStyle('BodyText', fontSize=10, textColor=BRAND_TEXT, alignment=TA_JUSTIFY, leading=14, spaceAfter=8))
-        styles.add(ParagraphStyle('SmallText', fontSize=9, textColor=BRAND_TEXT, spaceAfter=4))
-        styles.add(ParagraphStyle('BulletText', fontSize=10, textColor=BRAND_TEXT, leftIndent=15, spaceAfter=4))
-        styles.add(ParagraphStyle('CardHeader', fontSize=12, textColor=BRAND_WHITE, fontName='Helvetica-Bold'))
-        styles.add(ParagraphStyle('CardBody', fontSize=9, textColor=BRAND_TEXT))
-        styles.add(ParagraphStyle('TableHeader', fontSize=10, textColor=BRAND_WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER))
-        styles.add(ParagraphStyle('FooterText', fontSize=9, textColor=BRAND_TEXT, alignment=TA_CENTER))
-        styles.add(ParagraphStyle('PillarTitle', fontSize=10, textColor=BRAND_WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER))
-        styles.add(ParagraphStyle('PillarBody', fontSize=8, textColor=BRAND_TEXT, alignment=TA_CENTER, leading=11))
+        add_style_safe('SectionNum', fontSize=28, textColor=BRAND_WHITE, alignment=TA_CENTER, fontName='Helvetica-Bold')
+        add_style_safe('PDFSectionTitle', fontSize=16, textColor=BRAND_WHITE, alignment=TA_LEFT, fontName='Helvetica-Bold')
+        add_style_safe('SubHeader', fontSize=13, textColor=BRAND_DARK, alignment=TA_LEFT, fontName='Helvetica-Bold', spaceBefore=15, spaceAfter=8)
+        add_style_safe('PDFBodyText', fontSize=10, textColor=BRAND_TEXT, alignment=TA_JUSTIFY, leading=14, spaceAfter=8)
+        add_style_safe('SmallText', fontSize=9, textColor=BRAND_TEXT, spaceAfter=4)
+        add_style_safe('BulletText', fontSize=10, textColor=BRAND_TEXT, leftIndent=15, spaceAfter=4)
+        add_style_safe('CardHeader', fontSize=12, textColor=BRAND_WHITE, fontName='Helvetica-Bold')
+        add_style_safe('CardBody', fontSize=9, textColor=BRAND_TEXT)
+        add_style_safe('TableHeader', fontSize=10, textColor=BRAND_WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER)
+        add_style_safe('FooterText', fontSize=9, textColor=BRAND_TEXT, alignment=TA_CENTER)
+        add_style_safe('PillarTitle', fontSize=10, textColor=BRAND_WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER)
+        add_style_safe('PillarBody', fontSize=8, textColor=BRAND_TEXT, alignment=TA_CENTER, leading=11)
 
         elements = []
 
@@ -1026,7 +1033,7 @@ class RIBIFModule9Catalog:
         # Two-column layout: text left, placeholder right
         elements.append(Paragraph("<b>OPERATIONAL OVERVIEW</b>", styles['SubHeader']))
         overview = description or f"This catalog presents the comprehensive technical documentation for {project_name}, an industrial manufacturing project operated by {company_name}. The facility integrates modern automation systems with traditional manufacturing processes to deliver high-quality products efficiently."
-        elements.append(Paragraph(overview[:500], styles['BodyText']))
+        elements.append(Paragraph(overview[:500], styles['PDFBodyText']))
 
         # Key Objectives
         if objectives:
@@ -1092,7 +1099,7 @@ class RIBIFModule9Catalog:
         elements.append(Paragraph(
             "The manufacturing process follows a structured workflow designed for optimal efficiency and quality control. "
             "Each step is monitored in real-time through the Digital Twin interface.",
-            styles['BodyText']
+            styles['PDFBodyText']
         ))
 
         # Process flowchart as table
@@ -1176,7 +1183,7 @@ class RIBIFModule9Catalog:
 
         elements.append(Paragraph(
             "The following equipment inventory details the primary manufacturing assets deployed in this facility.",
-            styles['BodyText']
+            styles['PDFBodyText']
         ))
         elements.append(Spacer(1, 0.5*cm))
 
@@ -1233,7 +1240,7 @@ class RIBIFModule9Catalog:
                     elements.append(self._create_section_header("03", "MACHINE ASSETS (CONTINUED)", BRAND_PRIMARY, BRAND_DARK, page_width))
                     elements.append(Spacer(1, 0.5*cm))
         else:
-            elements.append(Paragraph("Machine inventory to be populated based on equipment specifications.", styles['BodyText']))
+            elements.append(Paragraph("Machine inventory to be populated based on equipment specifications.", styles['PDFBodyText']))
 
         elements.append(PageBreak())
 
@@ -1243,7 +1250,7 @@ class RIBIFModule9Catalog:
 
         elements.append(Paragraph(
             "The product catalog details the manufactured items, their specifications, and material composition.",
-            styles['BodyText']
+            styles['PDFBodyText']
         ))
         elements.append(Spacer(1, 0.5*cm))
 
@@ -1301,8 +1308,8 @@ class RIBIFModule9Catalog:
         logistics_data = [
             [Paragraph("<b>INBOUND FLOW</b>", styles['SubHeader']),
              Paragraph("<b>OUTBOUND FLOW</b>", styles['SubHeader'])],
-            [Paragraph("Raw materials and components are sourced from qualified suppliers and delivered to the facility following strict quality protocols.", styles['BodyText']),
-             Paragraph("Finished products are packaged, labeled, and distributed through established logistics channels to reach end customers efficiently.", styles['BodyText'])],
+            [Paragraph("Raw materials and components are sourced from qualified suppliers and delivered to the facility following strict quality protocols.", styles['PDFBodyText']),
+             Paragraph("Finished products are packaged, labeled, and distributed through established logistics channels to reach end customers efficiently.", styles['PDFBodyText'])],
             [Paragraph("• Metric A: Supplier Count<br/>• Metric B: Quality Rate 98%", styles['BulletText']),
              Paragraph("• Metric C: Daily Shipments<br/>• Metric D: Lead Time 48h", styles['BulletText'])],
         ]
@@ -1337,13 +1344,13 @@ class RIBIFModule9Catalog:
         elements.append(Paragraph(
             "The Digital Twin interface provides a real-time, browser-based supervision of the factory floor. "
             "It is built using <b>React.js</b> and <b>Three.js</b> to render a 3D interactive scene alongside critical live data.",
-            styles['BodyText']
+            styles['PDFBodyText']
         ))
 
         # Section 1: 3D Visualization
         elements.append(Spacer(1, 0.5*cm))
         elements.append(Paragraph("🖥 <b>1. 3D VISUALIZATION (CANVAS)</b>", styles['SubHeader']))
-        elements.append(Paragraph("The Dashboard features a <font face='Courier'>ComplexFactoryScene</font> that renders the physical layout:", styles['BodyText']))
+        elements.append(Paragraph("The Dashboard features a <font face='Courier'>ComplexFactoryScene</font> that renders the physical layout:", styles['PDFBodyText']))
         elements.append(Paragraph("• <b>Assets:</b> Displays CNC Machines, Robot Arms, and Conveyor Belts.", styles['BulletText']))
         elements.append(Paragraph(f"• <b>Status Indicators:</b> Machines change color dynamically: <font color='#10B981'><b>Green (Running)</b></font>, <font color='#F59E0B'><b>Amber (Idle)</b></font>, or <font color='#EF4444'><b>Red (Warning)</b></font>.", styles['BulletText']))
         elements.append(Paragraph("• <b>Animation:</b> Robot arms and AGVs move in sync with the production cycle time.", styles['BulletText']))
@@ -1351,16 +1358,16 @@ class RIBIFModule9Catalog:
         # Section 2: Predictive Maintenance
         elements.append(Spacer(1, 0.5*cm))
         elements.append(Paragraph("📊 <b>2. PREDICTIVE MAINTENANCE (SCATTER CHART)</b>", styles['SubHeader']))
-        elements.append(Paragraph("The Maintenance module utilizes a <b>Risk Matrix Scatter Chart</b> to correlate three key variables:", styles['BodyText']))
+        elements.append(Paragraph("The Maintenance module utilizes a <b>Risk Matrix Scatter Chart</b> to correlate three key variables:", styles['PDFBodyText']))
         elements.append(Paragraph("• <b>X-Axis:</b> Temperature (°C)", styles['BulletText']))
         elements.append(Paragraph("• <b>Y-Axis:</b> Machine Health (%)", styles['BulletText']))
         elements.append(Paragraph("• <b>Z-Axis (Point Size):</b> Vibration levels", styles['BulletText']))
-        elements.append(Paragraph("<b>Logic:</b> The system triggers a <font face='Courier'>status=\"warning\"</font> if Temperature > 90°C.", styles['BodyText']))
+        elements.append(Paragraph("<b>Logic:</b> The system triggers a <font face='Courier'>status=\"warning\"</font> if Temperature > 90°C.", styles['PDFBodyText']))
 
         # Section 3: TCO Optimization
         elements.append(Spacer(1, 0.5*cm))
         elements.append(Paragraph("🧮 <b>3. TCO OPTIMIZATION (BAR CHART)</b>", styles['SubHeader']))
-        elements.append(Paragraph("The <b>Total Cost of Ownership (TCO)</b> calculator projects financial data over 10 years based on live telemetry.", styles['BodyText']))
+        elements.append(Paragraph("The <b>Total Cost of Ownership (TCO)</b> calculator projects financial data over 10 years based on live telemetry.", styles['PDFBodyText']))
         elements.append(Paragraph("• <b>Calculation:</b> <font face='Courier'>Total = CAPEX + (Power × Hours × Cost) + Maintenance</font>", styles['BulletText']))
         elements.append(Paragraph("• <b>Stacked Bar Chart:</b> Visualizes OPEX accumulation on top of CAPEX investment.", styles['BulletText']))
         elements.append(Paragraph("• <b>User Inputs:</b> Financial directors can adjust Energy Cost (€/kWh) and Years to simulate ROI scenarios.", styles['BulletText']))
@@ -1368,7 +1375,7 @@ class RIBIFModule9Catalog:
         # Section 4: Safety & ATEX
         elements.append(Spacer(1, 0.5*cm))
         elements.append(Paragraph("🛡 <b>4. SAFETY & ATEX MONITORING</b>", styles['SubHeader']))
-        elements.append(Paragraph("For hazardous zones (e.g., Painting Robot), the system monitors air quality.", styles['BodyText']))
+        elements.append(Paragraph("For hazardous zones (e.g., Painting Robot), the system monitors air quality.", styles['PDFBodyText']))
         elements.append(Paragraph("• <b>Data Viz:</b> An Area Chart tracks PPM (Parts Per Million) of VOCs/Solvents in real-time.", styles['BulletText']))
         elements.append(Paragraph("• <b>Automation:</b> If concentration spikes, ventilation status switches to \"100%\" instantly.", styles['BulletText']))
 
