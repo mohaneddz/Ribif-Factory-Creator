@@ -1,3 +1,5 @@
+![Ribif](screenshots/cover.avif)
+
 <h1 style="font-family: Arial, sans-serif; font-size: 34px; color: #EAC360; display: flex; align-items: center; gap: 12px; border-bottom: 3px solid #EAC360; padding-bottom: 8px;">
   <img src="screenshots/logo.webp" alt="RIBIF 3D" style="height: 55px; width: 100px; object-fit: cover; border-radius: 8px;">
   RIBIF - Industrial Investment Platform
