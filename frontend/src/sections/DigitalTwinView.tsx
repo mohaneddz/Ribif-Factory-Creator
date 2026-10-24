@@ -26,6 +26,7 @@ export function DigitalTwinView({ pipelineModelUrl }: DigitalTwinViewProps) {
     const [history, setHistory] = useState<TelemetryData[]>([]);
     const [currentData, setCurrentData] = useState<TelemetryData | null>(null);
     const timeStepRef = useRef(0);
+    const [elapsedSteps, setElapsedSteps] = useState(0);
 
     const boundingboxStart = useMemo(() => ({ x: -10, y: 0, z: -10 }), []);
     const boundingboxEnd = useMemo(() => ({ x: 10, y: 7, z: 0 }), []);
@@ -37,6 +38,7 @@ export function DigitalTwinView({ pipelineModelUrl }: DigitalTwinViewProps) {
         const interval = setInterval(() => {
             const newData = generateTelemetry(params, timeStepRef.current);
             timeStepRef.current += 1;
+            setElapsedSteps(timeStepRef.current);
 
             setCurrentData(newData);
             setHistory(prev => {
@@ -316,7 +318,7 @@ export function DigitalTwinView({ pipelineModelUrl }: DigitalTwinViewProps) {
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-medium text-slate-400">
                             <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0" />
-                            <span className="text-white">{(timeStepRef.current / 60).toFixed(1)}m</span>
+                            <span className="text-white">{(elapsedSteps / 60).toFixed(1)}m</span>
                         </div>
                     </div>
                 </div>
