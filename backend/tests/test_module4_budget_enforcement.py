@@ -48,7 +48,6 @@ def test_basic_budget_operations():
     
     logger.info("✓ Basic operations passed")
     logger.info("")
-    return True
 
 
 def test_budget_exhaustion():
@@ -87,7 +86,6 @@ def test_budget_exhaustion():
     
     logger.info("✓ Budget exhaustion prevention passed")
     logger.info("")
-    return True
 
 
 def test_parallel_budget_enforcement():
@@ -159,7 +157,6 @@ def test_parallel_budget_enforcement():
     
     logger.info("✓ Parallel enforcement passed - NO OVERSHOOT under race conditions")
     logger.info("")
-    return True
 
 
 def test_cache_bypass():
@@ -187,7 +184,6 @@ def test_cache_bypass():
     
     logger.info("✓ Cache bypass passed - cache hits don't consume budget")
     logger.info("")
-    return True
 
 
 def test_budget_summary_and_compliance():
@@ -219,14 +215,13 @@ def test_budget_summary_and_compliance():
         logger.info("✓ assert_compliance() passed (no exception)")
     except AssertionError as e:
         logger.error(f"✗ assert_compliance() failed: {e}")
-        return False
+        raise
     
     # Log summary
     controller.log_summary()
     
     logger.info("✓ Budget summary and compliance passed")
     logger.info("")
-    return True
 
 
 def test_overshoot_detection():
@@ -253,14 +248,13 @@ def test_overshoot_detection():
     # assert_compliance should fail
     try:
         controller.assert_compliance()
-        logger.error("✗ assert_compliance() should have raised AssertionError")
-        return False
     except AssertionError as e:
         logger.info(f"✓ assert_compliance() correctly raised: {e}")
+    else:
+        raise AssertionError("assert_compliance() did not detect the overshoot")
     
     logger.info("✓ Overshoot detection passed")
     logger.info("")
-    return True
 
 
 def main():
@@ -285,11 +279,8 @@ def main():
     
     for name, test_func in tests:
         try:
-            if test_func():
-                passed += 1
-            else:
-                failed += 1
-                logger.error(f"✗ {name} FAILED")
+            test_func()
+            passed += 1
         except Exception as e:
             failed += 1
             logger.error(f"✗ {name} FAILED with exception: {e}")

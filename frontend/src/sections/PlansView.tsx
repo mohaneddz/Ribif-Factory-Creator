@@ -14,7 +14,7 @@ const Layout2DPanel = ({
 }) => (
     <div className={`${heightClass} relative bg-[#f8fafc] dark:bg-[#13141c] rounded-4xl overflow-hidden border border-slate-200 dark:border-white/10 transition-colors`}>
         <div className="absolute top-6 left-6 bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold z-10 shadow-lg shadow-indigo-200 dark:shadow-indigo-900/40">
-            VUE 2D (PLAN D'IMPLANTATION)
+            VUE 2D (PLAN D&apos;IMPLANTATION)
         </div>
         <div className="h-full w-full flex items-center justify-center bg-[#f8fafc] dark:bg-[#13141c]">
             {imageUrl ? (

@@ -32,6 +32,8 @@ def _get_generate_video():
 
 bp_module3 = Blueprint("module3", __name__)
 
+CLIP_SECONDS = 8
+
 
 def _load_image_input(value: Any) -> Optional[bytes]:
     if value is None:
@@ -62,7 +64,8 @@ def _load_image_input(value: Any) -> Optional[bytes]:
             except Exception:
                 return None
         try:
-            return base64.b64decode(data)
+            # validate=True so a missing file path is not "decoded" into garbage bytes
+            return base64.b64decode(data, validate=True)
         except Exception:
             return None
     return None
@@ -181,7 +184,7 @@ def generate_video_from_images():
                     prompt=prompt,
                     image=img_bytes,
                     aspect_ratio="16:9",
-                    duration_seconds=8,
+                    duration_seconds=CLIP_SECONDS,
                 )
                 log.info("module3: generated video uri=%s for prompt=%s", str(video_uri)[:200], prompt[:80])
                 video_uris.append(video_uri)
@@ -246,7 +249,6 @@ def generate_video_from_images():
                 codec="libx264",
                 audio_codec="aac",
                 fps=24,
-                verbose=False,
                 logger=None,
             )
             for clip in clips:
@@ -255,7 +257,7 @@ def generate_video_from_images():
         except Exception:
             merged_path = Path(downloaded_paths[0])
 
-        total_duration = len(downloaded_paths) * 5
+        total_duration = len(downloaded_paths) * CLIP_SECONDS
         result = {
             "message": "Video generation completed",
             "video_url": str(merged_path),

@@ -9,7 +9,8 @@
  * @returns A pseudo-random value from the distribution.
  */
 export function gaussianRandom(mean: number, stdDev: number): number {
-    const u1 = Math.random();
+    // Math.random() can return 0, and log(0) is -Infinity; 1 - x keeps u1 in (0, 1]
+    const u1 = 1 - Math.random();
     const u2 = Math.random();
     const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
     return z0 * stdDev + mean;
@@ -21,7 +22,7 @@ export function gaussianRandom(mean: number, stdDev: number): number {
  * @returns A pseudo-random value from the distribution.
  */
 export function poissonRandom(lambda: number): number {
-    let L = Math.exp(-lambda);
+    const L = Math.exp(-lambda);
     let p = 1.0;
     let k = 0;
     do {

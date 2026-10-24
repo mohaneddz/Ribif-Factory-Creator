@@ -13,7 +13,7 @@ RectAreaLightUniformsLib.init()
 // ---- Helpers hook (no extra deps) ----
 function useLightHelpers(
   items: Array<{
-    light: THREE.Light | null
+    light: React.RefObject<THREE.Light | null>
     type: "dir" | "point" | "rect"
     size?: number
     color?: THREE.ColorRepresentation
@@ -25,7 +25,7 @@ function useLightHelpers(
     const helpers: THREE.Object3D[] = []
 
     for (const it of items) {
-      const l = it.light
+      const l = it.light.current
       if (!l) continue
 
       let h: THREE.Object3D | null = null
@@ -105,12 +105,12 @@ export default function Lighting({
   // Create helper list (stable)
   const helperItems = useMemo(
     () => [
-      { light: rectTopRef.current, type: "rect" as const, color: "white" },
-      { light: rectSideRef.current, type: "rect" as const, color: "#00ffd5" },
-      { light: pLRef.current, type: "point" as const, size: 0.2, color: "cyan" },
-      { light: pRRef.current, type: "point" as const, size: 0.2, color: "cyan" },
-      { light: keyRef.current, type: "dir" as const, size: 1.5, color: "#ffd6b0" },
-      { light: fillRef.current, type: "dir" as const, size: 1.5, color: "#b9c7ff" },
+      { light: rectTopRef, type: "rect" as const, color: "white" },
+      { light: rectSideRef, type: "rect" as const, color: "#00ffd5" },
+      { light: pLRef, type: "point" as const, size: 0.2, color: "cyan" },
+      { light: pRRef, type: "point" as const, size: 0.2, color: "cyan" },
+      { light: keyRef, type: "dir" as const, size: 1.5, color: "#ffd6b0" },
+      { light: fillRef, type: "dir" as const, size: 1.5, color: "#b9c7ff" },
     ],
     []
   )

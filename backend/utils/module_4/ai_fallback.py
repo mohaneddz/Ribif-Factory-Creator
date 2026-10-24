@@ -1,4 +1,4 @@
-﻿"""
+"""
 AI Fallback Supplier Generation for Module 4
 
 Provides intelligent fallback suppliers using:
@@ -25,24 +25,24 @@ CURATED_SUPPLIERS_BY_CATEGORY = {
             "supplier_name": "Glaston Corporation",
             "region": "Finland/Global",
             "website": "https://www.glaston.net",
-            "price_estimate": "â‚¬500,000 - â‚¬2,000,000",
+            "price_estimate": "€500,000 - €2,000,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: Leading glass tempering furnace manufacturer with global presence",
             "relevance_score": 0.8,
             "is_ai_fallback": True,
-            "ai_tag": "â˜…",
+            "ai_tag": "★",
             "availability_note": "No public suppliers found; AI suggestion based on domain knowledge"
         },
         {
             "supplier_name": "Bystronic Glass",
             "region": "Switzerland/Global",
             "website": "https://www.bystronic-glass.com",
-            "price_estimate": "â‚¬400,000 - â‚¬1,500,000",
+            "price_estimate": "€400,000 - €1,500,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: Premium glass processing equipment manufacturer",
             "relevance_score": 0.8,
             "is_ai_fallback": True,
-            "ai_tag": "â˜…",
+            "ai_tag": "★",
             "availability_note": "No public suppliers found; AI suggestion based on domain knowledge"
         },
     ],
@@ -51,12 +51,12 @@ CURATED_SUPPLIERS_BY_CATEGORY = {
             "supplier_name": "Glaston Lamination",
             "region": "Finland/Global",
             "website": "https://www.glaston.net",
-            "price_estimate": "â‚¬300,000 - â‚¬1,000,000",
+            "price_estimate": "€300,000 - €1,000,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: Complete lamination line solutions",
             "relevance_score": 0.8,
             "is_ai_fallback": True,
-            "ai_tag": "â˜…",
+            "ai_tag": "★",
             "availability_note": "No public suppliers found; AI suggestion based on domain knowledge"
         },
     ],
@@ -65,12 +65,12 @@ CURATED_SUPPLIERS_BY_CATEGORY = {
             "supplier_name": "Hegla GmbH",
             "region": "Germany",
             "website": "https://www.hegla.com",
-            "price_estimate": "â‚¬250,000 - â‚¬800,000",
+            "price_estimate": "€250,000 - €800,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: Glass bending and processing machinery",
             "relevance_score": 0.8,
             "is_ai_fallback": True,
-            "ai_tag": "â˜…",
+            "ai_tag": "★",
             "availability_note": "No public suppliers found; AI suggestion based on domain knowledge"
         },
     ],
@@ -86,19 +86,19 @@ CURATED_SUPPLIERS_BY_CATEGORY = {
             "notes": "AI suggestion: Leading extrusion systems and complete lines",
             "relevance_score": 0.8,
             "is_ai_fallback": True,
-            "ai_tag": "â˜…",
+            "ai_tag": "★",
             "availability_note": "No public suppliers found; AI suggestion based on domain knowledge"
         },
         {
             "supplier_name": "Battenfeld-Cincinnati",
             "region": "Germany/USA",
             "website": "https://www.battenfeld-cincinnati.com",
-            "price_estimate": "â‚¬150,000 - â‚¬1,200,000",
+            "price_estimate": "€150,000 - €1,200,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: Extrusion lines and downstream equipment",
             "relevance_score": 0.8,
             "is_ai_fallback": True,
-            "ai_tag": "â˜…",
+            "ai_tag": "★",
             "availability_note": "No public suppliers found; AI suggestion based on domain knowledge"
         },
     ],
@@ -109,7 +109,7 @@ CURATED_SUPPLIERS_BY_CATEGORY = {
             "supplier_name": "ILLIG Maschinenbau",
             "region": "Germany",
             "website": "https://www.illig.de",
-            "price_estimate": "â‚¬200,000 - â‚¬800,000",
+            "price_estimate": "€200,000 - €800,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: World leader in thermoforming technology",
             "relevance_score": 0.9,
@@ -120,7 +120,7 @@ CURATED_SUPPLIERS_BY_CATEGORY = {
             "supplier_name": "Kiefel GmbH",
             "region": "Germany",
             "website": "https://www.kiefel.com",
-            "price_estimate": "â‚¬180,000 - â‚¬750,000",
+            "price_estimate": "€180,000 - €750,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: Premium thermoforming and packaging machinery",
             "relevance_score": 0.9,
@@ -135,7 +135,7 @@ CURATED_SUPPLIERS_BY_CATEGORY = {
             "supplier_name": "Engel Austria GmbH",
             "region": "Austria/Global",
             "website": "https://www.engelglobal.com",
-            "price_estimate": "â‚¬80,000 - â‚¬500,000",
+            "price_estimate": "€80,000 - €500,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: Premium injection molding machines, global leader",
             "relevance_score": 0.9,
@@ -157,7 +157,7 @@ CURATED_SUPPLIERS_BY_CATEGORY = {
             "supplier_name": "Arburg GmbH",
             "region": "Germany",
             "website": "https://www.arburg.com",
-            "price_estimate": "â‚¬100,000 - â‚¬600,000",
+            "price_estimate": "€100,000 - €600,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: Premium injection molding technology",
             "relevance_score": 0.9,
@@ -169,10 +169,10 @@ CURATED_SUPPLIERS_BY_CATEGORY = {
     # Painting robots
     "painting_robot": [
         {
-            "supplier_name": "DÃ¼rr Systems AG",
+            "supplier_name": "Dürr Systems AG",
             "region": "Germany",
             "website": "https://www.durr.com",
-            "price_estimate": "â‚¬150,000 - â‚¬500,000",
+            "price_estimate": "€150,000 - €500,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: Leading painting and surface finishing automation",
             "relevance_score": 0.9,
@@ -183,7 +183,7 @@ CURATED_SUPPLIERS_BY_CATEGORY = {
             "supplier_name": "ABB Robotics",
             "region": "Global",
             "website": "https://new.abb.com/products/robotics",
-            "price_estimate": "â‚¬80,000 - â‚¬300,000",
+            "price_estimate": "€80,000 - €300,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: Industrial robots for painting applications",
             "relevance_score": 0.8,
@@ -198,7 +198,7 @@ CURATED_SUPPLIERS_BY_CATEGORY = {
             "supplier_name": "IMA Schelling Group",
             "region": "Austria/Italy",
             "website": "https://www.ima.it",
-            "price_estimate": "â‚¬100,000 - â‚¬400,000",
+            "price_estimate": "€100,000 - €400,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: Vacuum membrane press systems for furniture",
             "relevance_score": 0.8,
@@ -213,7 +213,7 @@ CURATED_SUPPLIERS_BY_CATEGORY = {
             "supplier_name": "EREMA Engineering Recycling",
             "region": "Austria",
             "website": "https://www.erema.at",
-            "price_estimate": "â‚¬150,000 - â‚¬600,000",
+            "price_estimate": "€150,000 - €600,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: Leading plastic recycling systems manufacturer",
             "relevance_score": 0.9,
@@ -224,7 +224,7 @@ CURATED_SUPPLIERS_BY_CATEGORY = {
             "supplier_name": "Rapid Granulator",
             "region": "Sweden",
             "website": "https://www.rapidgranulator.com",
-            "price_estimate": "â‚¬30,000 - â‚¬200,000",
+            "price_estimate": "€30,000 - €200,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: Industrial granulators and size reduction equipment",
             "relevance_score": 0.8,
@@ -239,7 +239,7 @@ CURATED_SUPPLIERS_BY_CATEGORY = {
             "supplier_name": "HOMAG Group",
             "region": "Germany",
             "website": "https://www.homag.com",
-            "price_estimate": "â‚¬200,000 - â‚¬1,000,000",
+            "price_estimate": "€200,000 - €1,000,000",
             "price_type": "Ex-works",
             "notes": "AI suggestion: Complete door manufacturing lines and automation",
             "relevance_score": 0.8,
@@ -409,7 +409,7 @@ def add_no_suppliers_subtext(machine_result: Dict) -> Dict:
     suppliers = machine_result.get('suppliers', [])
     
     # Check if all suppliers are AI-generated
-    all_ai = all(s.get('is_ai_fallback', False) for s in suppliers) if suppliers else True
+    all_ai = all(s.get('is_ai_fallback', False) or s.get('ai_star', False) for s in suppliers) if suppliers else True
     
     if all_ai or len(suppliers) == 0:
         machine_result['no_public_suppliers_subtext'] = (

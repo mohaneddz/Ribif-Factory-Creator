@@ -71,7 +71,7 @@ class TestAIFallbackGeneration(unittest.TestCase):
         
         # All should be marked as AI-generated
         for supplier in ai_suppliers:
-            self.assertTrue(supplier.get('ai_star', False))
+            self.assertTrue(supplier.get('is_ai_fallback', False))
             self.assertIn('availability_note', supplier)
             self.assertIn('AI suggestion', supplier['notes'])
     
@@ -89,7 +89,7 @@ class TestAIFallbackGeneration(unittest.TestCase):
         
         # All should be marked as AI-generated
         for supplier in ai_suppliers:
-            self.assertTrue(supplier.get('ai_star', False))
+            self.assertTrue(supplier.get('is_ai_fallback', False))
     
     def test_supplier_structure_completeness(self):
         """Test that generated suppliers have all required fields."""
@@ -100,7 +100,7 @@ class TestAIFallbackGeneration(unittest.TestCase):
         
         required_fields = [
             'supplier_name', 'region', 'website', 'price_estimate',
-            'price_type', 'notes', 'relevance_score', 'ai_star',
+            'price_type', 'notes', 'relevance_score', 'is_ai_fallback', 'ai_tag',
             'availability_note', 'emails', 'phones', 'contact_pages',
             'quality_score', 'evidence'
         ]
@@ -149,8 +149,8 @@ class TestAIFallbackGeneration(unittest.TestCase):
             # Check supplier structure
             for supplier in suppliers:
                 self.assertIn('supplier_name', supplier)
-                self.assertIn('ai_star', supplier)
-                self.assertTrue(supplier['ai_star'])
+                self.assertTrue(supplier.get('is_ai_fallback'))
+                self.assertEqual(supplier.get('ai_tag'), '★')
 
 
 class TestNoSuppliersSubtext(unittest.TestCase):
@@ -229,9 +229,8 @@ class TestIntegrationScenarios(unittest.TestCase):
         
         # Check quality
         for supplier in ai_suppliers:
-            self.assertIn('Glaston', supplier['supplier_name']) or \
-            self.assertIn('Bystronic', supplier['supplier_name']) or \
-            self.assertTrue(supplier.get('ai_star'))
+            self.assertTrue(supplier.get('is_ai_fallback'))
+            self.assertNotIn('â', supplier['price_estimate'])
     
     def test_scenario_zero_public_suppliers_plastic(self):
         """Test generating AI fallback for plastic machinery."""
@@ -260,7 +259,7 @@ class TestIntegrationScenarios(unittest.TestCase):
         
         # Should be marked as generic/AI suggestion
         for supplier in ai_suppliers:
-            self.assertTrue(supplier.get('ai_star'))
+            self.assertTrue(supplier.get('is_ai_fallback'))
 
 
 if __name__ == "__main__":

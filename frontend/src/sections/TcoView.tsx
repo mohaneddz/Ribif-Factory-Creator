@@ -20,7 +20,7 @@ export const TcoView = ({ data, loading }: { data: any, loading: boolean }) => {
     const renderValue = (val: any) => {
         if (val === null || val === undefined) return "N/A";
 
-        let target = val;
+        const target = val;
 
         // Handle stringified objects (like Python repr)
         if (typeof val === 'string' && val.trim().startsWith('{')) {

@@ -204,6 +204,12 @@ def _state_key(cfg: IMAPConfig) -> str:
     return f"{cfg.username}@{cfg.host}:{cfg.mailbox}"
 
 
+def _flag(value: Any, env_name: str, default: str) -> bool:
+    # An explicit False in the payload must win over the env/default
+    raw = value if value is not None else (os.getenv(env_name) or default)
+    return str(raw).lower() in ("1", "true", "yes")
+
+
 def _resolve_smtp_config(payload: Dict[str, Any]) -> SMTPConfig:
     host = payload.get("smtp_host") or os.getenv("SMTP_HOST")
     if not host:
@@ -212,8 +218,8 @@ def _resolve_smtp_config(payload: Dict[str, Any]) -> SMTPConfig:
     port = int(payload.get("smtp_port") or os.getenv("SMTP_PORT") or 587)
     username = payload.get("smtp_username") or os.getenv("SMTP_USERNAME")
     password = payload.get("smtp_password") or os.getenv("SMTP_PASSWORD")
-    use_tls = str(payload.get("smtp_use_tls") or os.getenv("SMTP_USE_TLS") or "1").lower() in ("1", "true", "yes")
-    use_ssl = str(payload.get("smtp_use_ssl") or os.getenv("SMTP_USE_SSL") or "0").lower() in ("1", "true", "yes")
+    use_tls = _flag(payload.get("smtp_use_tls"), "SMTP_USE_TLS", "1")
+    use_ssl = _flag(payload.get("smtp_use_ssl"), "SMTP_USE_SSL", "0")
     timeout_s = int(payload.get("smtp_timeout_s") or os.getenv("SMTP_TIMEOUT_S") or 25)
     from_address = payload.get("from_address") or os.getenv("SMTP_FROM_ADDRESS") or username
     return SMTPConfig(
@@ -238,7 +244,7 @@ def _resolve_imap_config(payload: Dict[str, Any]) -> IMAPConfig:
     password = payload.get("imap_password") or os.getenv("IMAP_PASSWORD")
     if not username or not password:
         raise ValueError("IMAP username/password not configured.")
-    use_ssl = str(payload.get("imap_use_ssl") or os.getenv("IMAP_USE_SSL") or "1").lower() in ("1", "true", "yes")
+    use_ssl = _flag(payload.get("imap_use_ssl"), "IMAP_USE_SSL", "1")
     mailbox = payload.get("mailbox") or os.getenv("IMAP_MAILBOX") or "INBOX"
     timeout_s = int(payload.get("imap_timeout_s") or os.getenv("IMAP_TIMEOUT_S") or 25)
     return IMAPConfig(

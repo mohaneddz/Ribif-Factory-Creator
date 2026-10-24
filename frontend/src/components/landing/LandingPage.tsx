@@ -145,7 +145,7 @@ export default function LandingPage() {
         >
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 px-4 py-2 text-xs uppercase tracking-[0.25em] text-indigo-600 dark:text-indigo-300 mb-8 backdrop-blur-sm">
             <Zap size={14} />
-            Industrie 5.0 — Propulsé par l'IA
+            Industrie 5.0 — Propulsé par l&apos;IA
           </div>
 
           <h1 className="text-5xl md:text-8xl font-black leading-[1.1] mb-8 tracking-tight text-slate-900 dark:text-white">
@@ -157,8 +157,8 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-12 leading-relaxed">
-            RIBIF automatise l'analyse de vos specs, génère des layouts optimisés,
-            et crée des jumeaux numériques 3D — de l'idée à la production en quelques heures.
+            RIBIF automatise l&apos;analyse de vos specs, génère des layouts optimisés,
+            et crée des jumeaux numériques 3D — de l&apos;idée à la production en quelques heures.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
@@ -212,7 +212,7 @@ export default function LandingPage() {
       <section className="relative z-10 max-w-7xl mx-auto px-6 py-32">
         <div className="text-center mb-20">
           <h2 className="text-4xl md:text-5xl font-bold mb-6 text-slate-900 dark:text-white">
-            Tout ce qu'il faut pour{" "}
+            Tout ce qu&apos;il faut pour{" "}
             <span className="text-indigo-600 dark:text-indigo-400">industrialiser</span>
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-lg max-w-2xl mx-auto">
@@ -246,7 +246,7 @@ export default function LandingPage() {
       <section className="relative z-10 max-w-7xl mx-auto px-6 py-24">
          <div className="grid lg:grid-cols-2 gap-16 items-center">
              <div>
-                 <h2 className="text-3xl md:text-5xl font-bold mb-8 text-slate-900 dark:text-white">Un workflow fluide, de l'idée à la production</h2>
+                 <h2 className="text-3xl md:text-5xl font-bold mb-8 text-slate-900 dark:text-white">Un workflow fluide, de l&apos;idée à la production</h2>
                  <p className="text-lg text-slate-500 dark:text-slate-400 mb-12">Oubliez les fichiers Excel interminables et les semaines de sourcing manuel. RIBIF orchestre tout pour vous.</p>
                  
                  <div className="space-y-8">
@@ -295,7 +295,7 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-16">
                 <h2 className="text-4xl font-bold mb-4 text-slate-900 dark:text-white">Pour qui est fait RIBIF ?</h2>
-                <p className="text-slate-500 dark:text-slate-400">Une solution adaptée à tous les acteurs de l'industrie</p>
+                <p className="text-slate-500 dark:text-slate-400">Une solution adaptée à tous les acteurs de l&apos;industrie</p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
@@ -334,7 +334,7 @@ export default function LandingPage() {
               Prêt à révolutionner votre industrie?
             </h2>
             <p className="text-xl text-white/90 max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
-              Rejoignez les entreprises qui transforment leurs projets industriels avec RIBIF. Commencez gratuitement dès aujourd'hui.
+              Rejoignez les entreprises qui transforment leurs projets industriels avec RIBIF. Commencez gratuitement dès aujourd&apos;hui.
             </p>
             <motion.button
               whileHover={{ scale: 1.05 }}

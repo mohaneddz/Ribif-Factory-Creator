@@ -112,6 +112,7 @@ class FactoryRenderer:
 
         draw_items = []
         visual_rects = []
+        placeholders = []
 
         for i, p in enumerate(all_machines):
             cx = p["x"] + p["w"] / 2.0
@@ -146,8 +147,10 @@ class FactoryRenderer:
                 except Exception as exc:
                     warn(f"Image load failed for {img_path}: {exc}")
                     visual_rects.append((p["x"], p["y"], p["x"] + p["w"], p["y"] + p["h"]))
+                    placeholders.append(p)
             else:
                 visual_rects.append((p["x"], p["y"], p["x"] + p["w"], p["y"] + p["h"]))
+                placeholders.append(p)
 
         if not visual_rects:
             visual_rects = [self._rect_bounds(m["x"], m["y"], m["w"], m["h"]) for m in all_machines]
@@ -203,6 +206,17 @@ class FactoryRenderer:
 
         for item in draw_items:
             ax.imshow(item["im"], extent=item["extent"], zorder=item["z"])
+
+        # Without a generated image, draw the footprint so the plan still shows the machine
+        for p in placeholders:
+            ax.add_patch(patches.Rectangle(
+                (p["x"], p["y"]), p["w"], p["h"],
+                facecolor="#d9d9d9", edgecolor="#333333", linewidth=2, zorder=10,
+            ))
+            ax.text(
+                p["x"] + p["w"] / 2.0, p["y"] + p["h"] / 2.0, str(p["uid"]),
+                ha="center", va="center", fontsize=9, zorder=11,
+            )
 
         ax.set_xlim(minx, maxx)
         ax.set_ylim(miny, maxy)

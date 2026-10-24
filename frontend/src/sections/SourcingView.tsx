@@ -15,7 +15,7 @@ export const SourcingView = ({ progress, data, module4Data, loading }: { progres
     const renderValue = (val: any) => {
         if (val === null || val === undefined) return "N/A";
         
-        let target = val;
+        const target = val;
         
         // Handle stringified objects (like Python repr)
         if (typeof val === 'string' && val.trim().startsWith('{')) {
@@ -37,7 +37,7 @@ export const SourcingView = ({ progress, data, module4Data, loading }: { progres
                 <div className="text-center">
                     <Loader2 size={48} className="text-indigo-600 animate-spin mx-auto mb-4" />
                     <h3 className="text-xl font-bold text-slate-800">Enrichissement des Machines...</h3>
-                    <p className="text-slate-500">Module 4 en cours d'exécution</p>
+                    <p className="text-slate-500">Module 4 en cours d&apos;exécution</p>
                 </div>
             </div>
         );

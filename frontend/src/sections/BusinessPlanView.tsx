@@ -367,7 +367,7 @@ export const BusinessPlanView = ({ businessPlanData, pitchDeckData, loading }: {
                 <div className="text-center">
                     <FileSpreadsheet size={48} className="text-slate-300 mx-auto mb-4" />
                     <h3 className="text-xl font-bold text-slate-600">En attente du Business Plan...</h3>
-                    <p className="text-slate-400">Le calcul TCO doit d'abord se terminer</p>
+                    <p className="text-slate-400">Le calcul TCO doit d&apos;abord se terminer</p>
                 </div>
             </div>
         );

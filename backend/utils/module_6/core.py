@@ -641,7 +641,7 @@ Respond ONLY with valid JSON containing estimates in DZD (Algerian Dinar)."""
         
         no_supplier_text = "No suppliers identified" if self._detected_language == "en" else "Aucun fournisseur identifié"
         supplier_summary = "\n".join([
-            f"- {s.get('supplier_name', 'Unknown')}: {s.get('region', 'N/A')} - {s.get('notes', '')[:100]}"
+            f"- {s.get('supplier_name', 'Unknown')}: {s.get('region', 'N/A')} - {(s.get('notes') or '')[:100]}"
             for s in suppliers[:5]
         ]) if suppliers else no_supplier_text
         
@@ -1357,13 +1357,8 @@ Return ONLY a JSON object with material names as keys:
         """
         Calculate TCO for a product category from RIBIF stage 3.
         """
-        machine_summary = {
-            "machine_name": machine_tco.machine_name,
-            "total_tco": machine_tco.total_tco,
-            "annual_tco": machine_tco.annual_tco
-        }
-        
-        estimates = self.estimate_product_costs(product, machine_summary)
+        nom_produit = product.get("nom_produit", "Unknown")
+        estimates = self.estimate_product_costs([product], machine_tco.annual_tco).get(nom_produit, {})
         
         # Convert to float to handle potential string values
         landing_cost = float(estimates.get("landing_cost", 0) or 0)
@@ -1374,7 +1369,7 @@ Return ONLY a JSON object with material names as keys:
         total_tco = landing_cost + holding_cost + quality_cost + administrative_cost
         
         return ProductTCO(
-            nom_produit=product.get("nom_produit", "Unknown"),
+            nom_produit=nom_produit,
             categorie=product.get("categorie"),
             landing_cost=round(landing_cost, 2),
             holding_cost=round(holding_cost, 2),

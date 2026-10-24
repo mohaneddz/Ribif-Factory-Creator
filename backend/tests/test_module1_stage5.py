@@ -127,7 +127,8 @@ class TestParameterNormalization:
         
         assert "cycle_mode" in normalized
         assert normalized["cycle_mode"] == "continuous"
-        assert normalized["cycle_time"]["value"] is None
+        # No numeric cycle in the source, so an estimated default fills it
+        assert normalized["cycle_time"]["source"] == "estimated"
     
     def test_normalize_missing_parameters(self):
         """Test normalizing with missing parameters."""
@@ -138,8 +139,9 @@ class TestParameterNormalization:
         normalized = normalize_parametres_process(raw_params)
         
         assert normalized["temperature"]["value"] == 150.0
-        assert normalized["pressure"]["value"] is None
-        assert normalized["cycle_time"]["value"] is None
+        # Missing values are estimated rather than left null
+        assert normalized["pressure"]["source"] == "estimated"
+        assert normalized["cycle_time"]["source"] == "estimated"
 
 
 class TestStepSignature:

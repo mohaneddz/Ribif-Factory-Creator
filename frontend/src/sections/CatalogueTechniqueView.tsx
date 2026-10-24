@@ -18,6 +18,8 @@ const Page = React.forwardRef<HTMLDivElement, { pageNum: number; pdfDoc: any; sc
             if (!pdfDoc || !canvasRef.current) return;
 
             isUnmountedRef.current = false;
+            // Reset the loaded flag before re-rendering a new page onto the canvas
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setRendered(false);
 
             const renderPage = async () => {

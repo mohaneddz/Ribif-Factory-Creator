@@ -272,7 +272,7 @@ export default function CreateProjectPage() {
         >
           <h2 className="text-4xl font-black mb-4 tracking-tight text-slate-900 dark:text-white">Créer un nouveau projet</h2>
           <p className="text-slate-500 dark:text-slate-400 text-lg">
-            Importez votre cahier des charges PDF pour démarrer l'analyse automatisée
+            Importez votre cahier des charges PDF pour démarrer l&apos;analyse automatisée
           </p>
         </motion.div>
 
@@ -459,7 +459,7 @@ export default function CreateProjectPage() {
                     <div>
                       <p className="font-bold text-emerald-700 dark:text-emerald-200 text-lg">Projet créé avec succès!</p>
                       <p className="text-emerald-600/70 dark:text-emerald-300/70 mt-1">
-                        Votre projet est prêt pour l'analyse.
+                        Votre projet est prêt pour l&apos;analyse.
                       </p>
                     </div>
                   </div>

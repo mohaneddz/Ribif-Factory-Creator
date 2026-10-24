@@ -132,10 +132,9 @@ export default function BaseScene({ children }: BaseSceneProps) {
                 camera={{ position: [0.7, 1.78, -3], fov: 45 }}
                 frameloop="always"
             >
-                <InnerSceneContent
-                    onHudUpdate={handleHudUpdate}
-                    children={(innerLogic) => children(innerLogic)}
-                />
+                <InnerSceneContent onHudUpdate={handleHudUpdate}>
+                    {(innerLogic) => children(innerLogic)}
+                </InnerSceneContent>
             </Canvas>
         </div>
     )

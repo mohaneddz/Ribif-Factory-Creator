@@ -18,7 +18,7 @@ const createMockStorageClient = () => ({
 });
 
 const getSupabaseMock = () =>
-  supabase as {
+  supabase as unknown as {
     auth: {
       signUp: ReturnType<typeof vi.fn>;
       signInWithPassword: ReturnType<typeof vi.fn>;

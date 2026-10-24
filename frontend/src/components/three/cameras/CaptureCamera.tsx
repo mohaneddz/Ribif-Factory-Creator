@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useEffect, useMemo } from "react"
+import React, { useRef, useEffect, useMemo, useState, useCallback } from "react"
 import { PerspectiveCamera, OrbitControls } from "@react-three/drei"
 import { useThree, useFrame, RootState } from "@react-three/fiber"
 import * as THREE from "three"
@@ -29,6 +29,12 @@ export default function CaptureCamera({
     onCameraReady
 }: CaptureCameraProps) {
     const cameraRef = useRef<THREE.PerspectiveCamera>(null!)
+    // Mirrors cameraRef in state so the helper renders once the camera mounts
+    const [mountedCamera, setMountedCamera] = useState<THREE.PerspectiveCamera | null>(null)
+    const attachCamera = useCallback((camera: THREE.PerspectiveCamera | null) => {
+        if (camera) cameraRef.current = camera
+        setMountedCamera(camera)
+    }, [])
     const controlsRef = useRef<any>(null)
     const setQuery = useThree((state) => state.set)
 
@@ -131,14 +137,14 @@ export default function CaptureCamera({
     return (
         <>
             <PerspectiveCamera
-                ref={cameraRef}
+                ref={attachCamera}
                 name={name}
                 makeDefault={isActive}
                 fov={fov}
                 near={0.1}
                 far={2000}
             />
-            {cameraRef.current && isVisible && <cameraHelper args={[cameraRef.current]} />}
+            {mountedCamera && isVisible && <cameraHelper args={[mountedCamera]} />}
             {isActive && (
                 <OrbitControls
                     ref={controlsRef}

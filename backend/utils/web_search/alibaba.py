@@ -14,6 +14,7 @@ from urllib.parse import quote_plus, urljoin
 from .base import (
     SearchProvider,
     ProductResult,
+    SearchResult,
     SupplierResult,
     SearchError,
     safe_request,

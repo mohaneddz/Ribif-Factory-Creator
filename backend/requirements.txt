@@ -68,6 +68,7 @@ XlsxWriter==3.2.9
 
 # Utilities
 certifi==2025.11.12
-moviepy==2.2.1
 
-phonenumbers
+# Tests (backend/tests)
+pytest==9.0.2
+openpyxl==3.1.5

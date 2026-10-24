@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
     Activity, Zap, Thermometer, Box, TrendingUp, AlertTriangle,
     Settings2, Play, Pause, RefreshCw, BarChart3, Clock,
-    Hammer, Volume2, ShieldCheck, Gauge
+    Hammer, Volume2, ShieldCheck, Gauge, type LucideIcon
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -20,12 +20,39 @@ interface DigitalTwinViewProps {
     pipelineModelUrl?: string | null;
 }
 
+const MetricCard = ({
+    label, value, unit, icon: Icon, color, trend, iconBg
+}: {
+    label: string, value: string | number, unit: string, icon: LucideIcon, color: string, trend?: string, iconBg: string
+}) => (
+    <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex justify-between items-start mb-1 sm:mb-2">
+            <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${iconBg} ${color}`}>
+                <Icon className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
+            </div>
+            {trend && (
+                <span className={`text-[9px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded-md ${trend.startsWith('+') ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
+                    {trend}
+                </span>
+            )}
+        </div>
+        <div>
+            <div className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5 truncate">{label}</div>
+            <div className="flex items-baseline gap-1">
+                <span className="text-base sm:text-xl font-black text-slate-900 dark:text-white">{value}</span>
+                <span className="text-[10px] sm:text-xs font-bold text-slate-400">{unit}</span>
+            </div>
+        </div>
+    </div>
+);
+
 export function DigitalTwinView({ pipelineModelUrl }: DigitalTwinViewProps) {
     const [isPlaying, setIsPlaying] = useState(true);
     const [params, setParams] = useState<SimulationParams>(DEFAULT_SIM_PARAMS);
     const [history, setHistory] = useState<TelemetryData[]>([]);
     const [currentData, setCurrentData] = useState<TelemetryData | null>(null);
     const timeStepRef = useRef(0);
+    const [elapsedSteps, setElapsedSteps] = useState(0);
 
     const boundingboxStart = useMemo(() => ({ x: -10, y: 0, z: -10 }), []);
     const boundingboxEnd = useMemo(() => ({ x: 10, y: 7, z: 0 }), []);
@@ -37,6 +64,7 @@ export function DigitalTwinView({ pipelineModelUrl }: DigitalTwinViewProps) {
         const interval = setInterval(() => {
             const newData = generateTelemetry(params, timeStepRef.current);
             timeStepRef.current += 1;
+            setElapsedSteps(timeStepRef.current);
 
             setCurrentData(newData);
             setHistory(prev => {
@@ -48,32 +76,6 @@ export function DigitalTwinView({ pipelineModelUrl }: DigitalTwinViewProps) {
 
         return () => clearInterval(interval);
     }, [isPlaying, params]);
-
-    const MetricCard = ({
-        label, value, unit, icon: Icon, color, trend, iconBg
-    }: {
-        label: string, value: string | number, unit: string, icon: any, color: string, trend?: string, iconBg: string
-    }) => (
-        <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-1 sm:mb-2">
-                <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${iconBg} ${color}`}>
-                    <Icon className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
-                </div>
-                {trend && (
-                    <span className={`text-[9px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded-md ${trend.startsWith('+') ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
-                        {trend}
-                    </span>
-                )}
-            </div>
-            <div>
-                <div className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5 truncate">{label}</div>
-                <div className="flex items-baseline gap-1">
-                    <span className="text-base sm:text-xl font-black text-slate-900 dark:text-white">{value}</span>
-                    <span className="text-[10px] sm:text-xs font-bold text-slate-400">{unit}</span>
-                </div>
-            </div>
-        </div>
-    );
 
     return (
         <div className="h-full flex flex-col p-3 sm:p-4 md:p-6 gap-3 sm:gap-4 md:gap-6 bg-slate-50 dark:bg-transparent overflow-y-auto">
@@ -316,7 +318,7 @@ export function DigitalTwinView({ pipelineModelUrl }: DigitalTwinViewProps) {
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-medium text-slate-400">
                             <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0" />
-                            <span className="text-white">{(timeStepRef.current / 60).toFixed(1)}m</span>
+                            <span className="text-white">{(elapsedSteps / 60).toFixed(1)}m</span>
                         </div>
                     </div>
                 </div>

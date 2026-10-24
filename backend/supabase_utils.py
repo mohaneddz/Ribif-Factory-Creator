@@ -266,7 +266,7 @@ def validate_module4_output(data: Dict[str, Any]) -> Dict[str, Any]:
         if value is None:
             return default
         if isinstance(value, str):
-            return value
+            return value if value.strip() else default
         return str(value)
     
     # Validate top-level structure
@@ -314,7 +314,7 @@ def validate_module4_output(data: Dict[str, Any]) -> Dict[str, Any]:
             supplier["availability_note"] = sanitize_string(supplier.get("availability_note", ""))
             
             # Sanitize boolean
-            supplier["ai_star"] = bool(supplier.get("ai_star", False))
+            supplier["ai_star"] = bool(supplier.get("ai_star") or supplier.get("is_ai_fallback"))
             
             # Sanitize numeric fields
             try:
