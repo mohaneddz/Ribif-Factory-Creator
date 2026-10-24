@@ -11,7 +11,6 @@ import pytest
 
 import vertex_utils
 from utils import email_service
-from utils.module_5 import core
 from utils.module_5.core import NegotiationConfig, compute_counter_offer, evaluate_offer, run_text_negotiation
 
 REQUIREMENTS = {

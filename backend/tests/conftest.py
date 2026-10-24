@@ -11,9 +11,14 @@ import socket
 import sys
 from pathlib import Path
 
+import dotenv
+
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
+
+# Modules call load_dotenv() at import; never let the suite read real keys
+dotenv.load_dotenv = lambda *args, **kwargs: False
 
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 _real_connect = socket.socket.connect

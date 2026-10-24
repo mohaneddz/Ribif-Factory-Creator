@@ -11,7 +11,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from utils.module_6 import core
 from utils.module_6.core import RIBIFModule6TCO, TCOCalculationInput
 
 MACHINE = {
@@ -46,8 +45,7 @@ MACHINE_ANSWER = {
 
 
 @pytest.fixture
-def calculator(monkeypatch):
-    monkeypatch.setattr(core, "load_dotenv", lambda *a, **k: None)
+def calculator():
     return RIBIFModule6TCO(api_key="offline-test-key")
 
 
