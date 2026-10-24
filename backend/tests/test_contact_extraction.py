@@ -21,20 +21,27 @@ class TestEmailExtraction(unittest.TestCase):
     
     def test_basic_email_extraction(self):
         """Test extraction of standard email formats."""
-        text = "Contact us at info@example.com or sales@company.org"
+        text = "Contact us at info@glaston.net or sales@company.org"
         emails = extract_emails_from_text(text)
         
         self.assertEqual(len(emails), 2)
-        self.assertIn("info@example.com", emails)
+        self.assertIn("info@glaston.net", emails)
         self.assertIn("sales@company.org", emails)
+    
+    def test_multi_label_domains_are_kept_whole(self):
+        """Test that country-code domains like .com.cn are not truncated."""
+        text = "Write to sales@supplier.com.cn or uk@makers.co.uk"
+        emails = extract_emails_from_text(text)
+        
+        self.assertEqual(emails, ["sales@supplier.com.cn", "uk@makers.co.uk"])
     
     def test_email_normalization(self):
         """Test email normalization (lowercase, deduplication)."""
-        text = "Contact Info@Example.COM or INFO@example.com"
+        text = "Contact Info@Glaston.NET or INFO@glaston.net"
         emails = extract_emails_from_text(text)
         
         self.assertEqual(len(emails), 1)  # Deduplicated
-        self.assertEqual(emails[0], "info@example.com")  # Lowercase
+        self.assertEqual(emails[0], "info@glaston.net")  # Lowercase
     
     def test_email_filtering(self):
         """Test filtering of invalid emails."""
@@ -51,7 +58,8 @@ class TestEmailExtraction(unittest.TestCase):
     
     def test_email_validation(self):
         """Test _is_valid_email helper function."""
-        self.assertTrue(_is_valid_email("valid@domain.com"))
+        self.assertTrue(_is_valid_email("valid@supplier.com"))
+        self.assertFalse(_is_valid_email("valid@domain.com"))  # Placeholder domain
         self.assertTrue(_is_valid_email("name.surname@company.co.uk"))
         
         self.assertFalse(_is_valid_email("image.png@host"))

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Email pattern - comprehensive but conservative
 EMAIL_PATTERN = re.compile(
-    r'\b[A-Za-z0-9][\w\.\-\+]*@[A-Za-z0-9][\w\-]*\.[A-Za-z]{2,}\b',
+    r'\b[A-Za-z0-9][\w\.\-\+]*@(?:[A-Za-z0-9][\w\-]*\.)+[A-Za-z]{2,}\b',
     re.IGNORECASE
 )
 
