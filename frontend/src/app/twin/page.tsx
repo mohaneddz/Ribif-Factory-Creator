@@ -288,6 +288,25 @@ const ComplexFactoryScene = ({ machineStates, viewMode = 'exterior' }: { machine
 // 3. MAIN DASHBOARD COMPONENT
 // ==========================================
 
+const Header = ({ title, subtitle }: { title: string, subtitle: string }) => (
+    <div className="bg-white border-b border-slate-200 px-8 py-6 mb-8 flex justify-between items-center sticky top-0 z-30">
+        <div>
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{title}</h1>
+            <p className="text-sm font-medium text-slate-500">{subtitle}</p>
+        </div>
+        <div className="flex gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Live Connection</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200">
+                <ShieldCheck size={14} className="text-indigo-600" />
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Secure</span>
+            </div>
+        </div>
+    </div>
+);
+
 export default function TwinDashboard() {
     const [view, setView] = useState<'overview' | 'machines' | 'maintenance' | 'safety' | 'tco'>('overview');
     const [selectedMachineId, setSelectedMachineId] = useState<string>(INITIAL_MACHINES[0].id);
@@ -480,25 +499,6 @@ export default function TwinDashboard() {
     }, [selectedMachineId, machines]);
 
     const scatterData = machines.map(m => ({ x: m.temp, y: m.health, z: m.vibration * 100, name: m.name, status: m.status }));
-
-    const Header = ({ title, subtitle }: { title: string, subtitle: string }) => (
-        <div className="bg-white border-b border-slate-200 px-8 py-6 mb-8 flex justify-between items-center sticky top-0 z-30">
-            <div>
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{title}</h1>
-                <p className="text-sm font-medium text-slate-500">{subtitle}</p>
-            </div>
-            <div className="flex gap-3">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Live Connection</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200">
-                    <ShieldCheck size={14} className="text-indigo-600" />
-                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Secure</span>
-                </div>
-            </div>
-        </div>
-    );
 
     return (
         <>
