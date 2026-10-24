@@ -21,7 +21,7 @@ export function gaussianRandom(mean: number, stdDev: number): number {
  * @returns A pseudo-random value from the distribution.
  */
 export function poissonRandom(lambda: number): number {
-    let L = Math.exp(-lambda);
+    const L = Math.exp(-lambda);
     let p = 1.0;
     let k = 0;
     do {

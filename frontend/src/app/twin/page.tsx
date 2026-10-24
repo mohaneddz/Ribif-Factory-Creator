@@ -386,7 +386,7 @@ export default function TwinDashboard() {
                 const powerFluctuation = (Math.random() - 0.5) * 5;
 
                 let newStatus = m.status;
-                let newTemp = Math.max(20, Math.min(120, m.temp + tempFluctuation));
+                const newTemp = Math.max(20, Math.min(120, m.temp + tempFluctuation));
                 let newHealth = m.health;
 
                 if (newTemp > 90) newStatus = "warning";
@@ -770,7 +770,7 @@ export default function TwinDashboard() {
                                         </div>
                                     </div>
                                     <div className="col-span-2 bg-white border border-slate-200 p-8 rounded-4xl shadow-sm">
-                                        <h3 className="font-bold text-slate-800 mb-6 text-lg">Qualité de l'Air (PPM Temps Réel)</h3>
+                                        <h3 className="font-bold text-slate-800 mb-6 text-lg">Qualité de l&apos;Air (PPM Temps Réel)</h3>
                                         <div className="h-40">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <AreaChart data={[
@@ -973,7 +973,7 @@ export default function TwinDashboard() {
                                         <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center justify-between">
                                             <span className="flex items-center gap-3">
                                                 <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><TrendingUp size={20} /></div>
-                                                Coûts d'Exploitation en Temps Réel
+                                                Coûts d&apos;Exploitation en Temps Réel
                                             </span>
                                             <span className="text-xs font-medium text-slate-400 flex items-center gap-2">
                                                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

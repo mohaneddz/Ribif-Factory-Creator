@@ -187,7 +187,7 @@ export default function SettingsPage() {
                       <div className="flex-1">
                         <p className="font-semibold text-red-700 dark:text-red-200">Confirmer la déconnexion</p>
                         <p className="text-sm text-red-600/70 dark:text-red-300/70 mt-1">
-                          Vous serez redirigé vers la page d'accueil.
+                          Vous serez redirigé vers la page d&apos;accueil.
                         </p>
                         <div className="flex gap-2 mt-4">
                           <button
@@ -224,7 +224,7 @@ export default function SettingsPage() {
               </>
             ) : (
               <div className="text-center py-8">
-                <p className="text-slate-500 mb-4">Vous n'êtes pas connecté</p>
+                <p className="text-slate-500 mb-4">Vous n&apos;êtes pas connecté</p>
                 <button
                   onClick={() => router.push("/auth/login")}
                   className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/20"

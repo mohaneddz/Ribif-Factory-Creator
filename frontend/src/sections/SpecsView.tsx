@@ -19,7 +19,7 @@ export const SpecsView = ({ data }: any) => {
     const renderValue = (val: any, showUnit = false) => {
         if (val === null || val === undefined) return "N/A";
         
-        let target = val;
+        const target = val;
         
         // Handle stringified objects (like Python repr)
         if (typeof val === 'string' && val.trim().startsWith('{')) {
