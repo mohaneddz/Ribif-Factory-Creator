@@ -429,4 +429,3 @@ python test_imports.py
 - Module 2 conveyor routes are valid but often take unnecessary bends around machine ports.
 - The Module 3 clip merge (moviepy 2) and the Module 2 realistic render and 3D export have not been run.
 - About 150 places in the frontend type backend JSON as `any`; lint reports them as warnings.
-- `next build` was not run during the audit; the type-check, lint and unit tests were.
