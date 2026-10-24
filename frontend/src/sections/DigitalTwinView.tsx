@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
     Activity, Zap, Thermometer, Box, TrendingUp, AlertTriangle,
     Settings2, Play, Pause, RefreshCw, BarChart3, Clock,
-    Hammer, Volume2, ShieldCheck, Gauge
+    Hammer, Volume2, ShieldCheck, Gauge, type LucideIcon
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -19,6 +19,32 @@ import {
 interface DigitalTwinViewProps {
     pipelineModelUrl?: string | null;
 }
+
+const MetricCard = ({
+    label, value, unit, icon: Icon, color, trend, iconBg
+}: {
+    label: string, value: string | number, unit: string, icon: LucideIcon, color: string, trend?: string, iconBg: string
+}) => (
+    <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex justify-between items-start mb-1 sm:mb-2">
+            <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${iconBg} ${color}`}>
+                <Icon className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
+            </div>
+            {trend && (
+                <span className={`text-[9px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded-md ${trend.startsWith('+') ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
+                    {trend}
+                </span>
+            )}
+        </div>
+        <div>
+            <div className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5 truncate">{label}</div>
+            <div className="flex items-baseline gap-1">
+                <span className="text-base sm:text-xl font-black text-slate-900 dark:text-white">{value}</span>
+                <span className="text-[10px] sm:text-xs font-bold text-slate-400">{unit}</span>
+            </div>
+        </div>
+    </div>
+);
 
 export function DigitalTwinView({ pipelineModelUrl }: DigitalTwinViewProps) {
     const [isPlaying, setIsPlaying] = useState(true);
@@ -50,32 +76,6 @@ export function DigitalTwinView({ pipelineModelUrl }: DigitalTwinViewProps) {
 
         return () => clearInterval(interval);
     }, [isPlaying, params]);
-
-    const MetricCard = ({
-        label, value, unit, icon: Icon, color, trend, iconBg
-    }: {
-        label: string, value: string | number, unit: string, icon: any, color: string, trend?: string, iconBg: string
-    }) => (
-        <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-1 sm:mb-2">
-                <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${iconBg} ${color}`}>
-                    <Icon className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
-                </div>
-                {trend && (
-                    <span className={`text-[9px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded-md ${trend.startsWith('+') ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
-                        {trend}
-                    </span>
-                )}
-            </div>
-            <div>
-                <div className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5 truncate">{label}</div>
-                <div className="flex items-baseline gap-1">
-                    <span className="text-base sm:text-xl font-black text-slate-900 dark:text-white">{value}</span>
-                    <span className="text-[10px] sm:text-xs font-bold text-slate-400">{unit}</span>
-                </div>
-            </div>
-        </div>
-    );
 
     return (
         <div className="h-full flex flex-col p-3 sm:p-4 md:p-6 gap-3 sm:gap-4 md:gap-6 bg-slate-50 dark:bg-transparent overflow-y-auto">
