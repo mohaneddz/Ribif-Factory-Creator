@@ -32,7 +32,25 @@ Output:
 
 ## Status
 
-Hackathon-demo-complete. Built end-to-end during EliteHack; most modules run through the full workflow, but polish is uneven across them — some pipelines are solid, others are rougher and less battle-tested. Treat this as a working prototype/demo rather than a production system.
+Stopped hackathon project, built during EliteHack. The frontend is deployed at [ribif-jade.vercel.app](https://ribif-jade.vercel.app). The pipeline itself depends on paid services (Gemini/Veo, Serper and other search APIs, Replicate, Presenton, Supabase, SMTP), which are not funded, so the live pipeline has not been run since.
+
+The code was audited without calling any of those services. Local logic was run on sample data; each service call was replaced by a fake at its single client function and the code around it tested. The backend suite blocks all non-localhost network access.
+
+| # | Module | Runs locally | Needs | Verification |
+|---|--------|--------------|-------|--------------|
+| 1 | Spec extraction | PDF/DOCX parsing, page selection, stage assembly, stage 5 normalization | Gemini (extraction, enrichment, machine images), web search (enrichment) | Mocked: Gemini faked, sample PDF/DOCX parsed for real |
+| 2 | Factory layout | Placement, annealing, conveyor routing, PNG and DXF rendering | Gemini (machine flows, realistic render), Replicate (3D model), rembg model download | Verified locally with given flows; service steps not exercised |
+| 3 | Video | Image intake and clip requests | Veo (Google GenAI), clip download | Mocked; the moviepy merge is not exercised |
+| 4 | Supplier sourcing | Classification, budgets, dedup, filtering, contact parsing, AI fallback suppliers | Serper, Bing, DuckDuckGo, B2B marketplace scraping, Gemini | Mocked: search and Gemini faked |
+| 5 | Negotiation | Offer scoring, counter-offer pricing, email building | Gemini (drafting), SMTP/IMAP, Vapi (voice, browser side), Supabase | Mocked: Gemini and SMTP faked; voice not exercised |
+| 6 | TCO | TCO arithmetic, 5-year projection, heuristic fallbacks | Gemini (cost estimates) | Mocked: Gemini faked, arithmetic checked by hand |
+| 7 | Business plan + pitch deck | P&L, NPV, IRR, payback, Excel workbook | Gemini (CapEx/OpEx/pricing), Presenton (deck) | Mocked: both faked |
+| 8 | Digital twin | Telemetry simulation and 3D view (frontend only) | None | Verified locally (vitest) |
+| 9 | Technical catalog | PDF built in memory with ReportLab | Image downloads, Supabase upload | Verified locally from the saved pipeline outputs, downloads faked |
+
+Every route also persists to Supabase when it is configured; the tests run without it. Setting `SKIP_MODULE_<n>=1` makes modules 1–4, 6, 7 and 9 return their saved output from `backend/template/` without calling any service (`SKIP_MODULE_8` does the same for the pitch deck).
+
+Bugs fixed during the audit: Module 5's routes had lost their imports and every negotiation endpoint raised `NameError`; `/api/module6/tco` always failed after an API change; Module 4 ran the same paid search four times per machine; Module 3 could send junk bytes to Veo as an image and misreported video length; email addresses on `.com.cn`/`.co.uk` domains were truncated; AI fallback prices showed mojibake (`â‚¬`); and the 2D plan drew nothing but conveyors when no machine images were available.
 
 ---
 
@@ -47,7 +65,7 @@ Hackathon-demo-complete. Built end-to-end during EliteHack; most modules run thr
 ![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)
 
 Core stack:
-- Backend: Python, Flask, OpenAI/GenAI integrations, Pandas, Pydantic
+- Backend: Python, Flask, Google GenAI (Gemini, Veo), Pydantic, ReportLab, ezdxf, XlsxWriter
 - Frontend: Next.js App Router, React, TypeScript, Tailwind, Three.js/R3F
 - Data and storage: Supabase
 
@@ -273,6 +291,7 @@ ribif/
 |  |- app.py
 |  |- config.py
 |  |- requirements.txt
+|  |- pytest.ini
 |  |- routes/
 |  |  |- module1.py
 |  |  |- module2.py
@@ -291,6 +310,8 @@ ribif/
 |  |  |- module_7/
 |  |  |- module_9/
 |  |  |- web_search/
+|  |- tests/
+|  |- template/        (saved module outputs used by SKIP_MODULE_<n>)
 |- frontend/
 |  |- src/app/
 |  |- src/sections/
@@ -302,19 +323,15 @@ ribif/
 
 ## Environment Variables
 
-Backend (`backend/.env`):
-- `GOOGLE_API_KEY`
-- `GEMINI_MODEL`
-- `IMAGE_MODEL`
-- `VIDEO_MODEL`
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SERPER_API_KEY`
-- `BING_API_KEY`
-- `WEB_SEARCH_ENABLED`
-- `PREFER_WEB_DATA`
-- `CORS_ORIGINS`
-- `BACKEND_BASE_URL`
+Backend (`backend/.env`), main ones:
+- `GOOGLE_API_KEY`, `GEMINI_MODEL`, `IMAGE_MODEL`, `VIDEO_MODEL`: Gemini and Veo
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`: persistence and file storage
+- `SERPER_API_KEY`, `BING_API_KEY`, `WEB_SEARCH_ENABLED`, `PREFER_WEB_DATA`: supplier search
+- `REPLICATE_API_TOKEN`: Module 2 3D model
+- `PRESENTON_API_KEY`, `PRESENTON_API_BASE_URL`: Module 7 pitch deck
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `IMAP_HOST`, `IMAP_PORT`: Module 5 email
+- `SKIP_MODULE_<n>`: serve saved template output instead of running a module (see Status)
+- `CORS_ORIGINS`, `BACKEND_BASE_URL`
 
 Frontend (`frontend/.env.local`):
 - `NEXT_PUBLIC_BACKEND_URL`
@@ -384,17 +401,32 @@ Default URLs:
 
 ## Development Verification
 
-Frontend checks:
+All of these run offline and need no keys.
+
+Frontend:
 ```bash
 cd frontend
 pnpm lint
+pnpm exec tsc --noEmit
 pnpm test
 ```
 
-Backend checks (examples from repository):
+Backend (`pytest` is limited to `tests/` by `pytest.ini`; `tests/conftest.py` blocks outbound network and never loads `.env`):
 ```bash
 cd backend
+python -m pytest
 python test_imports.py
-python test_module4_budget_enforcement.py
-python test_module1_refactor.py
 ```
+
+`test_full_enrichment.py`, `test_zero_shot_enrichment.py` and `run_enrichment_module1.py` in `backend/` are manual runners that call Gemini and the search APIs; `validate_stage5.py` is an older local check now covered by `tests/`. None of them are part of the suite.
+
+---
+
+## Known Limitations
+
+- With the default per-machine budget, Module 4's first search pass uses every allowed query, so the second pass (contact-focused queries) never runs; supplier emails come only from the first pass.
+- Module 4's supplier filter is keyword-based and untuned; it can reject legitimate manufacturers.
+- Module 2 conveyor routes are valid but often take unnecessary bends around machine ports.
+- The Module 3 clip merge (moviepy 2) and the Module 2 realistic render and 3D export have not been run.
+- About 150 places in the frontend type backend JSON as `any`; lint reports them as warnings.
+- `next build` was not run during the audit; the type-check, lint and unit tests were.
