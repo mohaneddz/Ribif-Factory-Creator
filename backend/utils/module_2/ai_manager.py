@@ -21,7 +21,7 @@ import os
 import threading
 import mimetypes
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import requests
 from PIL import Image
