@@ -812,10 +812,10 @@ def web_validate_minimal(
                 budget.record_query("aggregator", query)
                 queries_attempted += 1
                 
-                # Execute search
+                # Execute search (each pass-1 query is a distinct search)
                 raw_results = aggregator.search_machine_suppliers(
-                    machine_name=original_name,
-                    machine_type=canonical_name,
+                    machine_name=query,
+                    machine_type="",
                     region="Algeria",
                     max_results_per_source=5,
                     max_total_results=MAX_RESULTS_PER_QUERY
