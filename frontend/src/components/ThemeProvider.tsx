@@ -18,6 +18,8 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     const mode = getTheme();
+    // localStorage is only readable after mount
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setThemeState(mode);
     applyTheme(mode);
 

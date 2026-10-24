@@ -351,6 +351,8 @@ export default function TwinDashboard() {
             });
         }
         initData.forEach(d => d.total = d.operations + d.maintenance + d.energy);
+        // Seeded after mount: random values in a useState initializer would mismatch the server render
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setChartHistory(initData);
 
         const interval = setInterval(() => {

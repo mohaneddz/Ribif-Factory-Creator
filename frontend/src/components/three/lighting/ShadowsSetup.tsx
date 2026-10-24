@@ -9,6 +9,8 @@ export default function ShadowsSetup({ enabled, soft }: { enabled: boolean; soft
 
   useEffect(() => {
     if (!gl) return
+    // Mutating the renderer from useThree is how R3F configures it
+    // eslint-disable-next-line react-hooks/immutability
     gl.shadowMap.enabled = enabled
     gl.shadowMap.type = soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap
     gl.shadowMap.needsUpdate = true
